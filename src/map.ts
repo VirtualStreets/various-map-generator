@@ -152,9 +152,9 @@ async function initMap(el: string) {
       { text: 'Copy Coordinates', callback: copyCoords },
       { text: 'See Nearest Pano', callback: openNearestPano },
     ],
-    center: [0, 0],
+    center: [35, 110],
     preferCanvas: true,
-    zoom: 1,
+    zoom: 4,
     minZoom: 1,
     zoomControl: false,
     worldCopyJump: true,
@@ -336,9 +336,9 @@ type OverlayMapName = keyof typeof overlayMaps
 const storedLayers = useStorage<{
   base: BaseMapName
   overlays: OverlayMapName[]
-}>('map_generator__layers', {
-  base: '谷歌地图',
-  overlays: ['谷歌街景'],
+}>('map_generator__layers_v1', {
+  base: '华为地图',
+  overlays: ['百度街景（Zoom 5+ 启用）'],
 })
 
 const baseLayerToName = new Map<L.Layer, string>()
