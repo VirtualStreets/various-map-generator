@@ -4,7 +4,7 @@
     size="sm"
     squared
     :disabled
-    title="Copy to clipboard"
+    title="复制到剪贴板"
     @click="handleCopy"
   >
     <ClipboardCheckedIcon v-if="copied" class="w-5 h-5" />

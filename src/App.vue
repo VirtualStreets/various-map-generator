@@ -9,34 +9,34 @@
     <div class="flex-1 min-h-0 flex flex-col gap-1">
       <div v-if="!state.started" class="container flex flex-col">
         <div class="relative cursor-pointer" @click="panels.general = !panels.general">
-          <h2>General</h2>
+          <h2>通用</h2>
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
         </div>
         <Collapsible :is-open="panels.general" class="flex flex-col gap-1 max-h-[140px] overflow-y-auto mt-2 p-1">
-          <div class="flex items-center justify-between ml-1 mr-1">
-            Theme :
-            <select v-model="themeMode" class="ml-10">
-              <option value="auto">System</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
+          <div class="flex items-center justify-between">
+            主题 :
+            <select v-model="themeMode">
+              <option value="auto">跟随系统</option>
+              <option value="light">白天</option>
+              <option value="dark">黑夜</option>
             </select>
           </div>
-          <div class="flex items-center justify-between ml-1 mr-1">
-            Notifications :
-            <select v-model="settings.notification.enabled" class="w-18 ml-2">
-              <option :value=true>On</option>
-              <option :value=false>Off</option>
+          <div class="flex items-center justify-between">
+            通知 :
+            <select v-model="settings.notification.enabled" class="w-20">
+              <option :value=true>启用</option>
+              <option :value=false>关闭</option>
             </select>
           </div>
           <div v-if="settings.notification.enabled" class="flex-1 min-h-0 overflow-y-auto ml-4 mb-1">
             <Checkbox v-model="settings.notification.anyLocation">
-              Any location found
+              找到任意一个街景
             </Checkbox>
             <Checkbox v-model="settings.notification.onePolygonComplete">
-              One polygon completed
+              任意区域生成完毕
             </Checkbox>
             <Checkbox v-model="settings.notification.allPolygonsComplete">
-              All polygons completed
+              所有区域生成完毕
             </Checkbox>
           </div>
         </Collapsible>
@@ -45,7 +45,7 @@
     <div class="flex-1 min-h-0 flex flex-col gap-1">
       <div v-if="!state.started" class="container flex flex-col">
         <div class="relative cursor-pointer" @click="panels.layer = !panels.layer">
-          <h2>Layers</h2>
+          <h2>图层</h2>
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
         </div>
 
@@ -55,11 +55,11 @@
               <span class="truncate">{{ layer.label }}</span>
             </Checkbox>
             <div class="flex gap-1">
-              <Button size="sm" @click="selectLayer(layer.key)">Select All</Button>
+              <Button size="sm" @click="selectLayer(layer.key)">选择全部</Button>
               <Button size="sm" variant="danger" @click="deselectLayer(layer.key)">
-                Deselect All
+                取消选择
               </Button>
-              <Button squared size="sm" title="Export layer" @click="exportLayer(layer as LayerMeta)">
+              <Button squared size="sm" title="输出GeoJSON" @click="exportLayer(layer as LayerMeta)">
                 <FileExportIcon class="w-5 h-5" />
               </Button>
             </div>
@@ -71,20 +71,20 @@
       <div v-if="!state.started" class="container font-bold text-center">{{ select }}</div>
 
       <div v-if="selected.length" class="container flex-1 min-h-0 flex flex-col gap-1">
-        <h2>Countries/Territories ({{ selected.length }})</h2>
+        <h2>国家/地区 ({{ selected.length }})</h2>
         <div class="px-1">
           <Checkbox v-model="settings.markersOnImport" title="This may affect performance.">
-            Add markers to imported locations
+            为导入街景添加标记
           </Checkbox>
           <Checkbox v-model="settings.checkImports" title="Useful for comprehensive datasets.">
-            Check imported locations
+            检查导入街景
           </Checkbox>
           <hr />
         </div>
 
         <div class="flex flex-col gap-1 overflow-y-auto px-1 pb-1">
           <div v-for="polygon of selected" :key="polygon._leaflet_id" class="flex items-center gap-2">
-            <Button size="sm" squared title="Import locations">
+            <Button size="sm" squared title="导入街景">
               <label class="cursor-pointer">
                 <input type="file" accept=".json" hidden @change="importLocations($event, polygon as Polygon)" />
                 <FileImportIcon class="w-5 h-5" />
@@ -111,7 +111,7 @@
               <ExportToJSON :data="[polygon as Polygon]" :disabled="!polygon.found.length" />
               <ExportToCSV :data="[polygon as Polygon]" :disabled="!polygon.found.length" />
               <Button size="sm" squared variant="danger" :disabled="!polygon.found.length"
-                title="Delete locations for polygon" @click="clearPolygon(polygon as Polygon)">
+                title="删除该区域生成街景" @click="clearPolygon(polygon as Polygon)">
                 <TrashBinIcon class="w-5 h-5" />
               </Button>
             </div>
@@ -122,16 +122,16 @@
 
     <div class="container">
       <div class="flex items-center gap-2 p-1">
-        <h2>Export all ({{ totalLocs }})</h2>
-        <Button class="ml-auto" size="sm" title="Change locations cap for all selected" @click="changeLocationsCap">Edit
-          cap for all
+        <h2>导出全部 ({{ totalLocs }})</h2>
+        <Button class="ml-auto" size="sm" title="更改所有选定区域的生成数量上限" @click="changeLocationsCap">
+          更改生成数量上限
         </Button>
         <div class="flex gap-1">
           <Clipboard :data="selected as Polygon[]" :disabled="!totalLocs" />
           <Clipboard_Prefix :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider" />
           <ExportToJSON :data="selected as Polygon[]" :disabled="!totalLocs" />
           <ExportToCSV :data="selected as Polygon[]" :disabled="!totalLocs" />
-          <Button size="sm" squared variant="danger" :disabled="!totalLocs" title="Delete all locations"
+          <Button size="sm" squared variant="danger" :disabled="!totalLocs" title="删除所有生成街景"
             @click="clearAllLocations">
             <TrashBinIcon class="w-5 h-5" />
           </Button>
@@ -144,24 +144,24 @@
     <div class="flex flex-col gap-1 flex-1 min-h-0">
       <div v-if="!state.started" class="container flex flex-col">
         <div class="relative cursor-pointer" @click="panels.generatorSettings = !panels.generatorSettings">
-          <h2>Generator settings</h2>
+          <h2>生成器设置</h2>
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
         </div>
         <Collapsible :is-open="panels.generatorSettings" class="mt-1 p-1 pr-2">
-          <div class="flex items-center justify-between ml-1 mr-1">
-            Provider :
+          <div class="flex items-center justify-between mr-1">
+            街景服务 :
             <select v-model="settings.provider" @change="toggleMap(settings.provider)">
-              <option value="google">Google</option>
-              <option value="apple">Apple</option>
-              <option value="bing">Bing</option>
+              <option value="google">谷歌</option>
+              <option value="apple">苹果</option>
+              <option value="bing">必应</option>
               <option value="yandex">Yandex</option>
-              <option value="tencent">Tencent</option>
-              <option value="baidu">Baidu</option>
+              <option value="tencent">腾讯</option>
+              <option value="baidu">百度</option>
               <option value="kakao">Kakao</option>
             </select>
           </div>
           <div class="flex justify-between">
-            Generators :
+            生成器数量 :
             <div class="flex items-center gap-4">
               <input type="number" v-model.number="settings.numOfGenerators" min="1" max="10"
                 class="w-10 h-5 px-2 py-1 border rounded text-right" />
@@ -170,32 +170,32 @@
           </div>
 
           <div class="flex justify-between">
-            Speed:
+            速度:
             <span>
               <input type="number" v-model.number="settings.speed" min="1" max="1000" @change="handleSpeedInput" />
-              attemps
+              次尝试
             </span>
           </div>
 
           <div class="flex items-center justify-between">
-            Radius :
+            搜索半径 :
             <span>
               <input type="number" v-model.number="settings.radius" @change="handleRadiusInput" />
-              m
+              米
             </span>
           </div>
 
           <Checkbox v-model="settings.oneCountryAtATime">
-            Only check one country/polygon at a time.
+            一次只检查一个国家/区域
           </Checkbox>
 
           <Checkbox v-model="settings.onlyCheckBlueLines"
             title="Significatly speeds up generation in areas with sparse coverage density. May negatively affect speeds if generating locations exclusively in areas with very dense coverage. (Official coverage only)">
-            Only check in areas with blue lines
+            只检查有蓝线覆盖的区域
           </Checkbox>
 
           <div v-if="!settings.rejectOfficial">
-            <Checkbox v-model="settings.findRegions">Minimum distance between locations</Checkbox>
+            <Checkbox v-model="settings.findRegions">生成街景之间的最小距离</Checkbox>
             <div v-if="settings.findRegions" class="ml-6">
               <input type="number" v-model.number="settings.regionRadius" /> <span> km </span>
             </div>
@@ -205,38 +205,38 @@
 
       <div v-if="!state.started" class="container flex flex-col flex-1 min-h-0">
         <div class="cursor-pointer relative" @click="panels.coverageSettings = !panels.coverageSettings">
-          <h2>Coverage settings</h2>
+          <h2>街景设置</h2>
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
         </div>
         <div class="flex-1 min-h-0 overflow-y-auto">
           <Collapsible :is-open="panels.coverageSettings" class="p-1">
-            <Checkbox v-if="!settings.rejectOfficial" v-model="settings.rejectUnofficial">Reject unofficial</Checkbox>
+            <Checkbox v-if="!settings.rejectOfficial" v-model="settings.rejectUnofficial">拒绝非官方街景</Checkbox>
 
-            <Checkbox v-model="settings.rejectOfficial">Find unofficial coverage</Checkbox>
-            <Checkbox v-if="settings.rejectOfficial" v-model="settings.findPhotospheres">Find photospheres only
+            <Checkbox v-model="settings.rejectOfficial">寻找非官方街景</Checkbox>
+            <Checkbox v-if="settings.rejectOfficial" v-model="settings.findPhotospheres">只寻找非官方个人街景
             </Checkbox>
-            <Checkbox v-if="settings.rejectOfficial" v-model="settings.findDrones">Find drone photospheres only
+            <Checkbox v-if="settings.rejectOfficial" v-model="settings.findDrones">只寻找非官方鸟瞰街景
             </Checkbox>
 
             <div v-if="settings.rejectUnofficial && !settings.rejectOfficial">
-              <Checkbox v-model="settings.rejectDateless">Reject locations without date</Checkbox>
+              <Checkbox v-model="settings.rejectDateless">拒绝无日期的街景</Checkbox>
 
               <Checkbox v-if="!settings.rejectDescription" v-model="settings.rejectNoDescription">
-                Reject locations without description
+                拒绝无描述的街景
               </Checkbox>
-              <Checkbox v-if="settings.provider === 'google'" v-model="settings.ignoreBadcam">Ignore BadCam</Checkbox>
-              <Checkbox v-model="settings.rejectDescription">Find trekker coverage</Checkbox>
+              <Checkbox v-if="settings.provider === 'google'" v-model="settings.ignoreBadcam">忽略印度相机</Checkbox>
+              <Checkbox v-model="settings.rejectDescription">寻找徒步者街景</Checkbox>
 
               <Checkbox v-model="settings.findNightCoverage" v-if="settings.provider === 'tencent'">
-                Find night coverage
+                寻找夜晚街景
               </Checkbox>
 
               <Checkbox v-model="settings.onlyOneInTimeframe"
                 title="Only allow locations that don't have other nearby coverage in timeframe.">
-                Only one panorama on location
+                一个位置仅一张街景
               </Checkbox>
 
-              <Checkbox v-model="settings.checkLinks">Check linked panos</Checkbox>
+              <Checkbox v-model="settings.checkLinks">检查相邻街景</Checkbox>
               <div v-if="settings.checkLinks" class="flex items-center justify-between ml-6">
                 Depth :
                 <div class="flex items-center gap-2">
@@ -246,8 +246,7 @@
               </div>
 
               <Checkbox v-model="settings.findByGeneration.enabled"
-                v-if="['google', 'apple', 'bing', 'yandex'].includes(settings.provider)">Find by
-                generation</Checkbox>
+                v-if="['google', 'apple', 'bing', 'yandex'].includes(settings.provider)">根据街景种类/相机代数过滤</Checkbox>
               <div v-if="settings.findByGeneration.enabled && settings.provider === 'google'" class="ml-6">
                 <Checkbox v-model="settings.findByGeneration.google[1]">Gen 1</Checkbox>
                 <Checkbox v-model="settings.findByGeneration.google[2]">Gen 2</Checkbox>
@@ -268,26 +267,26 @@
               <div v-if="settings.findByGeneration.enabled && settings.provider === 'yandex'" class="ml-6">
                 <Checkbox v-model="settings.findByGeneration.yandex[1]">Gen 1</Checkbox>
                 <Checkbox v-model="settings.findByGeneration.yandex[2]">Gen 2</Checkbox>
-                <Checkbox v-model="settings.findByGeneration.yandex.trekker">Trekker</Checkbox>
+                <Checkbox v-model="settings.findByGeneration.yandex.trekker">徒步者</Checkbox>
               </div>
             </div>
 
             <div v-if="!settings.selectMonths" class="flex flex-col gap-0.5">
               <div class="flex justify-between">
-                From :
+                从 :
                 <input type="month" v-model="settings.fromDate" min="2007-01" :max="currentDate" />
               </div>
               <div class="flex justify-between">
-                To :
+                至 :
                 <input type="month" v-model="settings.toDate" min="2007-01" :max="currentDate" />
               </div>
             </div>
 
             <div v-if="!settings.rejectOfficial">
-              <Checkbox v-model="settings.selectMonths">Filter by months</Checkbox>
+              <Checkbox v-model="settings.selectMonths">按月份过滤</Checkbox>
               <div v-if="settings.selectMonths" class="flex flex-col gap-0.5 ml-6">
                 <div>
-                  From
+                  从
                   <select v-model="settings.fromMonth">
                     <option value="01">January</option>
                     <option value="02">February</option>
@@ -302,7 +301,7 @@
                     <option value="11">November</option>
                     <option value="12">December</option>
                   </select>
-                  to
+                  至
                   <select v-model="settings.toMonth">
                     <option value="01">January</option>
                     <option value="02">February</option>
@@ -319,16 +318,17 @@
                   </select>
                 </div>
                 <div>
-                  Between
+                  在
                   <input type="number" v-model.number="settings.fromYear" min="2007" />
-                  and
+                  和
                   <input type="number" v-model.number="settings.toYear" min="2007" />
+                  之间
                 </div>
               </div>
             </div>
 
             <div v-if="settings.provider != 'google'" class="flex items-center">
-              <Checkbox v-model="settings.filterByMinutes.enabled">Filter by minutes</Checkbox>
+              <Checkbox v-model="settings.filterByMinutes.enabled">按分钟过滤</Checkbox>
               <Slider v-if="settings.filterByMinutes.enabled" v-model="settings.filterByMinutes.range" :min="0"
                 :max="1439" :step="5" :showTooltip="'focus'" :range="true" class="w-48 ml-2" :format="val => {
                   const h = Math.floor(val / 60).toString().padStart(2, '0')
@@ -344,10 +344,10 @@
               </span>
             </div>
 
-            <Checkbox v-model="settings.checkAllDates">Check all dates</Checkbox>
+            <Checkbox v-model="settings.checkAllDates">检查历史街景</Checkbox>
 
             <Checkbox v-if="settings.rejectUnofficial && !settings.rejectOfficial" v-model="settings.randomInTimeline">
-              Choose random date in time range
+              从历史街景中随机选择
             </Checkbox>
           </Collapsible>
         </div>
@@ -356,26 +356,25 @@
       <div v-if="!state.started && settings.rejectUnofficial && !settings.rejectOfficial"
         class="container settings flex flex-col flex-1 min-h-0">
         <div class="cursor-pointer relative" @click="panels.mapMakingSettings = !panels.mapMakingSettings">
-          <h2>Map making settings</h2>
+          <h2>题库设置</h2>
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
         </div>
 
         <div class="flex-1 min-h-0 overflow-y-auto">
           <Collapsible :is-open="panels.mapMakingSettings" class="p-1">
             <div class="flex items-center gap-1 relative">
-              <Checkbox v-model="settings.searchInDescription.enabled">Search in panorama description
+              <Checkbox v-model="settings.searchInDescription.enabled">根据街景描述过滤
               </Checkbox>
               <Tooltip>
-                Description is usually based on your locale.<br />
-                You can enter multiple search terms separated by commas.
+                您可以输入由逗号分开的多个搜索关键词。
               </Tooltip>
             </div>
 
             <div v-if="settings.searchInDescription.enabled" class="space-y-0.5 ml-6 py-1">
               <div class="flex justify-between items-center gap-1">
                 <select v-model="settings.searchInDescription.filterType">
-                  <option value="include">include</option>
-                  <option value="exclude">exclude</option>
+                  <option value="include">包括</option>
+                  <option value="exclude">排除</option>
                 </select>
                 <input type="text" v-model.trim="settings.searchInDescription.searchTerms" class="w-full" />
               </div>
@@ -403,7 +402,7 @@
               </div>
             </div>
 
-            <Checkbox v-model="settings.findByTileColor.enabled">Find by tile color</Checkbox>
+            <Checkbox v-model="settings.findByTileColor.enabled">根据地图瓦片颜色过滤</Checkbox>
             <div v-if="settings.findByTileColor.enabled" class="space-y-0.5 ml-6 pb-1">
               <div class="flex justify-between items-center gap-2">
                 Include/Exclude :
@@ -453,16 +452,16 @@
             </div>
 
             <Checkbox v-model="settings.filterByLinksLength.enabled">
-              Filter by links length
+              按相邻街景数量过滤
             </Checkbox>
             <div v-if="settings.filterByLinksLength.enabled" class="ml-6">
               <label class="flex items-center justify-between">
                 <div class="flex items-center gap-1 relative">
-                  Range
+                  范围
                   <Tooltip>
-                    0 : photosphere/isolated<br />
-                    1 : one arrow (dead end)<br />
-                    > 2 : intersection
+                    0 : 孤立街景<br />
+                    1 : 道路尽头<br />
+                    > 2 : 路口
                   </Tooltip>
                 </div>
                 <Slider v-model="settings.filterByLinksLength.range" :min="0" :max="5" tooltipPosition="bottom"
@@ -472,11 +471,11 @@
 
             <Checkbox v-if="['apple', 'bing', 'baidu', 'google'].includes(settings.provider)"
               v-model="settings.filterByAltitude.enabled">
-              Filter by altitude</Checkbox>
+              根据海拔高度过滤</Checkbox>
             <div v-if="settings.filterByAltitude.enabled" class="ml-6">
               <label class="flex items-center justify-between">
                 <div class="flex items-center gap-1 relative">
-                  Meters
+                  米
                 </div>
                 <Slider v-if="settings.filterByAltitude.enabled" v-model="settings.filterByAltitude.range" :min="-200"
                   :max="8848" :step="10" :showTooltip="'always'" :range="true" :format="val => `${Math.round(val)}m`"
@@ -484,52 +483,52 @@
               </label>
             </div>
 
-            <Checkbox v-model="settings.getCurve"> Find curve locations </Checkbox>
+            <Checkbox v-model="settings.getCurve"> 寻找路弯街景 </Checkbox>
 
             <label v-if="settings.getCurve" class="ml-6 flex items-center justify-between">
-              Min curve angle ({{ settings.minCurveAngle }}°)
+              最小弯曲角度 ({{ settings.minCurveAngle }}°)
               <input type="range" v-model.number="settings.minCurveAngle" min="5" max="90" />
             </label>
 
-            <Checkbox v-model="settings.heading.adjust">Set heading</Checkbox>
+            <Checkbox v-model="settings.heading.adjust">调整视角朝向</Checkbox>
             <div v-if="settings.heading.adjust" class="ml-6">
               <label class="flex items-center gap-2 cursor-pointer">
                 <input type="radio" v-model="settings.heading.reference" value="link" />
-                Along road
+                向路边
               </label>
               <label class="flex items-center gap-2 cursor-pointer">
                 <input type="radio" v-model="settings.heading.reference" value="forward" />
-                To front of car
+                向车头
               </label>
               <label class="flex items-center gap-2 cursor-pointer">
                 <input type="radio" v-model="settings.heading.reference" value="backward" />
-                To back of car
+                向车尾
               </label>
               <label class="flex items-center justify-between">
-                Deviation
+                偏移度
                 <Slider v-model="settings.heading.range" :min="-180" :max="180" tooltipPosition="bottom"
                   class="w-32 pr-2" />
               </label>
-              <small>0° will point directly towards the road.</small>
-              <Checkbox v-model="settings.heading.randomInRange">Random in range</Checkbox>
+              <small>0° 和道路保持一致方向。</small>
+              <Checkbox v-model="settings.heading.randomInRange">随机偏移</Checkbox>
             </div>
 
             <div class="flex items-center justify-between">
-              <Checkbox v-model="settings.pitch.adjust">Set pitch</Checkbox>
+              <Checkbox v-model="settings.pitch.adjust">调整俯仰角度</Checkbox>
               <Slider v-if="settings.pitch.adjust" v-model="settings.pitch.range" :min="-90" :max="90"
                 tooltipPosition="bottom" class="w-32 pr-2" />
             </div>
             <div v-if="settings.pitch.adjust" class="ml-6">
-              <small>0° by default. -90° for tarmac, +90° for sky</small>
-              <Checkbox v-model="settings.pitch.randomInRange">Random in range</Checkbox>
+              <small>默认 0°， -90° 对准地面，+90° 对准天空</small>
+              <Checkbox v-model="settings.pitch.randomInRange">随机取值</Checkbox>
             </div>
 
             <div class="flex items-center justify-between">
-              <Checkbox v-model="settings.zoom.adjust">Set zoom</Checkbox>
+              <Checkbox v-model="settings.zoom.adjust">调整缩放水平</Checkbox>
               <Slider v-if="settings.zoom.adjust" v-model="settings.zoom.range" :min="0" :max="4" :step="-1"
                 tooltipPosition="bottom" class="w-32 pr-2" />
             </div>
-            <Checkbox v-if="settings.zoom.adjust" v-model="settings.zoom.randomInRange" class="ml-6">Random in range
+            <Checkbox v-if="settings.zoom.adjust" v-model="settings.zoom.randomInRange" class="ml-6">随机取值
             </Checkbox>
           </Collapsible>
         </div>
@@ -537,7 +536,7 @@
 
       <div class="container flex flex-col">
         <div class="cursor-pointer relative" @click="panels.marker = !panels.marker">
-          <h2>Markers</h2>
+          <h2>标记</h2>
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
         </div>
 
@@ -562,18 +561,18 @@
             <span class="h-3 w-3 bg-[#24AC20] rounded-full"></span>Gen 1 Update
           </Checkbox>
           <Checkbox v-model="settings.markers.cluster" v-on:change="updateClusters" title="For lag reduction.">
-            Cluster markers
+            聚合标记
           </Checkbox>
           <Button :disabled="!totalLocs" size="sm" variant="warning"
             class="mt-2 w-full justify-center flex items-center gap-1"
             title="Clear markers (for performance, this won't erase your generated locations)" @click="clearMarkers">
-            <MarkerIcon class="w-5 h-5" />Clear
+            <MarkerIcon class="w-5 h-5" />清理
           </Button>
         </Collapsible>
       </div>
 
       <Button v-if="canBeStarted" @click="handleClickStart" :variant="state.started ? 'danger' : 'primary'"
-        title="Space bar/Enter">{{ state.started ? 'Pause' : 'Start' }}
+        title="Space bar/Enter">{{ state.started ? '暂停' : '开始' }}
       </Button>
     </div>
   </div>
@@ -582,7 +581,7 @@
 <script setup lang="ts">
 // @ts-nocheck
 import { onMounted, watch, computed } from 'vue'
-import { formatDate, useStorage, useColorMode } from '@vueuse/core'
+import { useStorage, useColorMode } from '@vueuse/core'
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon'
 import { llToPX } from 'web-merc-projection'
 

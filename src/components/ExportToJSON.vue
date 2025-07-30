@@ -1,5 +1,5 @@
 <template>
-  <Button size="sm" squared :disabled title="Export to JSON" @click="handleExport">
+  <Button size="sm" squared :disabled title="输出为JSON文件" @click="handleExport">
     <FileExportIcon class="w-5 h-5" />
   </Button>
 </template>

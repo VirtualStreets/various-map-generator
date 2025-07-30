@@ -32,17 +32,17 @@ let map: L.Map
 const currentZoom = ref(1)
 
 const roadmapBaseLayer = L.tileLayer(
-  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m2!1e0!2sm!3m5!2sen!3sus!5e1105!12m1!1e3!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
+  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m2!1e0!2sm!3m7!2sen!3scn!5e1105!12m1!1e3!12m1!1e2!4e0!5m5!1e0!8m2!1e1!1e1!8i47083502!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
   { minZoom: 1, maxZoom: 20 },
 )
 const roadmapLabelsLayer = L.tileLayer(
-  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m2!1e0!2sm!3m5!2sen!3sus!5e1105!12m1!1e15!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
+  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m2!1e0!2sm!3m7!2sen!3scn!5e1105!12m1!1e2!12m1!1e15!4e0!5m5!1e0!8m2!1e1!1e1!8i47083502!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
   { minZoom: 1, maxZoom: 20, pane: 'labelPane' },
 )
 const roadmapLayer = L.layerGroup([roadmapBaseLayer, roadmapLabelsLayer])
 
 const terrainBaseLayer = L.tileLayer(
-  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m2!1e0!2sm!2m1!1e4!3m7!2sen!3sus!5e1105!12m1!1e67!12m1!1e3!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
+  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m2!1e0!2sm!2m1!1e4!3m9!2sen!3scn!5e1105!12m1!1e67!12m1!1e3!12m1!1e2!4e0!5m5!1e0!8m2!1e1!1e1!8i47083502!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
   { minZoom: 1, maxZoom: 20 },
 )
 const terrainLayer = L.layerGroup([terrainBaseLayer, roadmapLabelsLayer])
@@ -52,7 +52,7 @@ const satelliteBaseLayer = L.tileLayer(
   { minZoom: 1, maxZoom: 20 },
 )
 const satelliteLabelsLayer = L.tileLayer(
-  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m2!1e0!2sm!3m5!2sen!3sus!5e1105!12m1!1e4!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
+  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m2!1e0!2sm!3m5!2sen!3scn!5e1105!12m1!1e4!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
   { pane: 'labelPane' },
 )
 const satelliteLayer = L.layerGroup([satelliteBaseLayer, satelliteLabelsLayer])
@@ -66,7 +66,7 @@ const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
 
 const bingMapsLayer=L.layerGroup([bingBaseLayer, bingTerrainLayer])
 
-const petalMapsLayer = L.tileLayer("https://maprastertile-drcn.dbankcdn.cn/display-service/v1/online-render/getTile/24.12.10.10/{z}/{x}/{y}/?language=en&p=46&scale=2&mapType=ROADMAP&presetStyleId=standard&pattern=JPG&key=DAEDANitav6P7Q0lWzCzKkLErbrJG4kS1u%2FCpEe5ZyxW5u0nSkb40bJ%2BYAugRN03fhf0BszLS1rCrzAogRHDZkxaMrloaHPQGO6LNg==",
+const petalMapsLayer = L.tileLayer("https://maprastertile-drcn.dbankcdn.cn/display-service/v1/online-render/getTile/24.12.10.10/{z}/{x}/{y}/?language=zh&p=46&scale=2&mapType=ROADMAP&presetStyleId=standard&pattern=JPG&key=DAEDANitav6P7Q0lWzCzKkLErbrJG4kS1u%2FCpEe5ZyxW5u0nSkb40bJ%2BYAugRN03fhf0BszLS1rCrzAogRHDZkxaMrloaHPQGO6LNg==",
   { maxZoom: 20 }
 )
 
@@ -81,10 +81,6 @@ const gsvLayer2 = L.tileLayer(
   { maxZoom: 20 }
 )
 const gsvLayer3 = L.tileLayer(
-  'https://maps.googleapis.com/maps/vt?pb=!1m5!1m4!1i{z}!2i{x}!3i{y}!4i256!2m8!1e2!2ssvv!4m2!1scb_client!2sapiv3!4m2!1scc!2s*211m3*211e3*212b1*213e2*211m3*211e2*212b1*213e2!3m3!3sUS!12m1!1e68!4e0',
-  { minZoom: 12, minNativeZoom: 14 },
-)
-const gsvLayer4 = L.tileLayer(
   'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e3*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
   { maxZoom: 20 }
 )
@@ -97,26 +93,25 @@ const yandexCoverageLayer = new YandexLayer()
 
 
 const baseMaps = {
-  "Google Roadmap": roadmapLayer,
-  "Google Satellite": satelliteLayer,
-  "Google Terrain": terrainLayer,
+  "谷歌地图": roadmapLayer,
+  "谷歌卫星图": satelliteLayer,
+  "谷歌地形图": terrainLayer,
+  "必应地图": bingMapsLayer,
+  "腾讯地图": tencentBaseLayer,
+  "华为地图": petalMapsLayer,
   OSM: osmLayer,
-  Bing: bingMapsLayer,
-  Tencent: tencentBaseLayer,
-  Petal: petalMapsLayer,
 }
 
 const overlayMaps = {
-  'Google Street View': gsvLayer,
-  'Google Street View Official Only': gsvLayer2,
-  'Google Street View Roads (Only Works at Zoom Level 12+)': gsvLayer3,
-  'Google Unofficial coverage only': gsvLayer4,
-  'Apple Look Around': appleCoverageLayer,
-  'Apple Look Around (Only Works at Zoom Level 7+)':AppleLayer,
-  'Bing Streetside': bingStreetideLayer,
-  'Yandex Panorama': yandexCoverageLayer,
-  'Tencent Street View': TencentCoverageLayer,
-  'Baidu Street View': baiduCoverageLayer,
+  '谷歌街景': gsvLayer,
+  '谷歌官方街景': gsvLayer2,
+  '谷歌非官方街景': gsvLayer3,
+  '苹果街景': appleCoverageLayer,
+  '苹果街景（Zoom 7+ 启用）':AppleLayer,
+  '必应街景': bingStreetideLayer,
+  'Yandex全景（Zoom 6+ 启用）': yandexCoverageLayer,
+  '腾讯街景（Zoom 5+ 启用）': TencentCoverageLayer,
+  '百度街景（Zoom 5+ 启用）': baiduCoverageLayer,
 }
 
 const allLayers = [
@@ -342,8 +337,8 @@ const storedLayers = useStorage<{
   base: BaseMapName
   overlays: OverlayMapName[]
 }>('map_generator__layers', {
-  base: 'Google Roadmap',
-  overlays: ['Google Street View Official Only'],
+  base: '谷歌地图',
+  overlays: ['谷歌街景'],
 })
 
 const baseLayerToName = new Map<L.Layer, string>()
@@ -373,19 +368,19 @@ export interface LayerMeta {
 }
 const availableLayers = ref<LayerMeta[]>([
   {
-    label: 'World Borders',
+    label: '全球各国边界',
     key: 'world_borders',
     source: '/geojson/world_borders.json',
     visible: true,
   },
   {
-    label: 'China Borders',
+    label: '中国省级边界',
     key: 'china_borders',
     source: '/geojson/china_borders.json',
     visible: false,
   },
   {
-    label: 'Drawn polygons',
+    label: '自定义区域',
     key: 'drawn_polygons',
     source: drawnPolygonsLayer,
     visible: true,
@@ -570,7 +565,7 @@ function resetHighlight(e: L.LeafletMouseEvent) {
   if (!selected.value.some((x) => x._leaflet_id === polygon._leaflet_id)) {
     polygon.setStyle(polygonStyles.removeHighlight())
   }
-  select.value = 'Select a country or draw a polygon'
+  select.value = '选择一个国家/地区或绘制一个区域'
 }
 
 const polygonStyles = {

@@ -1,5 +1,5 @@
 <template>
-  <Button size="sm" squared :disabled title="Export to CSV" @click="handleExport">
+  <Button size="sm" squared :disabled title="输出为CSV文件" @click="handleExport">
     <FileCSV class="w-5 h-5" />
   </Button>
 </template>
