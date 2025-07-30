@@ -1,2 +1,8 @@
-# various-map-generator
-Geoguessr/Tuxun map generator(supports multi-providers)
+# MapGenerator
+
+Geoguessr/Tuxun map generator (supports multi-providers)
+
+```shell
+$ npm install
+$ npm run dev
+```

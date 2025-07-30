@@ -1,0 +1,131 @@
+@import url('https://fonts.googleapis.com/css?family=Montserrat:400,700');
+@import url('./flags/flag-icon.min.css');
+
+@import 'tailwindcss';
+
+@theme {
+  --color-primary: #53e0aa;
+  --color-danger: #e66a6a;
+  --color-warning: #ffc72d;
+}
+
+body {
+  background-color: #242424;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  color: #fff;
+}
+
+h2 {
+  @apply text-center font-bold;
+}
+
+a {
+  color: var(--color-primary);
+}
+
+input,
+select {
+  @apply bg-black/50 text-center rounded-sm outline-none hover:brightness-120;
+}
+
+select {
+  @apply border border-neutral-500 px-1 cursor-pointer;
+}
+
+input[type='number'] {
+  @apply max-w-14 border border-neutral-500;
+  -moz-appearance: textfield;
+}
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+input[type='range'] {
+  @apply max-w-32 appearance-none bg-transparent;
+}
+/* Chrome, Safari, Edge (Chromium) */
+input[type='range']::-webkit-slider-runnable-track {
+  @apply bg-black/50 h-1.5 rounded-sm;
+}
+input[type='range']::-webkit-slider-thumb {
+  @apply appearance-none w-3 h-3 rounded-full mt-[-0.25rem] bg-white cursor-grab;
+}
+/* Firefox */
+input[type='range']::-moz-range-track {
+  @apply bg-black/50 h-1.5 rounded-sm;
+}
+input[type='range']::-moz-range-thumb {
+  @apply appearance-none border-none w-3 h-3 rounded-full bg-white cursor-grab;
+}
+
+.settings input[type='radio'] {
+  @apply appearance-none grid place-content-center w-4 h-4 border border-neutral-500 rounded-full;
+}
+.settings input[type='radio']::before {
+  @apply content-[''] w-2 h-2 rounded-full shadow-[inset_1rem_1rem_var(--color-primary)] transition-transform duration-120 ease-in-out;
+  transform: scale(0);
+}
+.settings input[type='radio']:checked::before {
+  transform: scale(1);
+}
+
+input[type='file'] {
+  @apply text-xs bg-transparent file:mr-4 file:py-0.5 file:px-1 file:rounded-sm file:cursor-pointer file:text-black file:bg-primary;
+}
+
+input[type='month'] {
+  @apply scheme-dark w-40 px-2 bg-black/50 border border-neutral-500 rounded-sm;
+}
+
+hr {
+  @apply h-px my-2 mx-8 bg-primary border-none;
+}
+
+.small {
+  font-size: 0.8rem;
+}
+
+::-webkit-scrollbar {
+  width: 0.25rem;
+}
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+::-webkit-scrollbar-thumb {
+  border-radius: 2px;
+  background: rgb(255, 255, 255);
+}
+
+/* Collapsible */
+@keyframes slideDown {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--height);
+  }
+}
+@keyframes slideUp {
+  from {
+    height: var(--height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+/* Collapsible */
+[data-scope='collapsible'][data-state='open'] {
+  animation: slideDown 250ms ease-in-out;
+}
+[data-scope='collapsible'][data-state='closed'] {
+  animation: slideUp 200ms ease-in-out;
+}
+.collapsible-indicator {
+  @apply w-5 h-5 transform duration-150;
+}
+.container:has([data-scope='collapsible'][data-state='open']) .collapsible-indicator {
+  @apply rotate-180;
+}
