@@ -1,3 +1,5 @@
+import L from 'leaflet'
+
 export function sendNotification(title: string, body: string) {
   try {
     if (Notification.permission === 'granted') {
@@ -10,9 +12,6 @@ export function sendNotification(title: string, body: string) {
 
 export function isOfficial(pano: string, provider: string) {
   switch (provider) {
-    case 'google':
-      return pano.length === 22  // Checks if pano ID is 22 characters long. Otherwise, it's an Ari
-    // return (!/^\xA9 (?:\d+ )?Google$/.test(pano.copyright))
     case 'apple':
       return pano.length === 19
     case 'bing':
@@ -30,28 +29,17 @@ export function isOfficial(pano: string, provider: string) {
   }
 }
 
-export function isPhotosphere(res: google.maps.StreetViewPanoramaData) {
-  return res.links?.length === 0
-}
 
-export function isDrone(res: google.maps.StreetViewPanoramaData) {
-  return isPhotosphere(res) && [2048, 7200].includes(res.tiles.worldSize.height)
-}
-
-export function hasAnyDescription(location: google.maps.StreetViewLocation) {
+export function hasAnyDescription(location: StreetViewLocation) {
   return location.description || location.shortDescription
 }
 
-export function getStreetViewStatus(key: keyof typeof google.maps.StreetViewStatus): google.maps.StreetViewStatus {
-  return google?.maps?.StreetViewStatus?.[key] ?? key
-}
-
-export function makeLatLng(lat: number, lng: number): google.maps.LatLng {
-  return new google.maps.LatLng(lat, lng)
+export function makeLatLng(lat: number, lng: number): LatLng {
+  return new L.LatLng(lat, lng)
 }
 
 export function isAcceptableCurve(
-  links: google.maps.StreetViewLink[],
+  links: StreetViewLink[],
   minCurveAngle: number,
 ): boolean {
   if (links.length !== 2 || links[0].heading == null || links[1].heading == null) return false
@@ -62,67 +50,23 @@ export function isAcceptableCurve(
   return curveAngle >= minCurveAngle
 }
 
-export function getCameraGeneration(pano: google.maps.StreetViewPanoramaData, provider: string) {
-  if (provider === 'google') {
-    const gen3Dates: any = {
-      'BD': '2021-04', 'EC': '2022-03', 'FI': '2020-09', 'IN': '2021-10', 'LK': '2021-02', 'KH': '2022-10',
-      'LB': '2021-05', 'NG': '2021-06', 'ST': '2024-02', 'US': '2019-01', 'VN': '2021-01', 'ES': '2023-01'
-    };
-    const gen2Countries = new Set(['AU', 'BR', 'CA', 'CL', 'JP', 'GB', 'IE', 'NZ', 'MX', 'RU', 'US', 'IT', 'DK', 'GR', 'RO',
-      'PL', 'CZ', 'CH', 'SE', 'FI', 'BE', 'LU', 'NL', 'ZA', 'SG', 'TW', 'HK', 'MO', 'MC', 'SM',
-      'AD', 'IM', 'JE', 'FR', 'DE', 'ES', 'PT', 'SJ']);
-    const country = pano.location?.country ?? 'None'
-    const targetDate = country in gen3Dates ? gen3Dates[country] : '9999-99'
-    const lat: number = pano.location?.latLng?.lat() ?? 0
-    const { worldSize } = pano.tiles
-    switch (worldSize.height) {
-      case 1664:
-        return 1
-      case 6656:
-        if (country && pano.imageDate) {
-          if (pano.imageDate >= targetDate) {
-            if (country !== 'US') return 'badcam'
-            if (country === 'US' && lat > 52) return 'badcam'
-          }
-
-          if (gen2Countries.has(country) && pano.imageDate <= '2011-11') {
-            return pano.imageDate >= '2010-09' ? 23 : 2;
-          }
-        }
-        return 3
-      case 8192:
-        return 4
-      default:
-        return 0
-    }
+export function getCameraGeneration(
+  pano: StreetViewPanoramaData,
+  provider: string
+): number | string {
+  const { width } = pano.tiles.worldSize;
+  if (provider === 'apple' || provider === 'bing') {
+    return Number(pano.location?.description);
   }
-  else if (['apple', 'bing'].includes(provider)) {
-    return Number(pano.location?.description)
+
+  if (provider === 'yandex') {
+    if (!width) return 0;
+    if (width === 17664) return 2;
+    if (width === 5632) return 1;
+    return 'trekker';
   }
-  else if (provider === 'yandex') {
-    const world_width = pano.tiles.worldSize.width
-    if (!world_width) return 0
-    if (world_width == 17664) return 2
-    else if (world_width == 5632) return 1
-    else return 'trekker'
 
-  }
-}
-
-export function createPayload(
-  pano: string
-): string {
-  let payload: any;
-  let pano_type: number = 2;
-  if (pano.slice(0, 4) == 'CIHM' || pano.length != 22) pano_type = 10
-  payload = [
-    ["apiv3", null, null, null, "US", null, null, null, null, null, [[0]]],
-    ["en", "US"],
-    [[[pano_type, pano]]],
-    [[1, 2, 3, 4, 8, 6]]
-  ];
-
-  return JSON.stringify(payload);
+  return 0;
 }
 
 function normalizeText(text: string) {
@@ -151,7 +95,7 @@ function sectionmatch(text: string, target: string): boolean {
 }
 
 export function searchInDescription(
-  loc: google.maps.StreetViewLocation,
+  loc: StreetViewLocation,
   searchConfig: SearchInDescriptionConfig,
 ) {
   if (!searchConfig.searchTerms.trim()) return true

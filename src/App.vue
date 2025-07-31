@@ -4,7 +4,7 @@
   <div class="absolute bottom-1 left-1/2 -translate-x-1/2 font-bold text-xs text-black">
     Zoom : {{ currentZoom }}
   </div>
-  <div class="absolute top-1 left-1 w-100 max-h-[calc(100vh-178px)] flex flex-col gap-1">
+  <div class="absolute top-1 left-1 w-100 max-h-[calc(100vh-50px)] flex flex-col gap-1">
     <Logo />
     <div class="flex-1 min-h-0 flex flex-col gap-1">
       <div v-if="!state.started" class="container flex flex-col">
@@ -110,8 +110,8 @@
                 :prefix="settings.provider" />
               <ExportToJSON :data="[polygon as Polygon]" :disabled="!polygon.found.length" />
               <ExportToCSV :data="[polygon as Polygon]" :disabled="!polygon.found.length" />
-              <Button size="sm" squared variant="danger" :disabled="!polygon.found.length"
-                title="删除该区域生成街景" @click="clearPolygon(polygon as Polygon)">
+              <Button size="sm" squared variant="danger" :disabled="!polygon.found.length" title="删除该区域生成街景"
+                @click="clearPolygon(polygon as Polygon)">
                 <TrashBinIcon class="w-5 h-5" />
               </Button>
             </div>
@@ -131,8 +131,7 @@
           <Clipboard_Prefix :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider" />
           <ExportToJSON :data="selected as Polygon[]" :disabled="!totalLocs" />
           <ExportToCSV :data="selected as Polygon[]" :disabled="!totalLocs" />
-          <Button size="sm" squared variant="danger" :disabled="!totalLocs" title="删除所有生成街景"
-            @click="clearAllLocations">
+          <Button size="sm" squared variant="danger" :disabled="!totalLocs" title="删除所有生成街景" @click="clearAllLocations">
             <TrashBinIcon class="w-5 h-5" />
           </Button>
         </div>
@@ -151,7 +150,6 @@
           <div class="flex items-center justify-between mr-1">
             街景服务 :
             <select v-model="settings.provider" @change="toggleMap(settings.provider)">
-              <option value="google">谷歌</option>
               <option value="apple">苹果</option>
               <option value="bing">必应</option>
               <option value="yandex">Yandex</option>
@@ -189,11 +187,6 @@
             一次只检查一个国家/区域
           </Checkbox>
 
-          <Checkbox v-model="settings.onlyCheckBlueLines"
-            title="Significatly speeds up generation in areas with sparse coverage density. May negatively affect speeds if generating locations exclusively in areas with very dense coverage. (Official coverage only)">
-            只检查有蓝线覆盖的区域
-          </Checkbox>
-
           <div v-if="!settings.rejectOfficial">
             <Checkbox v-model="settings.findRegions">生成街景之间的最小距离</Checkbox>
             <div v-if="settings.findRegions" class="ml-6">
@@ -213,10 +206,6 @@
             <Checkbox v-if="!settings.rejectOfficial" v-model="settings.rejectUnofficial">拒绝非官方街景</Checkbox>
 
             <Checkbox v-model="settings.rejectOfficial">寻找非官方街景</Checkbox>
-            <Checkbox v-if="settings.rejectOfficial" v-model="settings.findPhotospheres">只寻找非官方个人街景
-            </Checkbox>
-            <Checkbox v-if="settings.rejectOfficial" v-model="settings.findDrones">只寻找非官方鸟瞰街景
-            </Checkbox>
 
             <div v-if="settings.rejectUnofficial && !settings.rejectOfficial">
               <Checkbox v-model="settings.rejectDateless">拒绝无日期的街景</Checkbox>
@@ -224,8 +213,6 @@
               <Checkbox v-if="!settings.rejectDescription" v-model="settings.rejectNoDescription">
                 拒绝无描述的街景
               </Checkbox>
-              <Checkbox v-if="settings.provider === 'google'" v-model="settings.ignoreBadcam">忽略印度相机</Checkbox>
-              <Checkbox v-model="settings.rejectDescription">寻找徒步者街景</Checkbox>
 
               <Checkbox v-model="settings.findNightCoverage" v-if="settings.provider === 'tencent'">
                 寻找夜晚街景
@@ -246,15 +233,7 @@
               </div>
 
               <Checkbox v-model="settings.findByGeneration.enabled"
-                v-if="['google', 'apple', 'bing', 'yandex'].includes(settings.provider)">根据街景种类/相机代数过滤</Checkbox>
-              <div v-if="settings.findByGeneration.enabled && settings.provider === 'google'" class="ml-6">
-                <Checkbox v-model="settings.findByGeneration.google[1]">Gen 1</Checkbox>
-                <Checkbox v-model="settings.findByGeneration.google[2]">Gen 2</Checkbox>
-                <Checkbox v-model="settings.findByGeneration.google[3]">Gen 3</Checkbox>
-                <Checkbox v-model="settings.findByGeneration.google[23]">Gen 2 & 3</Checkbox>
-                <Checkbox v-model="settings.findByGeneration.google[4]">Gen 4</Checkbox>
-                <Checkbox v-model="settings.findByGeneration.google.badcam">BadCam</Checkbox>
-              </div>
+                v-if="['apple', 'bing', 'yandex'].includes(settings.provider)">根据街景种类/相机代数过滤</Checkbox>
               <div v-if="settings.findByGeneration.enabled && settings.provider === 'apple'" class="ml-6">
                 <Checkbox v-model="settings.findByGeneration.apple.bigcam">Big Camera</Checkbox>
                 <Checkbox v-model="settings.findByGeneration.apple.smallcam">Small Camera</Checkbox>
@@ -327,7 +306,7 @@
               </div>
             </div>
 
-            <div v-if="settings.provider != 'google'" class="flex items-center">
+            <div class="flex items-center">
               <Checkbox v-model="settings.filterByMinutes.enabled">按分钟过滤</Checkbox>
               <Slider v-if="settings.filterByMinutes.enabled" v-model="settings.filterByMinutes.range" :min="0"
                 :max="1439" :step="5" :showTooltip="'focus'" :range="true" class="w-48 ml-2" :format="val => {
@@ -402,55 +381,6 @@
               </div>
             </div>
 
-            <Checkbox v-model="settings.findByTileColor.enabled">根据地图瓦片颜色过滤</Checkbox>
-            <div v-if="settings.findByTileColor.enabled" class="space-y-0.5 ml-6 pb-1">
-              <div class="flex justify-between items-center gap-2">
-                Include/Exclude :
-                <select v-model="settings.findByTileColor.filterType">
-                  <option value="include">include</option>
-                  <option value="exclude">exclude</option>
-                </select>
-              </div>
-              <div class="flex justify-between items-center gap-2">
-                Tile provider :
-                <select v-model="settings.findByTileColor.tileProvider">
-                  <option value="gmaps">Google Maps</option>
-                  <option value="osm">OSM</option>
-                </select>
-              </div>
-
-              <div class="flex justify-between items-center gap-2">
-                Tile zoom level :
-                <span class="ml-auto">
-                  {{ settings.findByTileColor.zoom }}
-                </span>
-                <input type="range" v-model.number="settings.findByTileColor.zoom" min="13" max="19" step="1"
-                  title="Tile zoom level" />
-              </div>
-
-              <div class="flex justify-between items-center gap-2">
-                Operator :
-                <select v-model="settings.findByTileColor.operator">
-                  <option value="OR">OR</option>
-                  <option value="AND">AND</option>
-                </select>
-              </div>
-
-              <div v-for="(tileColor, index) in settings.findByTileColor.tileColors[
-                settings.findByTileColor.tileProvider
-              ]" :key="index" :title="tileColor.label" class="flex items-center gap-2">
-                <Checkbox v-model="tileColor.active" class="hover:brightness-100! truncate">
-                  <span class="h-4 min-w-8" :style="{ backgroundColor: 'rgb(' + tileColor.colors[0] + ')' }" />
-                  <span class="truncate">{{ tileColor.label }}</span>
-                </Checkbox>
-                <div v-if="tileColor.threshold >= 0.01" class="flex items-center gap-2 ml-auto">
-                  <span>{{ (tileColor.threshold * 100).toFixed(0) }}%</span>
-                  <input type="range" v-model.number="tileColor.threshold" min="0.01" max="1" step="0.01"
-                    title="Color presence threshold" />
-                </div>
-              </div>
-            </div>
-
             <Checkbox v-model="settings.filterByLinksLength.enabled">
               按相邻街景数量过滤
             </Checkbox>
@@ -469,7 +399,7 @@
               </label>
             </div>
 
-            <Checkbox v-if="['apple', 'bing', 'baidu', 'google'].includes(settings.provider)"
+            <Checkbox v-if="['apple', 'bing', 'baidu'].includes(settings.provider)"
               v-model="settings.filterByAltitude.enabled">
               根据海拔高度过滤</Checkbox>
             <div v-if="settings.filterByAltitude.enabled" class="ml-6">
@@ -541,24 +471,12 @@
         </div>
 
         <Collapsible :is-open="panels.marker" class="p-1">
-          <Checkbox v-model="settings.markers.noBlueLine" v-if="settings.provider == 'google'"
-            v-on:change="updateMarkerLayers('noBlueLine')">
-            <span class="h-3 w-3 bg-[#E412D2] rounded-full"></span>No blue line
-          </Checkbox>
           <Checkbox v-model="settings.markers.newRoad" v-on:change="updateMarkerLayers('newRoad')">
             <span class="h-3 w-3 bg-[#CA283F] rounded-full"></span>New Road
           </Checkbox>
           <Checkbox v-model="settings.markers.gen4" @change="updateMarkerLayers('gen4')">
             <span class="h-3 w-3 bg-[#2880CA] rounded-full"></span>
-            {{ settings.provider !== 'google' ? 'Update' : 'Gen 4 Update' }}
-          </Checkbox>
-          <Checkbox v-model="settings.markers.gen2Or3" v-if="settings.provider == 'google'"
-            v-on:change="updateMarkerLayers('gen2Or3')">
-            <span class="h-3 w-3 bg-[#9A28CA] rounded-full"></span>Gen 2 or 3 Update
-          </Checkbox>
-          <Checkbox v-model="settings.markers.gen1" v-if="settings.provider == 'google'"
-            v-on:change="updateMarkerLayers('gen1')">
-            <span class="h-3 w-3 bg-[#24AC20] rounded-full"></span>Gen 1 Update
+            Update
           </Checkbox>
           <Checkbox v-model="settings.markers.cluster" v-on:change="updateClusters" title="For lag reduction.">
             聚合标记
@@ -580,7 +498,7 @@
 
 <script setup lang="ts">
 // @ts-nocheck
-import { onMounted, watch, computed } from 'vue'
+import { onMounted, watch, computed, ref } from 'vue'
 import { useStorage, useColorMode } from '@vueuse/core'
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon'
 import { llToPX } from 'web-merc-projection'
@@ -629,8 +547,6 @@ import {
   sendNotification,
   randomPointInPoly,
   isOfficial,
-  isPhotosphere,
-  isDrone,
   hasAnyDescription,
   isAcceptableCurve,
   getCameraGeneration,
@@ -689,6 +605,7 @@ const panels = useStorage('map_generator__panels_v1', {
 
 const { selected, select, state } = useStore()
 const allFoundPanoIds = new Set<string>()
+const generationStartTime = ref<number>(0)
 
 const canBeStarted = computed(() =>
   selected.value.some((country) => country.found.length < country.nbNeeded),
@@ -734,6 +651,9 @@ document.onkeydown = (event) => {
 
 const handleClickStart = () => {
   state.started = !state.started
+  if (state.started) {
+    generationStartTime.value = Date.now()
+  }
   start()
 }
 
@@ -753,7 +673,6 @@ async function start() {
 
 async function generate(polygon: Polygon) {
   let detector
-
   if (settings.onlyCheckBlueLines) {
     const bounds = polygon.getBounds()
     const boundsNW = { lat: bounds.getNorth(), lng: bounds.getWest() }
@@ -787,61 +706,18 @@ async function generate(polygon: Polygon) {
 }
 
 function getPanoramaRequest(
-  loc: LatLng,
-  rejectUnofficial: boolean,
-): google.maps.StreetViewLocationRequest {
+  loc: LatLng
+): StreetViewLocationRequest {
   return {
     location: loc,
-    sources: [
-      rejectUnofficial ? google.maps.StreetViewSource.GOOGLE : google.maps.StreetViewSource.DEFAULT,
-    ],
     radius: settings.radius,
   }
 }
 
-async function getNonBadcamRes(pano: string): Promise<StreetViewPanoramaData | null> {
-  const initialRes = await new Promise<StreetViewPanoramaData | null>((resolve) => {
-    StreetViewProviders.getPanorama('google', { pano }, (_res, _status) => {
-      if (_status === google.maps.StreetViewStatus.OK && _res) {
-        resolve(_res)
-      } else {
-        resolve(null)
-      }
-    })
-  })
-
-  if (!initialRes) return null
-
-  const gen = getCameraGeneration(initialRes)
-
-  if (gen != 'badcam') return initialRes
-
-  const candidates = (initialRes.time ?? [])
-    .filter((loc) => loc.pano !== initialRes.location.pano)
-    .reverse()
-
-  for (const loc of candidates) {
-    const fallbackRes = await new Promise<StreetViewPanoramaData | null>((resolve) => {
-      StreetViewProviders.getPanorama('google', { pano: loc.pano }, (__res, __status) => {
-        if (__status === google.maps.StreetViewStatus.OK && __res) {
-          resolve(__res)
-        } else {
-          resolve(null)
-        }
-      })
-    })
-
-    if (fallbackRes && getCameraGeneration(fallbackRes) != 'badcam') {
-      return fallbackRes
-    }
-  }
-
-  return null
-}
 
 async function getLoc(loc: LatLng, polygon: Polygon) {
-  return StreetViewProviders.getPanorama(settings.provider, getPanoramaRequest(loc, settings.rejectUnofficial), async (res, status) => {
-    if (status != google.maps.StreetViewStatus.OK || !res || !res.location) return false
+  return StreetViewProviders.getPanorama(settings.provider, getPanoramaRequest(loc), (res, status) => {
+    if (status != 'OK' || !res || !res.location) return false
 
     if (settings.searchInDescription.enabled) {
       const descriptionMatchesSearch = searchInDescription(
@@ -872,18 +748,6 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
 
       // Exclude Yandex Unofficial
       if (settings.provider === 'yandex' && !res.copyright?.includes('Yandex')) return false
-
-      // Ignore Google BadCam
-      if (settings.ignoreBadcam && settings.provider === 'google') {
-        if (res.imageDate >= '2019-01' && res.tiles?.worldSize?.height === 6656) {
-          const validRes = await getNonBadcamRes(res.location.pano);
-          if (validRes) {
-            res = validRes;
-          } else {
-            return false;
-          }
-        }
-      }
     }
 
     if (settings.findRegions) {
@@ -908,9 +772,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       return getPano(res.location.shortDescription, polygon)
     }
 
-    if (
-      settings.filterByMinutes.enabled && settings.provider != 'google'
-    ) {
+    if (settings.filterByMinutes.enabled) {
       var panoMinutes
       switch (settings.provider) {
         case 'baidu':
@@ -981,10 +843,11 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
     }
 
     return true
-  })
+  }
+  )
 }
 
-async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
+async function isPanoGood(pano: StreetViewPanoramaData) {
   if (settings.rejectUnofficial && !settings.rejectOfficial) {
     if (!pano.location || !isOfficial(pano.location.pano, settings.provider)) return false
     // Reject trekkers
@@ -1009,7 +872,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
 
     // Find Generation
     if (
-      ['google', 'apple', 'yandex', 'bing'].includes(settings.provider) &&
+      ['apple', 'yandex', 'bing'].includes(settings.provider) &&
       settings.findByGeneration.enabled &&
       ((!settings.rejectOfficial && !settings.checkAllDates) || settings.selectMonths)
     ) {
@@ -1082,7 +945,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
 
     if (
       settings.findByGeneration.enabled &&
-      ['google', 'apple', 'yandex', 'bing'].includes(settings.provider)
+      ['apple', 'yandex', 'bing'].includes(settings.provider)
     ) {
       const gen = getCameraGeneration(pano, settings.provider)
       if (gen === 0) return false
@@ -1161,13 +1024,13 @@ function getPanoDeep(id: string, polygon: Polygon, depth: number) {
   else polygon.checkedPanos.add(id)
 
   StreetViewProviders.getPanorama(settings.provider, { pano: id }, async (pano, status) => {
-    if (status == google.maps.StreetViewStatus.UNKNOWN_ERROR) {
+    if (status == 'UNKNOWN_ERROR') {
       polygon.checkedPanos.delete(id)
       return getPanoDeep(id, polygon, depth)
-    } else if (status != google.maps.StreetViewStatus.OK) return
+    } else if (status != 'OK') return
 
     const inCountry = booleanPointInPolygon(
-      [pano.location.latLng.lng(), pano.location.latLng.lat()],
+      [pano.location.latLng.lng, pano.location.latLng.lat],
       polygon.feature,
     )
     const isPanoGoodAndInCountry = (await isPanoGood(pano)) && inCountry
@@ -1208,7 +1071,7 @@ function getPanoDeep(id: string, polygon: Polygon, depth: number) {
   })
 }
 
-function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
+function addLoc(pano: StreetViewPanoramaData, polygon: Polygon) {
   let heading = 0
   if (settings.heading.adjust) {
     if (settings.heading.reference === 'forward') {
@@ -1245,8 +1108,8 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
 
   const location: Panorama = {
     panoId: pano.location.pano,
-    lat: pano.location.latLng.lat(),
-    lng: pano.location.latLng.lng(),
+    lat: pano.location.latLng.lat,
+    lng: pano.location.latLng.lng,
     heading,
     pitch,
     zoom,
@@ -1267,24 +1130,9 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
 
   // New road
   if (!previousPano) {
-    checkHasBlueLine(pano.location.latLng.toJSON()).then((hasBlueLine) => {
-      addLocation(location, polygon,
-        settings.provider != 'google' ? icons.newLoc : (hasBlueLine ? icons.newLoc : icons.noBlueLine))
-    })
+    addLocation(location, polygon, icons.newLoc)
   } else {
-    StreetViewProviders.getPanorama(settings.provider, { pano: previousPano }, (previousPano) => {
-      if (settings.provider != 'google') return addLocation(location, polygon, icons.gen4)
-      if (previousPano?.tiles?.worldSize.height === 1664) {
-        // Gen 1
-        return addLocation(location, polygon, icons.gen1)
-      } else if (previousPano?.tiles?.worldSize.height === 6656) {
-        // Gen 2 or 3
-        return addLocation(location, polygon, icons.gen2Or3)
-      } else {
-        // Gen 4
-        return addLocation(location, polygon, icons.gen4)
-      }
-    })
+    return addLocation(location, polygon, icons.gen4)
   }
 }
 
@@ -1300,42 +1148,34 @@ function addLocation(
   let markerLayer = markerLayers['gen4']
   let zIndex = 1
   switch (iconType) {
-    case icons.gen2Or3:
-      markerLayer = markerLayers['gen2Or3']
-      zIndex = 2
-      break
-    case icons.gen1:
-      markerLayer = markerLayers['gen1']
-      zIndex = 3
-      break
     case icons.newLoc:
       markerLayer = markerLayers['newRoad']
       zIndex = 4
-      break
-    case icons.noBlueLine:
-      markerLayer = markerLayers['noBlueLine']
-      zIndex = 5
       break
   }
 
   if (polygon.found.length < polygon.nbNeeded) {
     polygon.found.push(location)
     if (settings.notification.anyLocation && polygon.found.length === 1) {
-      sendNotification('Location Found',
-        `Found first location in ${getPolygonName(polygon.feature.properties)}`
+      const elapsedTime = ((Date.now() - generationStartTime.value) / 1000).toFixed(1)
+      sendNotification('找到街景',
+        `在${getPolygonName(polygon.feature.properties)}中找到一个街景，用时${elapsedTime}秒`
       )
     }
 
     if (settings.notification.onePolygonComplete && polygon.found.length >= polygon.nbNeeded) {
-      sendNotification('Polygon Completed',
-        `${getPolygonName(polygon.feature.properties)} has reached target count`)
+      const elapsedTime = ((Date.now() - generationStartTime.value) / 1000).toFixed(1)
+      sendNotification('完成区域',
+        `${getPolygonName(polygon.feature.properties)} 已完成， 用时${elapsedTime}秒`
+      )
     }
 
     if (settings.notification.allPolygonsComplete) {
       const allComplete = selected.value.every(p => p.found.length >= p.nbNeeded)
       if (allComplete) {
-        sendNotification('Generation Completed',
-          'All polygons have reached their target counts'
+        const elapsedTime = ((Date.now() - generationStartTime.value) / 1000).toFixed(1)
+        sendNotification('生成完毕',
+          `所有区域已生成完毕，用时${elapsedTime}秒`
         )
       }
     }
@@ -1348,9 +1188,6 @@ function addLocation(
           let url = ''
 
           switch (settings.provider) {
-            case 'google':
-              url = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}&heading=${heading}&pitch=${pitch}&fov=${180 / 2 ** zoom}`
-              break
             case 'yandex':
               url = `https://yandex.com/maps/?l=stv%2Csta&ll=${location.lng},${location.lat}&panorama%5Bdirection%5D=${heading},0&panorama%5Bfull%5D=true&panorama%5Bid%5D=${location.panoId}&panorama%5Bpoint%5D=${location.lng},${location.lat}`
               break
@@ -1370,7 +1207,7 @@ function addLocation(
               url = `https://map.kakao.com/?map_type=TYPE_MAP&map_attribute=ROADVIEW&panoid=${location.panoId}&pan=${heading}&tilt=${pitch}`
               break
             default:
-              url = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}&heading=${heading}&pitch=${pitch}&fov=${180 / 2 ** zoom}`
+              url = `about:blank`
           }
 
           window.open(url, '_blank')
@@ -1380,33 +1217,6 @@ function addLocation(
       marker.polygonID = polygon._leaflet_id
     }
   }
-}
-
-const blueLineCanvas = document.createElement('canvas')
-async function checkHasBlueLine(latLng: LatLng) {
-  const tileSize = 256
-  // We stay somewhat zoomed out so the blue lines extend a bit more, as panoramas
-  // are often not *exactly* on the road
-  const zoom = 12
-  const [pixelX, pixelY] = llToPX([latLng.lng, latLng.lat], zoom, undefined, tileSize)
-  const tileX = Math.floor(pixelX / tileSize)
-  const tileY = Math.floor(pixelY / tileSize)
-  const image = new Image()
-  image.crossOrigin = 'anonymous'
-  image.src = `https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i${zoom}!2i${tileX}!3i${tileY}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*211m3*211e3*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b0!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e0`
-  await new Promise((resolve, reject) => {
-    image.onload = resolve
-    image.onerror = reject
-  })
-  blueLineCanvas.width = 256
-  blueLineCanvas.height = 256
-  const ctx = blueLineCanvas.getContext('2d', { willReadFrequently: true })
-  ctx!.drawImage(image, 0, 0)
-  // Check the pixel where the pano is
-  const imageData = ctx!.getImageData(pixelX - tileX * tileSize, pixelY - tileY * tileSize, 1, 1)
-  const alpha = imageData.data[3]
-  // Only 1 pixel, RGBA order
-  return alpha > 0
 }
 
 async function importLocations(e: Event, polygon: Polygon) {

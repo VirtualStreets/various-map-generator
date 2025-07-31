@@ -1,167 +1,25 @@
 import { extractDateFromPanoId, formatTimeStr } from '@/composables/utils'
 import { getClosestPanoAtCoords } from "@/apple/tile";
 import { AppleLookAroundPano } from "@/apple/types";
-import { createPayload } from '@/composables/utils';
 import gcoord from 'gcoord'
 
-let svService: google.maps.StreetViewService | null = null
-const applePanoCache = new Map<string, google.maps.StreetViewPanoramaData>()
-
-function getStreetViewService() {
-    if (!svService) {
-        svService = new google.maps.StreetViewService()
-    }
-    return svService
-}
-
-function parseGoogle(data: any): google.maps.StreetViewPanoramaData {
-    try {
-        let roadName = null;
-        let country = null;
-        let desc_raw = null;
-        let shortDesc_raw = null;
-
-        const panoId = data[1][0][1][1];
-        const lat = data[1][0][5][0][1][0][2];
-        const lng = data[1][0][5][0][1][0][3];
-        const heading = data[1][0][5][0][1][2][0];
-        const worldsize = data[1][0][2][2];
-
-        const imageYear = data[1][0][6][7][0];
-        const imageMonth = data[1][0][6][7][1];
-        const imageDate = `${imageYear}-${String(imageMonth).padStart(2, '0')}`;
-
-        const historyRaw = data[1][0][5][0][8];
-        const linksRaw = data[1][0][5][0][6];
-        const nodes = data[1][0][5][0][3][0];
-
-        const altitude = data[1][0][5][0][1][1][0]
-
-        try {
-            country = data[1][0][5][0][1][4];
-            if (['TW', 'HK', 'MO'].includes(country)) {
-                country = 'CN';
-            }
-        } catch (e) { }
-        try {
-            roadName = data[1][0][5][0][12][0][0][0][2][0];
-        } catch (e) { }
-        try {
-            desc_raw = data[1][0][3][2][1][0]
-        } catch (e) {
-            try { desc_raw = data[1][0][3][0][0] } catch (error) { }
-        }
-        try {
-            shortDesc_raw = data[1][0][3][2][0][0]
-        } catch (e) { try { shortDesc_raw = data[1][0][3][0][0] } catch (error) { } }
-
-        const history = historyRaw ? (historyRaw.map((node: any) => ({
-            pano: nodes[node[0]][0][1],
-            date: new Date(`${node[1][0]}-${String(node[1][1]).padStart(2, '0')}`),
-        })))
-            : [];
-        const panorama: google.maps.StreetViewPanoramaData = {
-            location: {
-                pano: panoId,
-                latLng: new google.maps.LatLng(lat, lng),
-                description: !desc_raw && !shortDesc_raw ? null : `${shortDesc_raw}, ${desc_raw}`,
-                shortDescription: shortDesc_raw,
-                altitude,
-                country
-            },
-            links: linksRaw.map((link: any) => ({
-                pano: nodes[link[0]][0][1],
-                heading: link[1][3] ?? 0,
-            })) ?? [],
-            tiles: {
-                centerHeading: heading,
-                tileSize: new google.maps.Size(512, 512),
-                worldSize: new google.maps.Size(worldsize[1], worldsize[0]),
-                getTileUrl: () => '',
-            },
-            imageDate,
-            copyright: '© Google',
-            time: [...history, { pano: panoId, date: new Date(imageDate) }]
-                .sort((a, b) => a.date.getTime() - b.date.getTime()),
-        };
-
-        return panorama;
-    } catch (error: any) {
-        console.error('Failed to parse panorama data:', error.message);
-        throw new Error('Invalid panorama data format');
-    }
-}
-
-async function getMetadata(
-    pano: string,
-): Promise<any> {
-    try {
-        const endpoint = `https://maps.googleapis.com/$rpc/google.internal.maps.mapsjs.v1.MapsJsInternalService/GetMetadata`;
-        const payload = createPayload(pano);
-
-        const response = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-                "content-type": "application/json+protobuf",
-                "x-user-agent": "grpc-web-javascript/0.1"
-            },
-            body: payload,
-            mode: "cors",
-            credentials: "omit"
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        return await response.json();
-    } catch (error: any) {
-        throw new Error(`Error fetching Google panorama: ${error.message}`);
-    }
-}
 
 
-// Google
-async function getFromGoogle(
-    request: google.maps.StreetViewLocationRequest | google.maps.StreetViewPanoRequest,
-    onCompleted: (
-        res: google.maps.StreetViewPanoramaData | null,
-        status: google.maps.StreetViewStatus,
-    ) => void,
-) {
-    const sv = getStreetViewService()
-    if ('pano' in request && typeof request.pano === 'string' && request.pano.length == 22) {
-        try {
-            const result = await getMetadata(request.pano)
-            if (result.length > 1) onCompleted(parseGoogle(result), google.maps.StreetViewStatus.OK)
-            else onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
-        }
-        catch (error) {
-            console.error('Error fetching Google panorama:', error)
-            onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
-        }
-    }
-    else {
-        await sv.getPanorama(request, onCompleted)
-    }
-
-}
-
-
+const applePanoCache = new Map<string, StreetViewPanoramaData>()
 
 // Apple Look Around
 async function getFromApple(
-    request: google.maps.StreetViewLocationRequest & { pano?: string },
+    request: StreetViewLocationRequest & { pano?: string },
     onCompleted: (
-        res: google.maps.StreetViewPanoramaData | null,
-        status: google.maps.StreetViewStatus
+        res: StreetViewPanoramaData | null,
+        status: StreetViewStatus
     ) => void
 ) {
     try {
         let apple: AppleLookAroundPano | null = null
 
         if (request.pano && applePanoCache.has(request.pano)) {
-            onCompleted(applePanoCache.get(request.pano)!, google.maps.StreetViewStatus.OK)
+            onCompleted(applePanoCache.get(request.pano)!, 'OK')
             return
         }
 
@@ -172,23 +30,23 @@ async function getFromApple(
         }
 
         if (!apple?.panoId) {
-            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
+            onCompleted(null, 'ZERO_RESULTS')
             return
         }
 
         const date = new Date(apple.date)
-        const panorama: google.maps.StreetViewPanoramaData = {
+        const panorama: StreetViewPanoramaData = {
             location: {
                 pano: apple.panoId,
-                latLng: new google.maps.LatLng(apple.lat, apple.lng),
+                latLng: { lat: apple.lat, lng: apple.lng },
                 description: apple.coverage_type == 3 ? "backpack" : (apple.camera_type),
                 altitude: apple.altitude
             },
             links: [],
             tiles: {
                 centerHeading: apple.heading,
-                tileSize: new google.maps.Size(256, 256),
-                worldSize: new google.maps.Size(16384, 8192),
+                tileSize: { width: 512, height: 512 },
+                worldSize: { width: 16384, height: 8192 },
                 getTileUrl: () => "",
             },
             imageDate: date.toISOString(),
@@ -198,19 +56,19 @@ async function getFromApple(
 
         applePanoCache.set(apple.panoId, panorama)
 
-        onCompleted(panorama, google.maps.StreetViewStatus.OK)
+        onCompleted(panorama, 'OK')
     } catch (error) {
         console.error("[Apple Look Around] panorama fetch error:", error)
-        onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
+        onCompleted(null, 'UNKNOWN_ERROR')
     }
 }
 
 // Yandex
 async function getFromYandex(
-    request: google.maps.StreetViewLocationRequest & { pano?: string },
+    request: StreetViewLocationRequest & { pano?: string },
     onCompleted: (
-        res: google.maps.StreetViewPanoramaData | null,
-        status: google.maps.StreetViewStatus,
+        res: StreetViewPanoramaData | null,
+        status: StreetViewStatus,
     ) => void,
 ) {
     try {
@@ -227,7 +85,7 @@ async function getFromYandex(
         }
 
         if (!panoId) {
-            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
+            onCompleted(null, 'ZERO_RESULTS')
             return
         }
 
@@ -237,17 +95,17 @@ async function getFromYandex(
         const result = json.data
 
         if (!result?.Data?.panoramaId) {
-            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
+            onCompleted(null, 'ZERO_RESULTS')
             return
         }
 
         const date = new Date(Number(result.Data.panoramaId.split('_').pop()) * 1000)
         const heading = (result.Data.EquirectangularProjection.Origin[0] + 180) % 360
 
-        const panorama: google.maps.StreetViewPanoramaData = {
+        const panorama: StreetViewPanoramaData = {
             location: {
                 pano: panoId,
-                latLng: new google.maps.LatLng(result.Data.Point.coordinates[1], result.Data.Point.coordinates[0]),
+                latLng: { lat: result.Data.Point.coordinates[1], lng: result.Data.Point.coordinates[0] },
                 description: result.Data.Point.name
             },
             links: result.Annotation?.Thoroughfares?.map((r: any) => ({
@@ -256,8 +114,8 @@ async function getFromYandex(
             })) ?? [],
             tiles: {
                 centerHeading: heading,
-                tileSize: new google.maps.Size(256, 256),
-                worldSize: new google.maps.Size(result.Data.Images.Zooms[0].width, result.Data.Images.Zooms[0].height),
+                tileSize: { width: 2565, height: 256 },
+                worldSize: { width: result.Data.Images.Zooms[0].width, height: result.Data.Images.Zooms[0].height },
                 getTileUrl: () => '',
             },
             imageDate: date.toISOString(),
@@ -274,19 +132,19 @@ async function getFromYandex(
             ].sort((a, b) => a.date.getTime() - b.date.getTime()),
         }
 
-        onCompleted(panorama, google.maps.StreetViewStatus.OK)
+        onCompleted(panorama, 'OK')
     } catch (err) {
         console.error('[Yandex] panorama fetch error:', err)
-        onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
+        onCompleted(null, 'UNKNOWN_ERROR')
     }
 }
 
-// Bing
+// Tencent
 async function getFromTencent(
-    request: google.maps.StreetViewLocationRequest & { pano?: string },
+    request: StreetViewLocationRequest & { pano?: string },
     onCompleted: (
-        res: google.maps.StreetViewPanoramaData | null,
-        status: google.maps.StreetViewStatus,
+        res: StreetViewPanoramaData | null,
+        status: StreetViewStatus,
     ) => void,
 ) {
     try {
@@ -304,7 +162,7 @@ async function getFromTencent(
         }
 
         if (!panoId) {
-            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
+            onCompleted(null, 'ZERO_RESULTS')
             return
         }
 
@@ -314,7 +172,7 @@ async function getFromTencent(
         const result = json?.detail
 
         if (!result?.basic?.svid) {
-            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
+            onCompleted(null, 'ZERO_RESULTS')
             return
         }
 
@@ -322,10 +180,10 @@ async function getFromTencent(
         const [lng, lat] = gcoord.transform([result.addr.x_lng, result.addr.y_lat], gcoord.GCJ02, gcoord.WGS84)
         const trans_svid = result.basic.trans_svid
 
-        const panorama: google.maps.StreetViewPanoramaData = {
+        const panorama: StreetViewPanoramaData = {
             location: {
                 pano: panoId,
-                latLng: new google.maps.LatLng(lat, lng),
+                latLng: { lat, lng },
                 description: result.basic.append_addr,
                 shortDescription: result.basic.mode === "night" ? panoId : (trans_svid || null),
                 country: 'CN'
@@ -336,8 +194,8 @@ async function getFromTencent(
             })) ?? [],
             tiles: {
                 centerHeading: Number(result.basic.dir),
-                tileSize: new google.maps.Size(512, 512),
-                worldSize: new google.maps.Size(8192, 4096),
+                tileSize: { width: 512, height: 512 },
+                worldSize: { width: 8192, height: 4096 },
                 getTileUrl: () => '',
             },
             imageDate: date,
@@ -354,19 +212,19 @@ async function getFromTencent(
             ].sort((a, b) => a.date.getTime() - b.date.getTime()),
         }
 
-        onCompleted(panorama, google.maps.StreetViewStatus.OK)
+        onCompleted(panorama, 'OK')
     } catch (err) {
         console.error('[Tencent] panorama fetch error:', err)
-        onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
+        onCompleted(null, 'UNKNOWN_ERROR')
     }
 }
 
 // Bing
 async function getFromBing(
-    request: google.maps.StreetViewLocationRequest & { pano?: string },
+    request: StreetViewLocationRequest & { pano?: string },
     onCompleted: (
-        res: google.maps.StreetViewPanoramaData | null,
-        status: google.maps.StreetViewStatus,
+        res: StreetViewPanoramaData | null,
+        status: StreetViewStatus,
     ) => void,
 ) {
     try {
@@ -397,7 +255,7 @@ async function getFromBing(
         }
 
         if (!panoId) {
-            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
+            onCompleted(null, 'ZERO_RESULTS')
             return
         }
 
@@ -408,12 +266,12 @@ async function getFromBing(
         const result = json?.[1]
 
         if (!result?.id) {
-            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
+            onCompleted(null, 'ZERO_RESULTS')
             return
         }
         const date = new Date(result.cd)
 
-        const links: google.maps.StreetViewLink[] = []
+        const links: StreetViewLink[] = []
         if (result.pr) links.push({
             pano: String(result.pr),
             heading: (result.he + 180) % 360,
@@ -436,18 +294,18 @@ async function getFromBing(
             }
         }
 
-        const panorama: google.maps.StreetViewPanoramaData = {
+        const panorama: StreetViewPanoramaData = {
             location: {
                 pano: panoId,
-                latLng: new google.maps.LatLng(result.la, result.lo),
+                latLng: { lat: result.la, lng: result.lo },
                 description: String(result.ml),
                 altitude: result.al
             },
             links,
             tiles: {
                 centerHeading: result.he,
-                tileSize: new google.maps.Size(512, 512),
-                worldSize: new google.maps.Size(8192, 4096),
+                tileSize: { width: 512, height: 512 },
+                worldSize: { width: 8192, height: 4096 },
                 getTileUrl: () => '',
             },
             imageDate: formatTimeStr(result.cd),
@@ -455,19 +313,19 @@ async function getFromBing(
             time: [{ pano: result.panoId, date: date }],
         }
 
-        onCompleted(panorama, google.maps.StreetViewStatus.OK)
+        onCompleted(panorama, 'OK')
     } catch (err) {
         console.error('[Tencent] panorama fetch error:', err)
-        onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
+        onCompleted(null, 'UNKNOWN_ERROR')
     }
 }
 
 // Kakao
 async function getFromKakao(
-    request: google.maps.StreetViewLocationRequest & { pano?: string },
+    request: StreetViewLocationRequest & { pano?: string },
     onCompleted: (
-        res: google.maps.StreetViewPanoramaData | null,
-        status: google.maps.StreetViewStatus,
+        res: StreetViewPanoramaData | null,
+        status: StreetViewStatus,
     ) => void,
 ) {
     try {
@@ -481,7 +339,7 @@ async function getFromKakao(
             const rad = request.radius || 50
             uri = `https://rv.map.kakao.com/roadview-search/v2/nodes?PX=${lng}&PY=${lat}&RAD=${rad}&PAGE_SIZE=1&INPUT=wgs&TYPE=w&SERVICE=glpano`
         } else {
-            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
+            onCompleted(null, 'ZERO_RESULTS')
             return
         }
 
@@ -490,7 +348,7 @@ async function getFromKakao(
         const result = json.street_view?.street ?? json.street_view?.streetList?.[0]
 
         if (!result) {
-            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
+            onCompleted(null, 'ZERO_RESULTS')
             return
         }
 
@@ -498,10 +356,10 @@ async function getFromKakao(
         const panoId = result.id.toString()
         const heading = (parseFloat(result.angle) + 180) % 360
 
-        const res: google.maps.StreetViewPanoramaData = {
+        const res: StreetViewPanoramaData = {
             location: {
                 pano: panoId,
-                latLng: new google.maps.LatLng(result.wgsy, result.wgsx),
+                latLng: { lat: result.wgsy, lng: result.wgsx },
                 description: result.addr,
                 country: 'KR'
             },
@@ -513,8 +371,8 @@ async function getFromKakao(
             tiles: {
                 centerHeading: heading,
                 getTileUrl: () => '',
-                tileSize: new google.maps.Size(512, 512),
-                worldSize: new google.maps.Size(8192, 4096),
+                tileSize: { width: 512, height: 512 },
+                worldSize: { width: 8192, height: 4096 },
             },
             copyright: '© Kakao Maps',
             time: [
@@ -529,19 +387,19 @@ async function getFromKakao(
             ].sort((a, b) => a.date.getTime() - b.date.getTime()),
         }
 
-        onCompleted(res, google.maps.StreetViewStatus.OK)
+        onCompleted(res, 'OK')
     } catch (err) {
         console.error('[Kakao] panorama fetch error:', err)
-        onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
+        onCompleted(null, 'UNKNOWN_ERROR')
     }
 }
 
 // Baidu
 async function getFromBaidu(
-    request: google.maps.StreetViewLocationRequest & { pano?: string },
+    request: StreetViewLocationRequest & { pano?: string },
     onCompleted: (
-        res: google.maps.StreetViewPanoramaData | null,
-        status: google.maps.StreetViewStatus,
+        res: StreetViewPanoramaData | null,
+        status: StreetViewStatus,
     ) => void,
 ) {
     try {
@@ -550,7 +408,6 @@ async function getFromBaidu(
         if (request.pano) {
             panoId = request.pano
         } else if (request.location) {
-
             const lat = typeof request.location.lat === 'function' ? request.location.lat() : request.location.lat
             const lng = typeof request.location.lng === 'function' ? request.location.lng() : request.location.lng
 
@@ -563,7 +420,7 @@ async function getFromBaidu(
         }
 
         if (!panoId) {
-            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
+            onCompleted(null, 'ZERO_RESULTS')
             return
         }
 
@@ -573,16 +430,16 @@ async function getFromBaidu(
         const result = json.content[0]
 
         if (!result?.ID) {
-            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
+            onCompleted(null, 'ZERO_RESULTS')
             return
         }
 
         const date = extractDateFromPanoId(panoId.slice(10, 22))
         const [lng, lat] = gcoord.transform([result.X / 100, result.Y / 100], gcoord.BD09MC, gcoord.WGS84);
-        const panorama: google.maps.StreetViewPanoramaData = {
+        const panorama: StreetViewPanoramaData = {
             location: {
                 pano: panoId,
-                latLng: new google.maps.LatLng(lat, lng),
+                latLng: { lat, lng },
                 description: result.Rname,
                 altitude: result.Z,
                 country: 'CN'
@@ -593,8 +450,8 @@ async function getFromBaidu(
             })) ?? [],
             tiles: {
                 centerHeading: result.Heading,
-                tileSize: new google.maps.Size(512, 512),
-                worldSize: new google.maps.Size(8192, 4096),
+                tileSize: { width: 512, height: 512 },
+                worldSize: { width: 8192, height: 4096 },
                 getTileUrl: () => '',
             },
             imageDate: date,
@@ -611,27 +468,23 @@ async function getFromBaidu(
             ].sort((a, b) => a.date.getTime() - b.date.getTime()),
         }
 
-        onCompleted(panorama, google.maps.StreetViewStatus.OK)
+        onCompleted(panorama, 'OK')
     } catch (err) {
         console.error('[Baidu] panorama fetch error:', err)
-        onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
+        onCompleted(null, 'UNKNOWN_ERROR')
     }
 }
 
 const StreetViewProviders = {
     getPanorama: async (
         provider: string,
-        request: google.maps.StreetViewLocationRequest & { pano?: string },
+        request: StreetViewLocationRequest & { pano?: string },
         onCompleted: (
-            res: google.maps.StreetViewPanoramaData | null,
-            status: google.maps.StreetViewStatus,
+            res: StreetViewPanoramaData | null,
+            status: StreetViewStatus,
         ) => void,
     ) => {
-        if (provider === 'google') {
-            await getFromGoogle(request, onCompleted)
-            return
-        }
-        else if (provider === "apple") {
+        if (provider === "apple") {
             await getFromApple(request, onCompleted);
             return;
         }
@@ -655,7 +508,7 @@ const StreetViewProviders = {
             await getFromKakao(request, onCompleted)
             return
         }
-        onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
+        onCompleted(null, 'UNKNOWN_ERROR')
     },
 }
 
