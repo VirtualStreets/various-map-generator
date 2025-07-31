@@ -148,7 +148,7 @@
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
         </div>
         <Collapsible :is-open="panels.generatorSettings" class="mt-1 p-1 pr-2">
-          <div class="flex items-center justify-between ml-1 mr-1">
+          <div class="flex items-center justify-between">
             Provider :
             <select v-model="settings.provider" @change="toggleMap(settings.provider)">
               <option value="google">Google</option>
