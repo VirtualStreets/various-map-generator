@@ -4,7 +4,7 @@
   <div class="absolute bottom-1 left-1/2 -translate-x-1/2 font-bold text-xs text-black">
     Zoom : {{ currentZoom }}
   </div>
-  <div class="absolute top-1 left-1 w-100 max-h-[calc(100vh-178px)] flex flex-col gap-1">
+  <div class="absolute top-1 left-1 w-100 max-h-[calc(100vh-50px)] flex flex-col gap-1">
     <Logo />
     <div class="flex-1 min-h-0 flex flex-col gap-1">
       <div v-if="!state.started" class="container flex flex-col">
@@ -581,7 +581,7 @@
 
 <script setup lang="ts">
 // @ts-nocheck
-import { onMounted, watch, computed } from 'vue'
+import { onMounted, watch, computed, ref } from 'vue'
 import { formatDate, useStorage, useColorMode } from '@vueuse/core'
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon'
 import { llToPX } from 'web-merc-projection'
@@ -690,6 +690,7 @@ const panels = useStorage('map_generator__panels_v1', {
 
 const { selected, select, state } = useStore()
 const allFoundPanoIds = new Set<string>()
+const generationStartTime = ref<number>(0)
 
 const canBeStarted = computed(() =>
   selected.value.some((country) => country.found.length < country.nbNeeded),
@@ -735,6 +736,9 @@ document.onkeydown = (event) => {
 
 const handleClickStart = () => {
   state.started = !state.started
+  if (state.started) {
+    generationStartTime.value = Date.now()
+  }
   start()
 }
 
@@ -1322,21 +1326,25 @@ function addLocation(
   if (polygon.found.length < polygon.nbNeeded) {
     polygon.found.push(location)
     if (settings.notification.anyLocation && polygon.found.length === 1) {
+      const elapsedTime = ((Date.now() - generationStartTime.value) / 1000).toFixed(1)
       sendNotification('Location Found',
-        `Found first location in ${getPolygonName(polygon.feature.properties)}`
+        `Found first location in ${getPolygonName(polygon.feature.properties)} (${elapsedTime}s)`
       )
     }
 
     if (settings.notification.onePolygonComplete && polygon.found.length >= polygon.nbNeeded) {
+      const elapsedTime = ((Date.now() - generationStartTime.value) / 1000).toFixed(1)
       sendNotification('Polygon Completed',
-        `${getPolygonName(polygon.feature.properties)} has reached target count`)
+        `${getPolygonName(polygon.feature.properties)} has reached target count (${elapsedTime}s)`
+      )
     }
 
     if (settings.notification.allPolygonsComplete) {
       const allComplete = selected.value.every(p => p.found.length >= p.nbNeeded)
       if (allComplete) {
+        const elapsedTime = ((Date.now() - generationStartTime.value) / 1000).toFixed(1)
         sendNotification('Generation Completed',
-          'All polygons have reached their target counts'
+          `All polygons have reached their target counts (${elapsedTime}s)`
         )
       }
     }

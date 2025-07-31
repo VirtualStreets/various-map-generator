@@ -62,51 +62,69 @@ export function isAcceptableCurve(
   return curveAngle >= minCurveAngle
 }
 
-export function getCameraGeneration(pano: google.maps.StreetViewPanoramaData, provider: string) {
+const gen3Dates = new Map<string, string>([
+  ['BD', '2021-04'], ['EC', '2022-03'], ['FI', '2020-09'], ['IN', '2021-10'], ['LK', '2021-02'],
+  ['KH', '2022-10'], ['LB', '2021-05'], ['NG', '2021-06'], ['ST', '2024-02'], ['US', '2019-01'],
+  ['VN', '2021-01'], ['ES', '2023-01']
+]);
+
+const gen2Countries = new Set([
+  'AU', 'BR', 'CA', 'CL', 'JP', 'GB', 'IE', 'NZ', 'MX', 'RU', 'US', 'IT', 'DK', 'GR', 'RO',
+  'PL', 'CZ', 'CH', 'SE', 'FI', 'BE', 'LU', 'NL', 'ZA', 'SG', 'TW', 'HK', 'MO', 'MC', 'SM',
+  'AD', 'IM', 'JE', 'FR', 'DE', 'ES', 'PT', 'SJ'
+]);
+
+function dateToMonthNumber(date: string): number {
+  const [y, m] = date.split('-').map(Number);
+  return (y || 0) * 12 + (m || 0);
+}
+
+export function getCameraGeneration(
+  pano: google.maps.StreetViewPanoramaData,
+  provider: string
+): number | string {
+  const location = pano.location;
+  const country = location?.country ?? 'None';
+  const lat = location?.latLng?.lat() ?? 0;
+  const imageDate = pano.imageDate ?? '';
+  const {width, height} = pano.tiles.worldSize;
+
   if (provider === 'google') {
-    const gen3Dates: any = {
-      'BD': '2021-04', 'EC': '2022-03', 'FI': '2020-09', 'IN': '2021-10', 'LK': '2021-02', 'KH': '2022-10',
-      'LB': '2021-05', 'NG': '2021-06', 'ST': '2024-02', 'US': '2019-01', 'VN': '2021-01', 'ES': '2023-01'
-    };
-    const gen2Countries = new Set(['AU', 'BR', 'CA', 'CL', 'JP', 'GB', 'IE', 'NZ', 'MX', 'RU', 'US', 'IT', 'DK', 'GR', 'RO',
-      'PL', 'CZ', 'CH', 'SE', 'FI', 'BE', 'LU', 'NL', 'ZA', 'SG', 'TW', 'HK', 'MO', 'MC', 'SM',
-      'AD', 'IM', 'JE', 'FR', 'DE', 'ES', 'PT', 'SJ']);
-    const country = pano.location?.country ?? 'None'
-    const targetDate = country in gen3Dates ? gen3Dates[country] : '9999-99'
-    const lat: number = pano.location?.latLng?.lat() ?? 0
-    const { worldSize } = pano.tiles
-    switch (worldSize.height) {
-      case 1664:
-        return 1
-      case 6656:
-        if (country && pano.imageDate) {
-          if (pano.imageDate >= targetDate) {
-            if (country !== 'US') return 'badcam'
-            if (country === 'US' && lat > 52) return 'badcam'
-          }
 
-          if (gen2Countries.has(country) && pano.imageDate <= '2011-11') {
-            return pano.imageDate >= '2010-09' ? 23 : 2;
-          }
-        }
-        return 3
-      case 8192:
-        return 4
-      default:
-        return 0
+    if (height === 8192) return 4;
+    if (height === 1664) return 1;
+
+    if (height === 6656) {
+      const targetDate = gen3Dates.get(country) ?? '9999-99';
+      const imageMonth = dateToMonthNumber(imageDate);
+      const targetMonth = dateToMonthNumber(targetDate);
+
+      if (imageMonth >= targetMonth && (country !== 'US' || lat > 52)) {
+        return 'badcam';
+      }
+
+      if (gen2Countries.has(country) && imageDate <= '2011-11') {
+        return imageDate >= '2010-09' ? 23 : 2;
+      }
+
+      return 3;
     }
-  }
-  else if (['apple', 'bing'].includes(provider)) {
-    return Number(pano.location?.description)
-  }
-  else if (provider === 'yandex') {
-    const world_width = pano.tiles.worldSize.width
-    if (!world_width) return 0
-    if (world_width == 17664) return 2
-    else if (world_width == 5632) return 1
-    else return 'trekker'
 
+    return 0;
   }
+
+  if (provider === 'apple' || provider === 'bing') {
+    return Number(pano.location?.description);
+  }
+
+  if (provider === 'yandex') {
+    if (!width) return 0;
+    if (width === 17664) return 2;
+    if (width === 5632) return 1;
+    return 'trekker';
+  }
+
+  return 0;
 }
 
 export function createPayload(
