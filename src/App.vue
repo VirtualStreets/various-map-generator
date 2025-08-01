@@ -105,11 +105,11 @@
             </div>
 
             <div class="flex gap-1">
-              <Clipboard :data="[polygon as Polygon]" :disabled="!polygon.found.length" 
-              :prefix="settings.provider" />
+              <Clipboard :data="[polygon as Polygon]" :disabled="!polygon.found.length" :prefix="settings.provider" />
               <Clipboard_Prefix :data="[polygon as Polygon]" :disabled="!polygon.found.length"
                 :prefix="settings.provider" />
-              <ExportToJSON :data="[polygon as Polygon]" :disabled="!polygon.found.length" />
+              <ExportToJSON :data="[polygon as Polygon]" :disabled="!polygon.found.length"
+                :prefix="settings.provider" />
               <ExportToCSV :data="[polygon as Polygon]" :disabled="!polygon.found.length" />
               <Button size="sm" squared variant="danger" :disabled="!polygon.found.length"
                 title="Delete locations for polygon" @click="clearPolygon(polygon as Polygon)">
@@ -128,9 +128,9 @@
           cap for all
         </Button>
         <div class="flex gap-1">
-          <Clipboard :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider"/>
+          <Clipboard :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider" />
           <Clipboard_Prefix :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider" />
-          <ExportToJSON :data="selected as Polygon[]" :disabled="!totalLocs" />
+          <ExportToJSON :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider" />
           <ExportToCSV :data="selected as Polygon[]" :disabled="!totalLocs" />
           <Button size="sm" squared variant="danger" :disabled="!totalLocs" title="Delete all locations"
             @click="clearAllLocations">

@@ -1,12 +1,6 @@
 <template>
-  <Button
-    v-if="isSupported"
-    size="sm"
-    squared
-    :disabled
-    title="Copy to clipboard(prefix with provdier)"
-    @click="handleCopy"
-  >
+  <Button v-if="isSupported" size="sm" squared :disabled title="Copy to clipboard(prefix with provdier)"
+    @click="handleCopy">
     <ClipboardCheckedIcon v-if="copied" class="w-5 h-5" />
     <ClipboardPrefixIcon v-else class="w-5 h-5" />
   </Button>
