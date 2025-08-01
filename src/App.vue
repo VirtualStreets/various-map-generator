@@ -105,7 +105,8 @@
             </div>
 
             <div class="flex gap-1">
-              <Clipboard :data="[polygon as Polygon]" :disabled="!polygon.found.length" />
+              <Clipboard :data="[polygon as Polygon]" :disabled="!polygon.found.length" 
+              :prefix="settings.provider" />
               <Clipboard_Prefix :data="[polygon as Polygon]" :disabled="!polygon.found.length"
                 :prefix="settings.provider" />
               <ExportToJSON :data="[polygon as Polygon]" :disabled="!polygon.found.length" />
@@ -127,7 +128,7 @@
           cap for all
         </Button>
         <div class="flex gap-1">
-          <Clipboard :data="selected as Polygon[]" :disabled="!totalLocs" />
+          <Clipboard :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider"/>
           <Clipboard_Prefix :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider" />
           <ExportToJSON :data="selected as Polygon[]" :disabled="!totalLocs" />
           <ExportToCSV :data="selected as Polygon[]" :disabled="!totalLocs" />
@@ -594,6 +595,7 @@ import Spinner from '@/components/Elements/Spinner.vue'
 import Tooltip from '@/components/Elements/Tooltip.vue'
 import Logo from '@/components/Elements/Logo.vue'
 import Clipboard from '@/components/Clipboard.vue'
+import Clipboard_Prefix from './components/Clipboard_Prefix.vue'
 import ExportToJSON from '@/components/ExportToJSON.vue'
 import ExportToCSV from '@/components/ExportToCSV.vue'
 import FileImportIcon from '@/assets/icons/file-import.svg'
@@ -648,7 +650,6 @@ import {
   tencentToGcj02
 } from '@/composables/utils.ts'
 import StreetViewProviders from './providers'
-import Clipboard_Prefix from './components/Clipboard_Prefix.vue'
 const { currentDate } = getCurrentDate()
 const themeMode = useColorMode()
 
