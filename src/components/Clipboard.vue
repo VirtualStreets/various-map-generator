@@ -30,7 +30,7 @@ function handleCopy() {
   props.data.forEach((polygon) => {
     const withSource = polygon.found.map((item) => ({
       ...item,
-      source: props.prefix || '',
+      source: `${props.prefix}_pano` || '',
     }))
     data = data.concat(withSource)
   })
