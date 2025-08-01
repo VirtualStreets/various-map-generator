@@ -317,7 +317,7 @@
                     (settings.filterByMinutes.range[1] % 60).toString().padStart(2, '0') }}
                 </span>
                 <Slider v-model="settings.filterByMinutes.range" :min="0" :max="1439" :step="5" :showTooltip="'focus'"
-                  :range="true" class="w-48 ml-4 mr-2" :format="val => {
+                  :range="true" class="w-40 ml-4 mr-4" :format="val => {
                     const h = Math.floor(val / 60).toString().padStart(2, '0')
                     const m = Math.floor(val % 60).toString().padStart(2, '0')
                     return `${h}:${m}`
