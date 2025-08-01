@@ -148,7 +148,7 @@
         </div>
         <Collapsible :is-open="panels.generatorSettings" class="mt-1 p-1 pr-2">
           <div class="flex items-center justify-between mr-1">
-            街景服务 :
+            街景服务
             <select v-model="settings.provider" @change="toggleMap(settings.provider)">
               <option value="apple">苹果</option>
               <option value="bing">必应</option>
@@ -159,7 +159,7 @@
             </select>
           </div>
           <div class="flex justify-between">
-            生成器数量 :
+            生成器数量
             <div class="flex items-center gap-4">
               <input type="number" v-model.number="settings.numOfGenerators" min="1" max="10"
                 class="w-10 h-5 px-2 py-1 border rounded text-right" />
@@ -168,7 +168,7 @@
           </div>
 
           <div class="flex justify-between">
-            速度:
+            速度
             <span>
               <input type="number" v-model.number="settings.speed" min="1" max="1000" @change="handleSpeedInput" />
               次尝试
@@ -176,7 +176,7 @@
           </div>
 
           <div class="flex items-center justify-between">
-            搜索半径 :
+            搜索半径
             <span>
               <input type="number" v-model.number="settings.radius" @change="handleRadiusInput" />
               米
@@ -184,7 +184,7 @@
           </div>
 
           <Checkbox v-model="settings.oneCountryAtATime">
-            一次只检查一个国家/区域
+            逐个国家/区域生成
           </Checkbox>
 
           <div v-if="!settings.rejectOfficial">
@@ -203,15 +203,15 @@
         </div>
         <div class="flex-1 min-h-0 overflow-y-auto">
           <Collapsible :is-open="panels.coverageSettings" class="p-1">
-            <Checkbox v-if="!settings.rejectOfficial" v-model="settings.rejectUnofficial">拒绝非官方街景</Checkbox>
+            <Checkbox v-if="!settings.rejectOfficial" v-model="settings.rejectUnofficial">忽略非官方街景</Checkbox>
 
             <Checkbox v-if="settings.provider === 'yandex'" v-model="settings.rejectOfficial">寻找非官方街景</Checkbox>
 
             <div v-if="settings.rejectUnofficial && !settings.rejectOfficial">
-              <Checkbox v-model="settings.rejectDateless">拒绝无日期的街景</Checkbox>
+              <Checkbox v-model="settings.rejectDateless" v-if="settings.provider !== 'tencent' && settings.provider !== 'baidu'">忽略无日期的街景</Checkbox>
 
               <Checkbox v-if="!settings.rejectDescription" v-model="settings.rejectNoDescription">
-                拒绝无描述的街景
+                忽略无描述的街景
               </Checkbox>
 
               <Checkbox v-model="settings.findNightCoverage" v-if="settings.provider === 'tencent'">
@@ -220,12 +220,12 @@
 
               <Checkbox v-model="settings.onlyOneInTimeframe"
                 title="Only allow locations that don't have other nearby coverage in timeframe.">
-                一个位置仅一张街景
+                忽略有历史的街景
               </Checkbox>
 
               <Checkbox v-model="settings.checkLinks">检查相邻街景</Checkbox>
               <div v-if="settings.checkLinks" class="flex items-center justify-between ml-6">
-                深度 :
+                深度:
                 <div class="flex items-center gap-2">
                   {{ settings.linksDepth }}
                   <input type="range" v-model.number="settings.linksDepth" min="1" max="10" />
@@ -267,33 +267,33 @@
                 <div>
                   从
                   <select v-model="settings.fromMonth">
-                    <option value="01">January</option>
-                    <option value="02">February</option>
-                    <option value="03">March</option>
-                    <option value="04">April</option>
-                    <option value="05">May</option>
-                    <option value="06">June</option>
-                    <option value="07">July</option>
-                    <option value="08">August</option>
-                    <option value="09">September</option>
-                    <option value="10">October</option>
-                    <option value="11">November</option>
-                    <option value="12">December</option>
+                    <option value="01">1月</option>
+                    <option value="02">2月</option>
+                    <option value="03">3月</option>
+                    <option value="04">4月</option>
+                    <option value="05">5月</option>
+                    <option value="06">6月</option>
+                    <option value="07">7月</option>
+                    <option value="08">8月</option>
+                    <option value="09">9月</option>
+                    <option value="10">10月</option>
+                    <option value="11">11月</option>
+                    <option value="12">12月</option>
                   </select>
                   至
                   <select v-model="settings.toMonth">
-                    <option value="01">January</option>
-                    <option value="02">February</option>
-                    <option value="03">March</option>
-                    <option value="04">April</option>
-                    <option value="05">May</option>
-                    <option value="06">June</option>
-                    <option value="07">July</option>
-                    <option value="08">August</option>
-                    <option value="09">September</option>
-                    <option value="10">October</option>
-                    <option value="11">November</option>
-                    <option value="12">December</option>
+                    <option value="01">1月</option>
+                    <option value="02">2月</option>
+                    <option value="03">3月</option>
+                    <option value="04">4月</option>
+                    <option value="05">5月</option>
+                    <option value="06">6月</option>
+                    <option value="07">7月</option>
+                    <option value="08">8月</option>
+                    <option value="09">9月</option>
+                    <option value="10">10月</option>
+                    <option value="11">11月</option>
+                    <option value="12">12月</option>
                   </select>
                 </div>
                 <div>
@@ -307,7 +307,7 @@
             </div>
 
             <div class="flex flex-col gap-1">
-              <Checkbox v-model="settings.filterByMinutes.enabled">按分钟过滤</Checkbox>
+              <Checkbox v-model="settings.filterByMinutes.enabled">按时间过滤</Checkbox>
               <div v-if="settings.filterByMinutes.enabled" class="flex items-center">
                 <span class="ml-6">
                   {{ Math.floor(settings.filterByMinutes.range[0] / 60).toString().padStart(2, '0') }}:{{
@@ -390,7 +390,7 @@
               <label class="flex items-center justify-between">
                 <div class="flex items-center gap-1 relative">
                   范围
-                  <Tooltip>
+                  <Tooltip style="color: white">
                     0 : 孤立街景<br />
                     1 : 道路尽头<br />
                     > 2 : 路口
@@ -438,7 +438,7 @@
                 <Slider v-model="settings.heading.range" :min="-180" :max="180" tooltipPosition="bottom"
                   class="w-32 pr-2" />
               </label>
-              <small>0° 和道路保持一致方向。</small>
+              <small>0°表示和道路保持一致方向。</small>
               <Checkbox v-model="settings.heading.randomInRange">随机偏移</Checkbox>
             </div>
 
