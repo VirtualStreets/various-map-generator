@@ -7,6 +7,26 @@
   <div class="absolute top-1 left-1 min-w-30 max-w-[calc(70vw)] max-h-[calc(100vh-50px)] flex flex-col gap-1">
     <Logo />
     <div class="flex-1 min-h-0 flex flex-col gap-1">
+      <div v-if="!state.started" class="container">
+        <div class="relative cursor-pointer" @click="panels.credit = !panels.credit">
+          <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
+          <h2>致谢</h2>
+        </div>
+        <Collapsible :is-open="panels.credit" class="gap-1 max-h-[140px] overflow-y-auto mt-1 p-1">
+          本项目主体基于
+          <a href="https://github.com/tzhf/map-generator" target="_blank" rel="noopener">@rollin</a>
+          的 <a href="https://github.com/tzhf/map-generator" target="_blank" rel="noopener">map-generator</a> 项目开发。<br>
+          腾讯街景覆盖图层基于
+          <a href="https://github.com/ReAnnannanna/qq-map" target="_blank" rel="noopener">@ReAnna</a>
+          的 <a href="https://github.com/ReAnnannanna/qq-map" target="_blank" rel="noopener">qq-map</a> 项目。<br>
+          苹果街景覆盖图层和生成逻辑基于
+          <a href="https://github.com/sk-zk" target="_blank" rel="noopener">@sk-zk</a>
+          的 <a href="https://lookmap.eu.pythonanywhere.com/" target="_blank" rel="noopener">Apple Lookaround Viewer</a> 项目。<br>
+          感谢他们对本项目的支持和帮助，同时感谢
+          <a href="https://github.com/GreenEyedBear" target="_blank" rel="noopener">@victheturtle</a>
+          提供的思路。
+        </Collapsible>
+      </div>
       <div v-if="!state.started" class="container flex flex-col">
         <div class="relative cursor-pointer" @click="panels.general = !panels.general">
           <h2>通用</h2>
@@ -164,7 +184,8 @@
             <div class="flex items-center">
               <input type="number" v-model.number="settings.numOfGenerators" min="1" max="10"
                 class="w-10 h-5 ml-2 px-2 py-1 border rounded text-right" />
-              <Slider v-model="settings.numOfGenerators" :min="1" :max="10" :step="1" :tooltips="false" class="w-32 ml-2" />
+              <Slider v-model="settings.numOfGenerators" :min="1" :max="10" :step="1" :tooltips="false"
+                class="w-32 ml-2" />
             </div>
           </div>
 
@@ -604,7 +625,8 @@ watch(
   }
 )
 
-const panels = useStorage('map_generator__panels_v1', {
+const panels = useStorage('map_generator__panels_v2', {
+  credit: true,
   general: true,
   layer: true,
   generatorSettings: true,
