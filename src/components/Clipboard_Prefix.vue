@@ -32,9 +32,8 @@ function handleCopy() {
     const updated = polygon.found.map((panorama) => ({
       ...panorama,
       panoId: `${props.prefix ? `${props.prefix.toUpperCase()}:` : ''}${panorama.panoId}`,
-      links: panorama.links?.map((link) =>
-        `${props.prefix ? `${props.prefix.toUpperCase()}:` : ''}${link}`
-      ),
+      source: `${props.prefix}_pano` || '',
+      links:[]
     }))
     data = data.concat(updated)
   })

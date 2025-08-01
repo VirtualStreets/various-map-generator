@@ -21,7 +21,8 @@
           的 <a href="https://github.com/ReAnnannanna/qq-map" target="_blank" rel="noopener">qq-map</a> 项目。<br>
           苹果街景覆盖图层和生成逻辑基于
           <a href="https://github.com/sk-zk" target="_blank" rel="noopener">@sk-zk</a>
-          的 <a href="https://lookmap.eu.pythonanywhere.com/" target="_blank" rel="noopener">Apple Lookaround Viewer</a> 项目。<br>
+          的 <a href="https://lookmap.eu.pythonanywhere.com/" target="_blank" rel="noopener">Apple Lookaround Viewer</a>
+          项目。<br>
           感谢他们对本项目的支持和帮助，同时感谢
           <a href="https://github.com/GreenEyedBear" target="_blank" rel="noopener">@victheturtle</a>
           提供的思路。
@@ -128,7 +129,7 @@
               <Clipboard :data="[polygon as Polygon]" :disabled="!polygon.found.length" :prefix="settings.provider" />
               <Clipboard_Prefix :data="[polygon as Polygon]" :disabled="!polygon.found.length"
                 :prefix="settings.provider" />
-              <ExportToJSON :data="[polygon as Polygon]" :disabled="!polygon.found.length" />
+              <ExportToJSON :data="[polygon as Polygon]" :disabled="!polygon.found.length" :prefix="settings.provider" />
               <ExportToCSV :data="[polygon as Polygon]" :disabled="!polygon.found.length" />
               <Button size="sm" squared variant="danger" :disabled="!polygon.found.length" title="删除该区域生成街景"
                 @click="clearPolygon(polygon as Polygon)">
@@ -147,9 +148,9 @@
           更改生成数量上限
         </Button>
         <div class="flex gap-1">
-          <Clipboard :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider"/>
+          <Clipboard :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider" />
           <Clipboard_Prefix :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider" />
-          <ExportToJSON :data="selected as Polygon[]" :disabled="!totalLocs" />
+          <ExportToJSON :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider" />
           <ExportToCSV :data="selected as Polygon[]" :disabled="!totalLocs" />
           <Button size="sm" squared variant="danger" :disabled="!totalLocs" title="删除所有生成街景" @click="clearAllLocations">
             <TrashBinIcon class="w-5 h-5" />

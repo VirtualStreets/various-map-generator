@@ -11,11 +11,22 @@ import FileExportIcon from '@/assets/icons/file-export.svg'
 const props = defineProps<{
   data: Polygon[]
   disabled?: boolean
+  prefix?: string
 }>()
 
 function handleExport() {
   let data: Panorama[] = []
-  props.data.forEach((polygon) => (data = data.concat(polygon.found)))
+
+
+  props.data.forEach((polygon) => {
+    const updated = polygon.found.map((panorama) => ({
+      ...panorama,
+      panoId: `${props.prefix ? `${props.prefix.toUpperCase()}:` : ''}${panorama.panoId}`,
+      source: `${props.prefix}_pano` || '',
+      links:[]
+    }))
+    data = data.concat(updated)
+  })
   const dataUri =
     'data:application/json;charset=utf-8,' +
     encodeURIComponent(JSON.stringify({ customCoordinates: data }))
