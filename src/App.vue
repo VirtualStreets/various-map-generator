@@ -139,7 +139,8 @@
     </div>
   </div>
 
-  <div class="absolute top-1 right-1 min-w-30 max-w-[calc(70vw)] max-h-[calc(100vh-8px)] overfslow-hidden flex flex-col gap-1">
+  <div
+    class="absolute top-1 right-1 min-w-30 max-w-[calc(70vw)] max-h-[calc(100vh-8px)] overfslow-hidden flex flex-col gap-1">
     <div class="flex flex-col gap-1 flex-1 min-h-0">
       <div v-if="!state.started" class="container flex flex-col">
         <div class="relative cursor-pointer" @click="panels.generatorSettings = !panels.generatorSettings">
@@ -160,10 +161,10 @@
           </div>
           <div class="flex justify-between">
             生成器数量
-            <div class="flex items-center gap-4">
+            <div class="flex items-center">
               <input type="number" v-model.number="settings.numOfGenerators" min="1" max="10"
-                class="w-10 h-5 px-2 py-1 border rounded text-right" />
-              <Slider v-model="settings.numOfGenerators" :min="1" :max="10" :step="1" :tooltips="false" class="w-32" />
+                class="w-10 h-5 ml-2 px-2 py-1 border rounded text-right" />
+              <Slider v-model="settings.numOfGenerators" :min="1" :max="10" :step="1" :tooltips="false" class="w-32 ml-2" />
             </div>
           </div>
 
@@ -208,7 +209,8 @@
             <Checkbox v-if="settings.provider === 'yandex'" v-model="settings.rejectOfficial">寻找非官方街景</Checkbox>
 
             <div v-if="settings.rejectUnofficial && !settings.rejectOfficial">
-              <Checkbox v-model="settings.rejectDateless" v-if="settings.provider !== 'tencent' && settings.provider !== 'baidu'">忽略无日期的街景</Checkbox>
+              <Checkbox v-model="settings.rejectDateless"
+                v-if="settings.provider !== 'tencent' && settings.provider !== 'baidu'">忽略无日期的街景</Checkbox>
 
               <Checkbox v-if="!settings.rejectDescription" v-model="settings.rejectNoDescription">
                 忽略无描述的街景
@@ -362,29 +364,27 @@
 
               <div class="flex justify-between items-center gap-2">
                 <div class="flex items-center gap-1 relative">
-                  Search mode
+                  过滤规则
                   <Tooltip>
-                    <strong>Search modes:</strong><br />
-                    • <strong>contains</strong>: anywhere in text<br />
-                    • <strong>fullword</strong>: exact word<br />
-                    • <strong>sectionmatch</strong>: exact comma-separated section<br />
-                    (eg: 901 N Main Ave, <strong>Springfield</strong>, Missouri)<br />
-                    • <strong>startswith</strong>: beginning of word<br />
-                    • <strong>endswith</strong>: end of word<br />
+                    • <strong>包含匹配</strong>: 出现在任意位置<br />
+                    • <strong>精确匹配</strong>: 完全对应<br />
+                    • <strong>部分匹配</strong>: 存在逗号分隔的部分匹配<br />
+                    • <strong>开头匹配</strong>: 开头字符相同<br />
+                    • <strong>结尾匹配</strong>: 结尾字符相同<br />
                   </Tooltip>
                 </div>
                 <select v-model="settings.searchInDescription.searchMode">
-                  <option value="contains">contains</option>
-                  <option value="fullword">fullword</option>
-                  <option value="sectionmatch">sectionmatch</option>
-                  <option value="startswith">startswith</option>
-                  <option value="endswith">endswith</option>
+                  <option value="contains">包含匹配</option>
+                  <option value="fullword">精确匹配</option>
+                  <option value="sectionmatch">部分匹配</option>
+                  <option value="startswith">开头匹配</option>
+                  <option value="endswith">结尾匹配</option>
                 </select>
               </div>
             </div>
 
             <Checkbox v-model="settings.filterByLinksLength.enabled">
-              按相邻街景数量过滤
+              根据相邻街景数量过滤
             </Checkbox>
             <div v-if="settings.filterByLinksLength.enabled" class="ml-6">
               <label class="flex items-center justify-between">
@@ -414,7 +414,7 @@
 
             <Checkbox v-model="settings.getCurve"> 寻找路弯街景 </Checkbox>
 
-            <label v-if="settings.getCurve" class="ml-6 flex items-center justify-between">
+            <label v-if="settings.getCurve" class="ml-6 flex items-center justify-between gap-2">
               最小弯曲角度 ({{ settings.minCurveAngle }}°)
               <input type="range" v-model.number="settings.minCurveAngle" min="5" max="90" />
             </label>
@@ -435,7 +435,7 @@
               </label>
               <label class="flex items-center justify-between">
                 偏移度
-                <Slider v-model="settings.heading.range" :min="-180" :max="180" tooltipPosition="bottom"
+                <Slider v-model="settings.heading.range" :min="-180" :max="180" tooltipPosition="top"
                   class="w-32 pr-2" />
               </label>
               <small>0°表示和道路保持一致方向。</small>
@@ -445,7 +445,7 @@
             <div class="flex items-center justify-between">
               <Checkbox v-model="settings.pitch.adjust">调整俯仰角度</Checkbox>
               <Slider v-if="settings.pitch.adjust" v-model="settings.pitch.range" :min="-90" :max="90"
-                tooltipPosition="bottom" class="w-32 pr-2" />
+                tooltipPosition="top" class="w-32 pr-2" />
             </div>
             <div v-if="settings.pitch.adjust" class="ml-6">
               <small>默认 0°， -90° 对准地面，+90° 对准天空</small>
@@ -455,7 +455,7 @@
             <div class="flex items-center justify-between">
               <Checkbox v-model="settings.zoom.adjust">调整缩放水平</Checkbox>
               <Slider v-if="settings.zoom.adjust" v-model="settings.zoom.range" :min="0" :max="4" :step="-1"
-                tooltipPosition="top" class="w-36 pr-2 mr-2" />
+                tooltipPosition="top" class="w-32 pr-2 ml-2 mr-2" />
             </div>
             <Checkbox v-if="settings.zoom.adjust" v-model="settings.zoom.randomInRange" class="ml-6">随机取值
             </Checkbox>
@@ -471,11 +471,11 @@
 
         <Collapsible :is-open="panels.marker" class="p-1">
           <Checkbox v-model="settings.markers.newRoad" v-on:change="updateMarkerLayers('newRoad')">
-            <span class="h-3 w-3 bg-[#CA283F] rounded-full"></span>New Road
+            <span class="h-3 w-3 bg-[#CA283F] rounded-full"></span>全新覆盖
           </Checkbox>
           <Checkbox v-model="settings.markers.gen4" @change="updateMarkerLayers('gen4')">
             <span class="h-3 w-3 bg-[#2880CA] rounded-full"></span>
-            Update
+            更新覆盖
           </Checkbox>
           <Checkbox v-model="settings.markers.cluster" v-on:change="updateClusters" title="For lag reduction.">
             <span class="inline-block w-3 h-3 rounded-full" style="background: linear-gradient(
