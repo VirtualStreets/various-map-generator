@@ -4,7 +4,7 @@
   <div class="absolute bottom-1 left-1/2 -translate-x-1/2 font-bold text-xs text-black">
     Zoom : {{ currentZoom }}
   </div>
-  <div class="absolute top-1 left-1 w-100 max-h-[calc(100vh-50px)] flex flex-col gap-1">
+  <div class="absolute top-1 left-1 min-w-30 max-w-[calc(70vw)] max-h-[calc(100vh-50px)] flex flex-col gap-1">
     <Logo />
     <div class="flex-1 min-h-0 flex flex-col gap-1">
       <div v-if="!state.started" class="container flex flex-col">
@@ -139,7 +139,7 @@
     </div>
   </div>
 
-  <div class="absolute top-1 right-1 w-88 max-h-[calc(100vh-8px)] overfslow-hidden flex flex-col gap-1">
+  <div class="absolute top-1 right-1 min-w-30 max-w-[calc(70vw)] max-h-[calc(100vh-8px)] overfslow-hidden flex flex-col gap-1">
     <div class="flex flex-col gap-1 flex-1 min-h-0">
       <div v-if="!state.started" class="container flex flex-col">
         <div class="relative cursor-pointer" @click="panels.generatorSettings = !panels.generatorSettings">
@@ -205,7 +205,7 @@
           <Collapsible :is-open="panels.coverageSettings" class="p-1">
             <Checkbox v-if="!settings.rejectOfficial" v-model="settings.rejectUnofficial">拒绝非官方街景</Checkbox>
 
-            <Checkbox v-model="settings.rejectOfficial">寻找非官方街景</Checkbox>
+            <Checkbox v-if="settings.provider === 'yandex'" v-model="settings.rejectOfficial">寻找非官方街景</Checkbox>
 
             <div v-if="settings.rejectUnofficial && !settings.rejectOfficial">
               <Checkbox v-model="settings.rejectDateless">拒绝无日期的街景</Checkbox>
@@ -306,21 +306,23 @@
               </div>
             </div>
 
-            <div class="flex items-center">
+            <div class="flex flex-col gap-1">
               <Checkbox v-model="settings.filterByMinutes.enabled">按分钟过滤</Checkbox>
-              <Slider v-if="settings.filterByMinutes.enabled" v-model="settings.filterByMinutes.range" :min="0"
-                :max="1439" :step="5" :showTooltip="'focus'" :range="true" class="w-48 ml-2" :format="val => {
-                  const h = Math.floor(val / 60).toString().padStart(2, '0')
-                  const m = Math.floor(val % 60).toString().padStart(2, '0')
-                  return `${h}:${m}`
-                }" />
-              <span v-if="settings.filterByMinutes.enabled" class="ml-2">
-                {{ Math.floor(settings.filterByMinutes.range[0] / 60).toString().padStart(2, '0') }}:{{
-                  (settings.filterByMinutes.range[0] % 60).toString().padStart(2, '0') }}
-                -
-                {{ Math.floor(settings.filterByMinutes.range[1] / 60).toString().padStart(2, '0') }}:{{
-                  (settings.filterByMinutes.range[1] % 60).toString().padStart(2, '0') }}
-              </span>
+              <div v-if="settings.filterByMinutes.enabled" class="flex items-center">
+                <span class="ml-6">
+                  {{ Math.floor(settings.filterByMinutes.range[0] / 60).toString().padStart(2, '0') }}:{{
+                    (settings.filterByMinutes.range[0] % 60).toString().padStart(2, '0') }}
+                  -
+                  {{ Math.floor(settings.filterByMinutes.range[1] / 60).toString().padStart(2, '0') }}:{{
+                    (settings.filterByMinutes.range[1] % 60).toString().padStart(2, '0') }}
+                </span>
+                <Slider v-model="settings.filterByMinutes.range" :min="0" :max="1439" :step="5" :showTooltip="'focus'"
+                  :range="true" class="w-48 ml-4 mr-2" :format="val => {
+                    const h = Math.floor(val / 60).toString().padStart(2, '0')
+                    const m = Math.floor(val % 60).toString().padStart(2, '0')
+                    return `${h}:${m}`
+                  }" />
+              </div>
             </div>
 
             <Checkbox v-model="settings.checkAllDates">检查历史街景</Checkbox>
@@ -402,15 +404,12 @@
             <Checkbox v-if="['apple', 'bing', 'baidu'].includes(settings.provider)"
               v-model="settings.filterByAltitude.enabled">
               根据海拔高度过滤</Checkbox>
-            <div v-if="settings.filterByAltitude.enabled" class="ml-6">
-              <label class="flex items-center justify-between">
-                <div class="flex items-center gap-1 relative">
-                  米
-                </div>
-                <Slider v-if="settings.filterByAltitude.enabled" v-model="settings.filterByAltitude.range" :min="-200"
-                  :max="8848" :step="10" :showTooltip="'always'" :range="true" :format="val => `${Math.round(val)}m`"
-                  tooltipPosition="bottom" class="w-40 pr-2" />
-              </label>
+            <div v-if="settings.filterByAltitude.enabled" class="flex items-center ml-6 gap-2">
+              <input v-model.number="settings.filterByAltitude.range[0]" type="number" :min="-200" :max="8848"
+                class="w-20 px-1 border rounded text-center" />米
+              <span>~</span>
+              <input v-model.number="settings.filterByAltitude.range[1]" type="number" :min="-200" :max="8848"
+                class="w-20 px-1 border rounded text-center" />米
             </div>
 
             <Checkbox v-model="settings.getCurve"> 寻找路弯街景 </Checkbox>
@@ -456,7 +455,7 @@
             <div class="flex items-center justify-between">
               <Checkbox v-model="settings.zoom.adjust">调整缩放水平</Checkbox>
               <Slider v-if="settings.zoom.adjust" v-model="settings.zoom.range" :min="0" :max="4" :step="-1"
-                tooltipPosition="bottom" class="w-32 pr-2" />
+                tooltipPosition="top" class="w-36 pr-2 mr-2" />
             </div>
             <Checkbox v-if="settings.zoom.adjust" v-model="settings.zoom.randomInRange" class="ml-6">随机取值
             </Checkbox>
@@ -479,6 +478,16 @@
             Update
           </Checkbox>
           <Checkbox v-model="settings.markers.cluster" v-on:change="updateClusters" title="For lag reduction.">
+            <span class="inline-block w-3 h-3 rounded-full" style="background: linear-gradient(
+              45deg,
+              #FF5F6D 0%,
+              #FFC371 20%,
+              #F9F871 40%,
+              #A1FFCE 60%,
+              #58CFFB 80%,
+              #845EC2 100%
+            );">
+            </span>
             聚合标记
           </Checkbox>
           <Button :disabled="!totalLocs" size="sm" variant="warning"
@@ -564,6 +573,7 @@ import {
 } from '@/composables/utils.ts'
 import StreetViewProviders from './providers'
 import Clipboard_Prefix from './components/Clipboard_Prefix.vue'
+import { tooltip } from 'leaflet'
 const { currentDate } = getCurrentDate()
 const themeMode = useColorMode()
 
