@@ -32,6 +32,7 @@ function handleCopy() {
     const withSource = polygon.found.map((item) => ({
       ...item,
       source: `${props.prefix}_pano` || '',
+      links: []
     }))
     data = data.concat(withSource)
   })
