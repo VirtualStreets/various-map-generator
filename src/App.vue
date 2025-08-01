@@ -125,7 +125,7 @@
             </div>
 
             <div class="flex gap-1">
-              <Clipboard :data="[polygon as Polygon]" :disabled="!polygon.found.length" />
+              <Clipboard :data="[polygon as Polygon]" :disabled="!polygon.found.length" :prefix="settings.provider" />
               <Clipboard_Prefix :data="[polygon as Polygon]" :disabled="!polygon.found.length"
                 :prefix="settings.provider" />
               <ExportToJSON :data="[polygon as Polygon]" :disabled="!polygon.found.length" />
@@ -147,7 +147,7 @@
           更改生成数量上限
         </Button>
         <div class="flex gap-1">
-          <Clipboard :data="selected as Polygon[]" :disabled="!totalLocs" />
+          <Clipboard :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider"/>
           <Clipboard_Prefix :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider" />
           <ExportToJSON :data="selected as Polygon[]" :disabled="!totalLocs" />
           <ExportToCSV :data="selected as Polygon[]" :disabled="!totalLocs" />

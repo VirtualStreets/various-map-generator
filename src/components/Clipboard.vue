@@ -22,11 +22,18 @@ const { copy, copied, isSupported } = useClipboard()
 const props = defineProps<{
   data: Polygon[]
   disabled?: boolean
+  prefix?: string
 }>()
 
 function handleCopy() {
   let data: Panorama[] = []
-  props.data.forEach((polygon) => (data = data.concat(polygon.found)))
+  props.data.forEach((polygon) => {
+    const withSource = polygon.found.map((item) => ({
+      ...item,
+      source: props.prefix || '',
+    }))
+    data = data.concat(withSource)
+  })
   copy(JSON.stringify({ customCoordinates: data }))
 }
 </script>
