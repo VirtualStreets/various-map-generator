@@ -225,7 +225,7 @@
 
               <Checkbox v-model="settings.checkLinks">检查相邻街景</Checkbox>
               <div v-if="settings.checkLinks" class="flex items-center justify-between ml-6">
-                Depth :
+                深度 :
                 <div class="flex items-center gap-2">
                   {{ settings.linksDepth }}
                   <input type="range" v-model.number="settings.linksDepth" min="1" max="10" />
@@ -484,7 +484,7 @@
           <Button :disabled="!totalLocs" size="sm" variant="warning"
             class="mt-2 w-full justify-center flex items-center gap-1"
             title="Clear markers (for performance, this won't erase your generated locations)" @click="clearMarkers">
-            <MarkerIcon class="w-5 h-5" />清理
+            <MarkerIcon class="w-5 h-5" />清理标记
           </Button>
         </Collapsible>
       </div>

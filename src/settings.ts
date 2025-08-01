@@ -20,7 +20,7 @@ const defaultSettings = {
   findRegions: false,
   regionRadius: 100,
 
-  provider: 'google',
+  provider: 'baidu',
 
   rejectUnofficial: true,
   rejectOfficial: false,
