@@ -22,8 +22,8 @@ function handleExport() {
     const updated = polygon.found.map((panorama) => ({
       ...panorama,
       panoId: `${props.prefix ? `${props.prefix.toUpperCase()}:` : ''}${panorama.panoId}`,
-      source: `${props.prefix}_pano` || '',
-      links:[]
+      source: `${props.prefix === 'tencent' ? 'qq' : props.prefix}_pano` || '',
+      links: []
     }))
     data = data.concat(updated)
   })

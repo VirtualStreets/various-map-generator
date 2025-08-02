@@ -1,12 +1,5 @@
 <template>
-  <Button
-    v-if="isSupported"
-    size="sm"
-    squared
-    :disabled
-    title="复制到剪贴板(带街景服务前缀)"
-    @click="handleCopy"
-  >
+  <Button v-if="isSupported" size="sm" squared :disabled title="复制到剪贴板(带街景服务前缀)" @click="handleCopy">
     <ClipboardCheckedIcon v-if="copied" class="w-5 h-5" />
     <ClipboardPrefixIcon v-else class="w-5 h-5" />
   </Button>
@@ -32,8 +25,8 @@ function handleCopy() {
     const updated = polygon.found.map((panorama) => ({
       ...panorama,
       panoId: `${props.prefix ? `${props.prefix.toUpperCase()}:` : ''}${panorama.panoId}`,
-      source: `${props.prefix}_pano` || '',
-      links:[]
+      source: `${props.prefix === 'tencent' ? 'qq' : props.prefix}_pano` || '',
+      links: []
     }))
     data = data.concat(updated)
   })
