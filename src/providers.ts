@@ -319,13 +319,12 @@ async function getFromTencent(
         }
 
         const date = extractDateFromPanoId(result.basic.svid.slice(8, 20))
-        const [lng, lat] = gcoord.transform([result.addr.x_lng, result.addr.y_lat], gcoord.GCJ02, gcoord.WGS84)
         const trans_svid = result.basic.trans_svid
 
         const panorama: google.maps.StreetViewPanoramaData = {
             location: {
                 pano: panoId,
-                latLng: new google.maps.LatLng(lat, lng),
+                latLng: new google.maps.LatLng(result.addr.y_lat, result.addr.x_lng),
                 description: result.basic.append_addr,
                 shortDescription: result.basic.mode === "night" ? panoId : (trans_svid || null),
                 country: 'CN'
@@ -578,7 +577,7 @@ async function getFromBaidu(
         }
 
         const date = extractDateFromPanoId(panoId.slice(10, 22))
-        const [lng, lat] = gcoord.transform([result.X / 100, result.Y / 100], gcoord.BD09MC, gcoord.WGS84);
+        const [lng, lat] = gcoord.transform([result.X / 100, result.Y / 100], gcoord.BD09MC, gcoord.GCJ02);
         const panorama: google.maps.StreetViewPanoramaData = {
             location: {
                 pano: panoId,
