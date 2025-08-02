@@ -19,7 +19,6 @@ function handleExport() {
   props.data.forEach((polygon) => {
     const updated = polygon.found.map((panorama) => ({
       ...panorama,
-      panoId: `${props.prefix ? `${props.prefix.toUpperCase()}:` : ''}${panorama.panoId}`,
       source: `${props.prefix}_pano` || '',
       links: []
     }))
