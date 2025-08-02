@@ -4,7 +4,8 @@
   <div class="absolute bottom-1 left-1/2 -translate-x-1/2 font-bold text-xs text-black">
     Zoom : {{ currentZoom }}
   </div>
-  <div class="absolute top-1 left-1 w-100 max-h-[calc(100vh-50px)] flex flex-col gap-1">
+  <div class="absolute top-1 left-1 min-w-90 max-w-[calc(80vw)] 
+  max-h-[calc(100vh-50px)] flex flex-col gap-1">
     <Logo />
     <div class="flex-1 min-h-0 flex flex-col gap-1">
       <div v-if="!state.started" class="container flex flex-col">
@@ -124,8 +125,8 @@
     <div class="container">
       <div class="flex items-center gap-2 p-1">
         <h2>Export all ({{ totalLocs }})</h2>
-        <Button class="ml-auto" size="sm" title="Change locations cap for all selected" @click="changeLocationsCap">Edit
-          cap for all
+        <Button class="ml-auto" size="sm" title="Change locations cap for all selected" @click="changeLocationsCap">
+          Edit cap for all
         </Button>
         <div class="flex gap-1">
           <Clipboard :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider" />
@@ -141,67 +142,71 @@
     </div>
   </div>
 
-  <div class="absolute top-1 right-1 w-88 max-h-[calc(100vh-8px)] overfslow-hidden flex flex-col gap-1">
+  <div class="absolute bottom-1 sm:top-1 sm:bottom-auto right-1 min-w-70 max-w-[calc(75vw)] 
+  max-h-[calc(100vh-8px)] overflow-hidden flex flex-col gap-1">
     <div class="flex flex-col gap-1 flex-1 min-h-0">
-      <div v-if="!state.started" class="container flex flex-col">
+      <div v-if="!state.started" class="container flex flex-col flex-1 min-h-0">
         <div class="relative cursor-pointer" @click="panels.generatorSettings = !panels.generatorSettings">
           <h2>Generator settings</h2>
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
         </div>
-        <Collapsible :is-open="panels.generatorSettings" class="mt-1 p-1 pr-2">
-          <div class="flex items-center justify-between">
-            Provider :
-            <select v-model="settings.provider" @change="toggleMap(settings.provider)">
-              <option value="google">Google</option>
-              <option value="apple">Apple</option>
-              <option value="bing">Bing</option>
-              <option value="yandex">Yandex</option>
-              <option value="tencent">Tencent</option>
-              <option value="baidu">Baidu</option>
-              <option value="kakao">Kakao</option>
-            </select>
-          </div>
-          <div class="flex justify-between">
-            Generators :
-            <div class="flex items-center gap-4">
-              <input type="number" v-model.number="settings.numOfGenerators" min="1" max="10"
-                class="w-10 h-5 px-2 py-1 border rounded text-right" />
-              <Slider v-model="settings.numOfGenerators" :min="1" :max="10" :step="1" :tooltips="false" class="w-32" />
+        <div class="flex-1 min-h-0 overflow-y-auto">
+          <Collapsible :is-open="panels.generatorSettings" class="mt-1 p-1 pr-2">
+            <div class="flex items-center justify-between">
+              Provider :
+              <select v-model="settings.provider" @change="toggleMap(settings.provider)">
+                <option value="google">Google</option>
+                <option value="apple">Apple</option>
+                <option value="bing">Bing</option>
+                <option value="yandex">Yandex</option>
+                <option value="tencent">Tencent</option>
+                <option value="baidu">Baidu</option>
+                <option value="kakao">Kakao</option>
+              </select>
             </div>
-          </div>
-
-          <div class="flex justify-between">
-            Speed:
-            <span>
-              <input type="number" v-model.number="settings.speed" min="1" max="1000" @change="handleSpeedInput" />
-              attemps
-            </span>
-          </div>
-
-          <div class="flex items-center justify-between">
-            Radius :
-            <span>
-              <input type="number" v-model.number="settings.radius" @change="handleRadiusInput" />
-              m
-            </span>
-          </div>
-
-          <Checkbox v-model="settings.oneCountryAtATime">
-            Only check one country/polygon at a time.
-          </Checkbox>
-
-          <Checkbox v-model="settings.onlyCheckBlueLines"
-            title="Significatly speeds up generation in areas with sparse coverage density. May negatively affect speeds if generating locations exclusively in areas with very dense coverage. (Official coverage only)">
-            Only check in areas with blue lines
-          </Checkbox>
-
-          <div v-if="!settings.rejectOfficial">
-            <Checkbox v-model="settings.findRegions">Minimum distance between locations</Checkbox>
-            <div v-if="settings.findRegions" class="ml-6">
-              <input type="number" v-model.number="settings.regionRadius" /> <span> km </span>
+            <div class="flex justify-between">
+              Generators :
+              <div class="flex items-center gap-4">
+                <input type="number" v-model.number="settings.numOfGenerators" min="1" max="10"
+                  class="w-10 h-5 px-2 py-1 border rounded text-right" />
+                <Slider v-model="settings.numOfGenerators" :min="1" :max="10" :step="1" :tooltips="false"
+                  class="w-32" />
+              </div>
             </div>
-          </div>
-        </Collapsible>
+
+            <div class="flex justify-between">
+              Speed:
+              <span>
+                <input type="number" v-model.number="settings.speed" min="1" max="1000" @change="handleSpeedInput" />
+                attemps
+              </span>
+            </div>
+
+            <div class="flex items-center justify-between">
+              Radius :
+              <span>
+                <input type="number" v-model.number="settings.radius" @change="handleRadiusInput" />
+                m
+              </span>
+            </div>
+
+            <Checkbox v-model="settings.oneCountryAtATime">
+              Only check one country/polygon at a time.
+            </Checkbox>
+
+            <Checkbox v-model="settings.onlyCheckBlueLines"
+              title="Significatly speeds up generation in areas with sparse coverage density. May negatively affect speeds if generating locations exclusively in areas with very dense coverage. (Official coverage only)">
+              Only check in areas with blue lines
+            </Checkbox>
+
+            <div v-if="!settings.rejectOfficial">
+              <Checkbox v-model="settings.findRegions">Minimum distance between locations</Checkbox>
+              <div v-if="settings.findRegions" class="ml-6">
+                <input type="number" v-model.number="settings.regionRadius" /> <span> km </span>
+              </div>
+            </div>
+          </Collapsible>
+        </div>
       </div>
 
       <div v-if="!state.started" class="container flex flex-col flex-1 min-h-0">
@@ -536,41 +541,42 @@
         </div>
       </div>
 
-      <div class="container flex flex-col">
+      <div class="container flex flex-col flex-1 min-h-0">
         <div class="cursor-pointer relative" @click="panels.marker = !panels.marker">
           <h2>Markers</h2>
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
         </div>
-
-        <Collapsible :is-open="panels.marker" class="p-1">
-          <Checkbox v-model="settings.markers.noBlueLine" v-if="settings.provider == 'google'"
-            v-on:change="updateMarkerLayers('noBlueLine')">
-            <span class="h-3 w-3 bg-[#E412D2] rounded-full"></span>No blue line
-          </Checkbox>
-          <Checkbox v-model="settings.markers.newRoad" v-on:change="updateMarkerLayers('newRoad')">
-            <span class="h-3 w-3 bg-[#CA283F] rounded-full"></span>New Road
-          </Checkbox>
-          <Checkbox v-model="settings.markers.gen4" @change="updateMarkerLayers('gen4')">
-            <span class="h-3 w-3 bg-[#2880CA] rounded-full"></span>
-            {{ settings.provider !== 'google' ? 'Update' : 'Gen 4 Update' }}
-          </Checkbox>
-          <Checkbox v-model="settings.markers.gen2Or3" v-if="settings.provider == 'google'"
-            v-on:change="updateMarkerLayers('gen2Or3')">
-            <span class="h-3 w-3 bg-[#9A28CA] rounded-full"></span>Gen 2 or 3 Update
-          </Checkbox>
-          <Checkbox v-model="settings.markers.gen1" v-if="settings.provider == 'google'"
-            v-on:change="updateMarkerLayers('gen1')">
-            <span class="h-3 w-3 bg-[#24AC20] rounded-full"></span>Gen 1 Update
-          </Checkbox>
-          <Checkbox v-model="settings.markers.cluster" v-on:change="updateClusters" title="For lag reduction.">
-            Cluster markers
-          </Checkbox>
-          <Button :disabled="!totalLocs" size="sm" variant="warning"
-            class="mt-2 w-full justify-center flex items-center gap-1"
-            title="Clear markers (for performance, this won't erase your generated locations)" @click="clearMarkers">
-            <MarkerIcon class="w-5 h-5" />Clear
-          </Button>
-        </Collapsible>
+        <div class="flex-1 min-h-0 overflow-y-auto">
+          <Collapsible :is-open="panels.marker" class="p-1">
+            <Checkbox v-model="settings.markers.noBlueLine" v-if="settings.provider == 'google'"
+              v-on:change="updateMarkerLayers('noBlueLine')">
+              <span class="h-3 w-3 bg-[#E412D2] rounded-full"></span>No blue line
+            </Checkbox>
+            <Checkbox v-model="settings.markers.newRoad" v-on:change="updateMarkerLayers('newRoad')">
+              <span class="h-3 w-3 bg-[#CA283F] rounded-full"></span>New Road
+            </Checkbox>
+            <Checkbox v-model="settings.markers.gen4" @change="updateMarkerLayers('gen4')">
+              <span class="h-3 w-3 bg-[#2880CA] rounded-full"></span>
+              {{ settings.provider !== 'google' ? 'Update' : 'Gen 4 Update' }}
+            </Checkbox>
+            <Checkbox v-model="settings.markers.gen2Or3" v-if="settings.provider == 'google'"
+              v-on:change="updateMarkerLayers('gen2Or3')">
+              <span class="h-3 w-3 bg-[#9A28CA] rounded-full"></span>Gen 2 or 3 Update
+            </Checkbox>
+            <Checkbox v-model="settings.markers.gen1" v-if="settings.provider == 'google'"
+              v-on:change="updateMarkerLayers('gen1')">
+              <span class="h-3 w-3 bg-[#24AC20] rounded-full"></span>Gen 1 Update
+            </Checkbox>
+            <Checkbox v-model="settings.markers.cluster" v-on:change="updateClusters" title="For lag reduction.">
+              Cluster markers
+            </Checkbox>
+            <Button :disabled="!totalLocs" size="sm" variant="warning"
+              class="mt-2 w-full justify-center flex items-center gap-1"
+              title="Clear markers (for performance, this won't erase your generated locations)" @click="clearMarkers">
+              <MarkerIcon class="w-5 h-5" />Clear
+            </Button>
+          </Collapsible>
+        </div>
       </div>
 
       <Button v-if="canBeStarted" @click="handleClickStart" :variant="state.started ? 'danger' : 'primary'"
@@ -1546,6 +1552,11 @@ body {
 .logo {
   color: var(--text-color);
   background-color: var(--container-bg);
+}
+
+.tooltip {
+  color: var(--text-color);
+  background-color: var(--bg-color);
 }
 
 input,
