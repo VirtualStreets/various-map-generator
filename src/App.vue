@@ -4,7 +4,7 @@
   <div class="absolute bottom-1 left-1/2 -translate-x-1/2 font-bold text-xs text-black">
     Zoom : {{ currentZoom }}
   </div>
-  <div class="absolute top-1 left-1 min-w-30 max-w-[calc(70vw)] max-h-[calc(100vh-50px)] flex flex-col gap-1">
+  <div class="absolute top-1 left-1 min-w-80 max-w-[calc(90vw)] max-h-[calc(100vh-50px)] flex flex-col gap-1">
     <Logo />
     <div class="flex-1 min-h-0 flex flex-col gap-1">
       <div v-if="!state.started" class="container">
@@ -129,7 +129,8 @@
               <Clipboard :data="[polygon as Polygon]" :disabled="!polygon.found.length" :prefix="settings.provider" />
               <Clipboard_Prefix :data="[polygon as Polygon]" :disabled="!polygon.found.length"
                 :prefix="settings.provider" />
-              <ExportToJSON :data="[polygon as Polygon]" :disabled="!polygon.found.length" :prefix="settings.provider" />
+              <ExportToJSON :data="[polygon as Polygon]" :disabled="!polygon.found.length"
+                :prefix="settings.provider" />
               <ExportToCSV :data="[polygon as Polygon]" :disabled="!polygon.found.length" />
               <Button size="sm" squared variant="danger" :disabled="!polygon.found.length" title="删除该区域生成街景"
                 @click="clearPolygon(polygon as Polygon)">
@@ -160,8 +161,8 @@
     </div>
   </div>
 
-  <div
-    class="absolute top-1 right-1 min-w-30 max-w-[calc(70vw)] max-h-[calc(100vh-8px)] overfslow-hidden flex flex-col gap-1">
+  <div class="absolute bottom-1 sm:top-1 sm:bottom-auto right-1 min-w-50 max-w-[calc(75vw)]
+  max-h-[calc(90vh)] overflow-hidden flex flex-col gap-1">
     <div class="flex flex-col gap-1 flex-1 min-h-0">
       <div v-if="!state.started" class="container flex flex-col">
         <div class="relative cursor-pointer" @click="panels.generatorSettings = !panels.generatorSettings">
@@ -1379,6 +1380,11 @@ body {
 .logo {
   color: var(--text-color);
   background-color: var(--container-bg);
+}
+
+.tooltip {
+  color: var(--text-color);
+  background-color: var(--bg-color);
 }
 
 input,
