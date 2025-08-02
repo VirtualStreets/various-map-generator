@@ -70,7 +70,7 @@
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
         </div>
 
-        <Collapsible :is-open="panels.layer" class="flex flex-col gap-1 max-h-[140px] overflow-y-auto mt-2 p-1">
+        <Collapsible :is-open="panels.layer" class="flex flex-col gap-1 max-h-[140px] mt-2 p-1">
           <div v-for="layer in availableLayers" :key="layer.key" class="flex gap-1 justify-between">
             <Checkbox v-model="layer.visible" @change="toggleLayer(layer as LayerMeta)" class="truncate">
               <span class="truncate">{{ layer.label }}</span>
@@ -91,7 +91,7 @@
 
       <div v-if="!state.started" class="container font-bold text-center">{{ select }}</div>
 
-      <div v-if="selected.length" class="container flex-1 min-h-0 flex flex-col gap-1">
+      <div v-if="selected.length" class="container overflow-y-auto max-h-[300px] flex-1 min-h-0 flex flex-col gap-1">
         <h2>国家/地区 ({{ selected.length }})</h2>
         <div class="px-1">
           <Checkbox v-model="settings.markersOnImport" title="This may affect performance.">
