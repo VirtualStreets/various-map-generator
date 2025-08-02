@@ -239,7 +239,7 @@
                 忽略无描述的街景
               </Checkbox>
 
-              <Checkbox v-model="settings.findNightCoverage" v-if="settings.provider === 'tencent'">
+              <Checkbox v-model="settings.findNightCoverage" v-if="settings.provider === 'tencent' && !settings.rejectDescription">
                 寻找夜晚街景
               </Checkbox>
 
@@ -802,6 +802,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
     }
 
     if (settings.findNightCoverage && settings.provider === 'tencent') {
+      settings.rejectDescription = false
       if (!res.location.shortDescription) return false
       return getPano(res.location.shortDescription, polygon)
     }
