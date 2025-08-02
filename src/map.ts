@@ -330,8 +330,14 @@ const availableLayers = ref<LayerMeta[]>([
   },
   {
     label: '中国省级边界',
-    key: 'china_borders',
-    source: '/geojson/china_borders.json',
+    key: 'china_provinces',
+    source: '/geojson/china_provinces.json',
+    visible: false,
+  },
+  {
+    label: '中国地级市边界',
+    key: 'china_cities',
+    source: '/geojson/china_cities.json',
     visible: false,
   },
   {
