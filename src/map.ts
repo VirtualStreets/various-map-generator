@@ -34,23 +34,10 @@ const currentZoom = ref(1)
 const bingMapsLayer = L.layerGroup([bingBaseLayer, bingTerrainLayer])
 
 const petalMapsLayer = L.tileLayer("https://maprastertile-drcn.dbankcdn.cn/display-service/v1/online-render/getTile/24.12.10.10/{z}/{x}/{y}/?language=zh&p=46&scale=2&mapType=ROADMAP&presetStyleId=standard&pattern=JPG&key=DAEDANitav6P7Q0lWzCzKkLErbrJG4kS1u%2FCpEe5ZyxW5u0nSkb40bJ%2BYAugRN03fhf0BszLS1rCrzAogRHDZkxaMrloaHPQGO6LNg==",
-  { maxZoom: 20 }
+  { maxZoom: 18 }
 )
 
 const tencentBaseLayer = L.tileLayer("http://rt{s}.map.gtimg.com/realtimerender?z={z}&x={x}&y={-y}&type=vector", { subdomains: ["0", "1", "2", "3"], minNativeZoom: 3, minZoom: 1 })
-
-const gsvLayer = L.tileLayer(
-  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*211m3*211e3*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
-  { maxZoom: 20 }
-)
-const gsvLayer2 = L.tileLayer(
-  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
-  { maxZoom: 20 }
-)
-const gsvLayer3 = L.tileLayer(
-  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e3*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
-  { maxZoom: 20 }
-)
 
 const appleCoverageLayer = L.tileLayer('https://lookmap.eu.pythonanywhere.com/bluelines_raster_2x/{z}/{x}/{y}.png', { minZoom: 1, maxZoom: 7 })
 
