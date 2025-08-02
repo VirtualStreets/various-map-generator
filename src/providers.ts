@@ -137,7 +137,6 @@ async function getFromGoogle(
             else onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
         }
         catch (error) {
-            console.error('Error fetching Google panorama:', error)
             onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
         }
     }
@@ -200,7 +199,6 @@ async function getFromApple(
 
         onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (error) {
-        console.error("[Apple Look Around] panorama fetch error:", error)
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
     }
 }
@@ -276,7 +274,6 @@ async function getFromYandex(
 
         onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (err) {
-        console.error('[Yandex] panorama fetch error:', err)
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
     }
 }
@@ -355,7 +352,6 @@ async function getFromTencent(
 
         onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (err) {
-        console.error('[Tencent] panorama fetch error:', err)
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
     }
 }
@@ -456,7 +452,6 @@ async function getFromBing(
 
         onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (err) {
-        console.error('[Tencent] panorama fetch error:', err)
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
     }
 }
@@ -530,7 +525,6 @@ async function getFromKakao(
 
         onCompleted(res, google.maps.StreetViewStatus.OK)
     } catch (err) {
-        console.error('[Kakao] panorama fetch error:', err)
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
     }
 }
@@ -612,7 +606,6 @@ async function getFromBaidu(
 
         onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (err) {
-        console.error('[Baidu] panorama fetch error:', err)
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
     }
 }
