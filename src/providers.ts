@@ -58,7 +58,6 @@ async function getFromApple(
 
         onCompleted(panorama, 'OK')
     } catch (error) {
-        console.error("[Apple Look Around] panorama fetch error:", error)
         onCompleted(null, 'UNKNOWN_ERROR')
     }
 }
@@ -134,7 +133,6 @@ async function getFromYandex(
 
         onCompleted(panorama, 'OK')
     } catch (err) {
-        console.error('[Yandex] panorama fetch error:', err)
         onCompleted(null, 'UNKNOWN_ERROR')
     }
 }
@@ -213,7 +211,6 @@ async function getFromTencent(
 
         onCompleted(panorama, 'OK')
     } catch (err) {
-        console.error('[Tencent] panorama fetch error:', err)
         onCompleted(null, 'UNKNOWN_ERROR')
     }
 }
@@ -314,7 +311,6 @@ async function getFromBing(
 
         onCompleted(panorama, 'OK')
     } catch (err) {
-        console.error('[Tencent] panorama fetch error:', err)
         onCompleted(null, 'UNKNOWN_ERROR')
     }
 }
@@ -388,7 +384,6 @@ async function getFromKakao(
 
         onCompleted(res, 'OK')
     } catch (err) {
-        console.error('[Kakao] panorama fetch error:', err)
         onCompleted(null, 'UNKNOWN_ERROR')
     }
 }
@@ -469,7 +464,6 @@ async function getFromBaidu(
 
         onCompleted(panorama, 'OK')
     } catch (err) {
-        console.error('[Baidu] panorama fetch error:', err)
         onCompleted(null, 'UNKNOWN_ERROR')
     }
 }
