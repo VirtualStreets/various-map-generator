@@ -47,6 +47,12 @@ const defaultSettings = {
       4: true,
       5: true
     },
+    naver: {
+      1:true,
+      3:true,
+      13:true,
+      15:true
+    },
     yandex: {
       1: true,
       2: true,
@@ -341,7 +347,7 @@ const defaultSettings = {
   checkImports: false,
 }
 
-const storedSettings = useStorage('map_generator__settings_v1', defaultSettings)
+const storedSettings = useStorage('map_generator__settings_v2', defaultSettings)
 const settings = reactive(storedSettings.value)
 settings.toDate = currentDate
 settings.toYear = currentYear

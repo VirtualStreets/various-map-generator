@@ -7,6 +7,9 @@ declare module 'leaflet-vector-tile-layer' {
     maxZoom?: number;
     interactive?: boolean;
     maxNativeZoom?: number;
+    tolerance?: number;
+    simplifyFactor?: number;
+    rendererFactory?: L.RendererFunction;
   }
 
   export default function vectorTileLayer(url: string, options?: VectorTileLayerOptions): L.GridLayer;

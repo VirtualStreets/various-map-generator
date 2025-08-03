@@ -143,7 +143,7 @@
   </div>
 
   <div class="absolute bottom-1 sm:top-1 sm:bottom-auto right-1 w-60 sm:w-70 md:w-80
-  max-h-[calc(90vh)] overflow-hidden flex flex-col gap-1">
+  max-h-[calc(95vh)] overflow-hidden flex flex-col gap-1">
     <div class="flex flex-col gap-1 flex-1 min-h-0">
       <div v-if="!state.started" class="container flex flex-col flex-1 min-h-0">
         <div class="relative cursor-pointer" @click="panels.generatorSettings = !panels.generatorSettings">
@@ -161,6 +161,7 @@
                 <option value="yandex">Yandex</option>
                 <option value="tencent">Tencent</option>
                 <option value="baidu">Baidu</option>
+                <option value="naver">Naver</option>
                 <option value="kakao">Kakao</option>
               </select>
             </div>
@@ -182,7 +183,8 @@
               </span>
             </div>
 
-            <div class="flex items-center justify-between">
+            <div v-if="!['apple', 'naver', 'yandex'].includes(settings.provider)"
+              class="flex items-center justify-between">
               Radius :
               <span>
                 <input type="number" v-model.number="settings.radius" @change="handleRadiusInput" />
@@ -218,7 +220,8 @@
           <Collapsible :is-open="panels.coverageSettings" class="p-1">
             <Checkbox v-if="!settings.rejectOfficial" v-model="settings.rejectUnofficial">Reject unofficial</Checkbox>
 
-            <Checkbox v-model="settings.rejectOfficial">Find unofficial coverage</Checkbox>
+            <Checkbox v-if="settings.rejectOfficial" v-model="settings.rejectOfficial">Find unofficial coverage
+            </Checkbox>
             <Checkbox v-if="settings.rejectOfficial" v-model="settings.findPhotospheres">Find photospheres only
             </Checkbox>
             <Checkbox v-if="settings.rejectOfficial" v-model="settings.findDrones">Find drone photospheres only
@@ -231,7 +234,8 @@
                 Reject locations without description
               </Checkbox>
               <Checkbox v-if="settings.provider === 'google'" v-model="settings.ignoreBadcam">Ignore BadCam</Checkbox>
-              <Checkbox v-model="settings.rejectDescription">Find trekker coverage</Checkbox>
+              <Checkbox v-if="settings.provider === 'google'" v-model="settings.rejectDescription">Find trekker coverage
+              </Checkbox>
 
               <Checkbox v-model="settings.findNightCoverage" v-if="settings.provider === 'tencent'">
                 Find night coverage
@@ -252,7 +256,7 @@
               </div>
 
               <Checkbox v-model="settings.findByGeneration.enabled"
-                v-if="['google', 'apple', 'bing', 'yandex'].includes(settings.provider)">Find by
+                v-if="['google', 'apple', 'bing', 'naver', 'yandex'].includes(settings.provider)">Find by
                 generation</Checkbox>
               <div v-if="settings.findByGeneration.enabled && settings.provider === 'google'" class="ml-6">
                 <Checkbox v-model="settings.findByGeneration.google[1]">Gen 1</Checkbox>
@@ -270,6 +274,13 @@
               <div v-if="settings.findByGeneration.enabled && settings.provider === 'bing'" class="ml-6">
                 <Checkbox v-model="settings.findByGeneration.bing[3]">TomTom</Checkbox>
                 <Checkbox v-model="settings.findByGeneration.bing[4]">Bing</Checkbox>
+              </div>
+              <div v-if="settings.findByGeneration.enabled && settings.provider === 'naver'" class="ml-6">
+                <Checkbox v-model="settings.findByGeneration.naver[4]">Gen 1</Checkbox>
+                <Checkbox v-model="settings.findByGeneration.naver[3]">Gen 2</Checkbox>
+                <Checkbox v-model="settings.findByGeneration.naver[15]">Gen 3 (3D)</Checkbox>
+                <Checkbox v-model="settings.findByGeneration.naver[13]">Trekker</Checkbox>
+                <Checkbox v-model="settings.findByGeneration.naver[1]">Drone</Checkbox>
               </div>
               <div v-if="settings.findByGeneration.enabled && settings.provider === 'yandex'" class="ml-6">
                 <Checkbox v-model="settings.findByGeneration.yandex[1]">Gen 1</Checkbox>
@@ -1021,7 +1032,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
 
     // Find Generation
     if (
-      ['google', 'apple', 'yandex', 'bing'].includes(settings.provider) &&
+      ['google', 'apple', 'yandex', 'bing', 'naver'].includes(settings.provider) &&
       settings.findByGeneration.enabled &&
       ((!settings.rejectOfficial && !settings.checkAllDates) || settings.selectMonths)
     ) {
@@ -1094,7 +1105,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
 
     if (
       settings.findByGeneration.enabled &&
-      ['google', 'apple', 'yandex', 'bing'].includes(settings.provider)
+      ['google', 'apple', 'yandex', 'bing', 'naver'].includes(settings.provider)
     ) {
       const gen = getCameraGeneration(pano, settings.provider)
       if (gen === 0) return false
@@ -1278,7 +1289,7 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
   const previousPano = time[time.length - 2]?.pano
 
   // New road
-  if (!previousPano) {
+  if (!previousPano && settings.provider != 'naver') {
     checkHasBlueLine(pano.location.latLng.toJSON()).then((hasBlueLine) => {
       addLocation(location, polygon,
         settings.provider != 'google' ? icons.newLoc : (hasBlueLine ? icons.newLoc : icons.noBlueLine))
@@ -1384,6 +1395,9 @@ function addLocation(
               break
             case 'kakao':
               url = `https://map.kakao.com/?map_type=TYPE_MAP&map_attribute=ROADVIEW&panoid=${location.panoId}&pan=${heading}&tilt=${pitch}`
+              break
+            case 'naver':
+              url = `https://map.naver.com/p?c=10.00,0,0,0,adh&p=${location.panoId},${heading > 180 ? (heading - 360) : heading},${pitch},80`
               break
             default:
               url = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}&heading=${heading}&pitch=${pitch}&fov=${180 / 2 ** zoom}`

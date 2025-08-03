@@ -13,16 +13,12 @@ export function isOfficial(pano: string, provider: string) {
     case 'google':
       return pano.length === 22  // Checks if pano ID is 22 characters long. Otherwise, it's an Ari
     // return (!/^\xA9 (?:\d+ )?Google$/.test(pano.copyright))
-    case 'apple':
-      return pano.length === 19
-    case 'bing':
-      return true
     case 'yandex':
-      return pano.length === 34
+    case 'apple':
+    case 'bing':
     case 'tencent':
-      return pano.length === 23
     case 'baidu':
-      return pano.length === 27
+    case 'naver':
     case 'kakao':
       return true
     default:
@@ -87,7 +83,7 @@ export function getCameraGeneration(
   const country = location?.country ?? 'None';
   const lat = location?.latLng?.lat() ?? 0;
   const imageDate = pano.imageDate ?? '';
-  const {width, height} = pano.tiles.worldSize;
+  const { width, height } = pano.tiles.worldSize;
 
   if (provider === 'google') {
 
@@ -113,11 +109,12 @@ export function getCameraGeneration(
     return 0;
   }
 
-  if (provider === 'apple' || provider === 'bing') {
-    return Number(pano.location?.description);
+  else if (provider === 'apple' || provider === 'bing' || provider === 'naver') {
+    if ( pano.location?.shortDescription === '2' && provider === 'naver') return 1
+    return Number(pano.location?.shortDescription);
   }
 
-  if (provider === 'yandex') {
+  else if (provider === 'yandex') {
     if (!width) return 0;
     if (width === 17664) return 2;
     if (width === 5632) return 1;

@@ -177,7 +177,8 @@ async function getFromApple(
             location: {
                 pano: apple.panoId,
                 latLng: new google.maps.LatLng(apple.lat, apple.lng),
-                description: apple.coverage_type == 3 ? "backpack" : (apple.camera_type),
+                shortDescription: apple.coverage_type == 3 ? "backpack" : (apple.camera_type),
+                description:'© Apple Look Around',
                 altitude: apple.altitude
             },
             links: [],
@@ -434,6 +435,7 @@ async function getFromBing(
                 pano: panoId,
                 latLng: new google.maps.LatLng(result.la, result.lo),
                 description: String(result.ml),
+                shortDescription: String(result.ml),
                 altitude: result.al
             },
             links,
@@ -519,6 +521,80 @@ async function getFromKakao(
                     pano: panoId,
                 },
             ].sort((a, b) => a.date.getTime() - b.date.getTime()),
+        }
+
+        onCompleted(res, google.maps.StreetViewStatus.OK)
+    } catch (err) {
+        onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
+    }
+}
+
+// Naver
+async function getFromNaver(
+    request: google.maps.StreetViewLocationRequest & { pano?: string },
+    onCompleted: (
+        res: google.maps.StreetViewPanoramaData | null,
+        status: google.maps.StreetViewStatus,
+    ) => void,
+) {
+    try {
+
+        let panoId: string | undefined
+        let heading: number | undefined
+        if (request.pano) {
+            panoId = request.pano
+        } else if (request.location) {
+            const { lat, lng } = request.location
+            const uri = `https://cors-proxy.ac4.stocc.dev/https://panorama.map.naver.com/api/v2/nearby/${lng}/${lat}?lang=en`
+            const resp = await fetch(uri)
+            const json = await resp.json()
+
+            panoId = json.features?.[0]?.properties?.id
+            heading = json.features?.[0]?.properties?.heading
+
+        }
+
+        if (!panoId) {
+            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
+            return
+        }
+
+        const uri = `https://cors-proxy.ac4.stocc.dev/https://panorama.map.naver.com/metadataV3/basic/${panoId}?lang=en`
+        const resp = await fetch(uri)
+        const result = await resp.json()
+
+        if (!result?.id) {
+            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
+            return
+        }
+        const date = result.info?.photodate
+
+        const res: google.maps.StreetViewPanoramaData = {
+            location: {
+                pano: panoId,
+                latLng: new google.maps.LatLng(result.latitude, result.longitude),
+                description: result.info?.description,
+                shortDescription: result.dtl_type,
+                altitude: result.altitude,
+                country: 'KR'
+            },
+            links: result.links?.map((r: any) => ({
+                pano: r.id,
+                heading: 0,
+            })) ?? [],
+            imageDate: date,
+            tiles: {
+                centerHeading: heading || 0,
+                getTileUrl: () => '',
+                tileSize: new google.maps.Size(512, 512),
+                worldSize: new google.maps.Size(8192, 4096),
+            },
+            copyright: '© Naver',
+            time: [{
+                date: new Date(date),
+                pano: panoId
+            } as any
+            ],
         }
 
         onCompleted(res, google.maps.StreetViewStatus.OK)
@@ -643,6 +719,10 @@ const StreetViewProviders = {
         }
         else if (provider === 'kakao') {
             await getFromKakao(request, onCompleted)
+            return
+        }
+        else if (provider === 'naver') {
+            await getFromNaver(request, onCompleted)
             return
         }
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)

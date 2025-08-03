@@ -24,6 +24,7 @@ import { bingBaseLayer, bingTerrainLayer, bingStreetideLayer } from './layers/bi
 import { YandexLayer } from './layers/yandexLayer'
 import { AppleLayer } from './layers/appleLayer'
 import { TencentCoverageLayer } from './layers/tencentLayer'
+import { NaverLayer } from './layers/naverLayer'
 
 import { useStore } from '@/store'
 const { selected, select, state } = useStore()
@@ -91,7 +92,6 @@ const baiduCoverageLayer = new BaiduLayer({ filter: "hue-rotate(140deg) saturate
 
 const yandexCoverageLayer = new YandexLayer()
 
-
 const baseMaps = {
   "Google Roadmap": roadmapLayer,
   "Google Satellite": satelliteLayer,
@@ -110,6 +110,7 @@ const overlayMaps = {
   'Apple Look Around (Only Works at Zoom Level 7+)':AppleLayer,
   'Bing Streetside': bingStreetideLayer,
   'Yandex Panorama': yandexCoverageLayer,
+  'Naver Panorama (Only Works at Zoom Level 15+)' : NaverLayer,
   'Tencent Street View': TencentCoverageLayer,
   'Baidu Street View': baiduCoverageLayer,
 }
@@ -298,6 +299,9 @@ function toggleMap(provider: string) {
   }
   else if (provider === 'yandex') {
     yandexCoverageLayer.addTo(map)
+  }
+  else if (provider === 'naver') {
+    NaverLayer.addTo(map)
   }
 }
 
