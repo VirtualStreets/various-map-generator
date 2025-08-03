@@ -120,7 +120,6 @@ async function getMetadata(
     }
 }
 
-
 // Google
 async function getFromGoogle(
     request: google.maps.StreetViewLocationRequest | google.maps.StreetViewPanoRequest,
@@ -145,8 +144,6 @@ async function getFromGoogle(
     }
 
 }
-
-
 
 // Apple Look Around
 async function getFromApple(
@@ -278,7 +275,7 @@ async function getFromYandex(
     }
 }
 
-// Bing
+// Tencent
 async function getFromTencent(
     request: google.maps.StreetViewLocationRequest & { pano?: string },
     onCompleted: (
@@ -352,6 +349,7 @@ async function getFromTencent(
 
         onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (err) {
+        console.log(request)
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
     }
 }

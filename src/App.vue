@@ -143,7 +143,7 @@
   </div>
 
   <div class="absolute bottom-1 sm:top-1 sm:bottom-auto right-1 w-60 sm:w-70 md:w-80
-  max-h-[calc(100vh-8px)] overflow-hidden flex flex-col gap-1">
+  max-h-[calc(90vh)] overflow-hidden flex flex-col gap-1">
     <div class="flex flex-col gap-1 flex-1 min-h-0">
       <div v-if="!state.started" class="container flex flex-col flex-1 min-h-0">
         <div class="relative cursor-pointer" @click="panels.generatorSettings = !panels.generatorSettings">
