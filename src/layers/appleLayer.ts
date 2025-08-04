@@ -43,4 +43,4 @@ function createVectorLayer(minZoom: number, maxZoom: number,): L.Layer {
 }
 
 
-export const AppleLayer = createVectorLayer(8, 15);
+export const AppleLayer = createVectorLayer(10, 15);

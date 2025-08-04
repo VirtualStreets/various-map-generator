@@ -107,7 +107,7 @@ const overlayMaps = {
   'Google Street View Official Only': gsvLayer2,
   'Google Unofficial coverage only': gsvLayer3,
   'Apple Look Around': appleCoverageLayer,
-  'Apple Look Around (Only Works at Zoom Level 7+)':AppleLayer,
+  'Apple Look Around (Only Works at Zoom Level 10+)':AppleLayer,
   'Bing Streetside': bingStreetideLayer,
   'Yandex Panorama': yandexCoverageLayer,
   'Naver Panorama (Only Works at Zoom Level 15+)' : NaverLayer,

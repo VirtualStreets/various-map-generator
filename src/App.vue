@@ -947,6 +947,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
           break
         case 'apple':
         case 'bing':
+        case 'naver':
         case 'yandex':
         case 'kakao':
           panoMinutes = Number(res.imageDate.slice(11, 13)) * 60 + Number(res.imageDate.slice(14, 16))
