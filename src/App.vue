@@ -143,7 +143,7 @@
   </div>
 
   <div class="absolute bottom-1 sm:top-1 sm:bottom-auto right-1 w-60 sm:w-70 md:w-80
-  max-h-[calc(95vh)] overflow-hidden flex flex-col gap-1">
+  max-h-[calc(100vh-16px)] overflow-hidden flex flex-col gap-1">
     <div class="flex flex-col gap-1 flex-1 min-h-0">
       <div v-if="!state.started" class="container flex flex-col flex-1 min-h-0">
         <div class="relative cursor-pointer" @click="panels.generatorSettings = !panels.generatorSettings">
@@ -552,12 +552,12 @@
         </div>
       </div>
 
-      <div class="container flex flex-col flex-1 min-h-0">
+      <div class="container flex flex-col flex-1">
         <div class="cursor-pointer relative" @click="panels.marker = !panels.marker">
           <h2>Markers</h2>
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
         </div>
-        <div class="flex-1 min-h-0 overflow-y-auto">
+        <div class="flex-1 min-h-0">
           <Collapsible :is-open="panels.marker" class="p-1">
             <Checkbox v-model="settings.markers.noBlueLine" v-if="settings.provider == 'google'"
               v-on:change="updateMarkerLayers('noBlueLine')">
