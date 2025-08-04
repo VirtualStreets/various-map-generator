@@ -142,7 +142,7 @@
     </div>
   </div>
 
-  <div class="absolute bottom-1 sm:top-1 sm:bottom-auto right-1 w-60 sm:w-70 md:w-80
+  <div class="absolute bottom-1 sm:top-1 sm:bottom-auto right-1 w-70 sm:w-75 md:w-80
   max-h-[calc(100vh-16px)] overflow-hidden flex flex-col gap-1">
     <div class="flex flex-col gap-1 flex-1 min-h-0">
       <div v-if="!state.started" class="container flex flex-col flex-1 min-h-0">
