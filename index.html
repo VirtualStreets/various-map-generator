@@ -7,12 +7,20 @@
     <meta name="description" content="GeoGuessr map generator" />
     <meta property="og:title" content="Various MapGenerator" />
     <meta property="og:description" content="GeoGuessr map generator" />
-    <meta property="og:url" content="https://various-map-generator.vercel.app" />
+    <meta property="og:url" content="https://various-map-generator.netlify.app" />
     <meta property="og:type" content="website" />
     <title>Various MapGenerator</title>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" src="./src/main.ts"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-0FQN6V03YJ"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() { dataLayer.push(arguments); }
+      gtag('js', new Date());
+
+      gtag('config', 'G-0FQN6V03YJ');
+</script>
   </body>
 </html>
