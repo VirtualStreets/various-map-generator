@@ -59,9 +59,8 @@ export function isAcceptableCurve(
 }
 
 const gen3Dates = new Map<string, string>([
-  ['BD', '2021-04'], ['EC', '2022-03'], ['FI', '2020-09'], ['IN', '2021-10'], ['LK', '2021-02'],
-  ['KH', '2022-10'], ['LB', '2021-05'], ['NG', '2021-06'], ['ST', '2024-02'], ['US', '2019-01'],
-  ['VN', '2021-01'], ['ES', '2023-01']
+  ['BD', '2021-04'], ['FI', '2020-09'], ['IN', '2021-10'], ['LK', '2021-02'],
+  ['LB', '2021-05'], ['NG', '2021-06'], ['US', '2019-01'], ['VN', '2021-01']
 ]);
 
 const gen2Countries = new Set([
@@ -95,7 +94,8 @@ export function getCameraGeneration(
       const imageMonth = dateToMonthNumber(imageDate);
       const targetMonth = dateToMonthNumber(targetDate);
 
-      if (imageMonth >= targetMonth && (country !== 'US' || lat > 52)) {
+      if (imageMonth >= dateToMonthNumber('2022-01') ||
+        (imageMonth >= targetMonth && (country !== 'US' || lat > 52))) {
         return 'badcam';
       }
 
@@ -110,7 +110,7 @@ export function getCameraGeneration(
   }
 
   else if (provider === 'apple' || provider === 'bing' || provider === 'naver') {
-    if ( pano.location?.shortDescription === '2' && provider === 'naver') return 1
+    if (pano.location?.shortDescription === '2' && provider === 'naver') return 1
     return Number(pano.location?.shortDescription);
   }
 
