@@ -69,10 +69,10 @@ function parseGoogle(data: any): google.maps.StreetViewPanoramaData {
                 altitude,
                 country
             },
-            links: linksRaw.map((link: any) => ({
+            links: linksRaw ? linksRaw.map((link: any) => ({
                 pano: nodes[link[0]][0][1],
                 heading: link[1][3] ?? 0,
-            })) ?? [],
+            })) : [],
             tiles: {
                 centerHeading: heading,
                 tileSize: new google.maps.Size(512, 512),
@@ -178,7 +178,7 @@ async function getFromApple(
                 pano: apple.panoId,
                 latLng: new google.maps.LatLng(apple.lat, apple.lng),
                 shortDescription: apple.coverage_type == 3 ? "backpack" : (apple.camera_type),
-                description:'© Apple Look Around',
+                description: '© Apple Look Around',
                 altitude: apple.altitude
             },
             links: [],
