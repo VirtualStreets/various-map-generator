@@ -4,7 +4,7 @@
   <div class="absolute bottom-1 left-1/2 -translate-x-1/2 font-bold text-xs text-black">
     Zoom : {{ currentZoom }}
   </div>
-  <div class="absolute top-1 left-1 min-w-80 max-w-[calc(90vw)] max-h-[calc(100vh-50px)] flex flex-col gap-1">
+  <div class="absolute top-1 left-1 w-90 max-h-[calc(100vh-50px)] flex flex-col gap-1">
     <Logo />
     <div class="flex-1 min-h-0 flex flex-col gap-1">
       <div v-if="!state.started" class="container">
@@ -161,8 +161,8 @@
     </div>
   </div>
 
-  <div class="absolute bottom-1 sm:top-1 sm:bottom-auto right-1 min-w-50 max-w-[calc(75vw)]
-  max-h-[calc(90vh)] overflow-hidden flex flex-col gap-1">
+  <div
+    class="absolute bottom-1 sm:top-1 sm:bottom-auto right-1 w-80 max-h-[calc(90vh)] overflow-hidden flex flex-col gap-1">
     <div class="flex flex-col gap-1 flex-1 min-h-0">
       <div v-if="!state.started" class="container flex flex-col">
         <div class="relative cursor-pointer" @click="panels.generatorSettings = !panels.generatorSettings">
@@ -170,9 +170,12 @@
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
         </div>
         <Collapsible :is-open="panels.generatorSettings" class="mt-1 p-1 pr-2">
-          <div class="flex items-center justify-between mr-1">
+          <div class="flex items-center relative gap-1">
             街景服务
-            <select v-model="settings.provider" @change="toggleMap(settings.provider)">
+            <Tooltip>
+              在切换街景服务前请先将已生成的街景导出，否则无法正常导入图寻。
+            </Tooltip>
+            <select class="ml-4" v-model="settings.provider" @change="toggleMap(settings.provider)">
               <option value="apple">苹果</option>
               <option value="bing">必应</option>
               <option value="yandex">Yandex</option>
@@ -181,13 +184,13 @@
               <option value="kakao">Kakao</option>
             </select>
           </div>
-          <div class="flex justify-between">
+          <div class="flex mt-1">
             生成器数量
             <div class="flex items-center">
               <input type="number" v-model.number="settings.numOfGenerators" min="1" max="10"
-                class="w-10 h-5 ml-2 px-2 py-1 border rounded text-right" />
+                class="w-10 h-5 ml-6 px-2 py-1 border rounded text-right" />
               <Slider v-model="settings.numOfGenerators" :min="1" :max="10" :step="1" :tooltips="false"
-                class="w-32 ml-2" />
+                class="w-36 ml-4 mr-1" />
             </div>
           </div>
 
@@ -239,7 +242,8 @@
                 忽略无描述的街景
               </Checkbox>
 
-              <Checkbox v-model="settings.findNightCoverage" v-if="settings.provider === 'tencent' && !settings.rejectDescription">
+              <Checkbox v-model="settings.findNightCoverage"
+                v-if="settings.provider === 'tencent' && !settings.rejectDescription">
                 寻找夜晚街景
               </Checkbox>
 
