@@ -126,11 +126,10 @@
             </div>
 
             <div class="flex gap-1">
-              <Clipboard :data="[polygon as Polygon]" :disabled="!polygon.found.length" :prefix="settings.provider" />
+              <Clipboard :data="[polygon as Polygon]" :disabled="!polygon.found.length"/>
               <Clipboard_Prefix :data="[polygon as Polygon]" :disabled="!polygon.found.length"
                 :prefix="settings.provider" />
-              <ExportToJSON :data="[polygon as Polygon]" :disabled="!polygon.found.length"
-                :prefix="settings.provider" />
+              <ExportToJSON :data="[polygon as Polygon]" :disabled="!polygon.found.length" />
               <ExportToCSV :data="[polygon as Polygon]" :disabled="!polygon.found.length" />
               <Button size="sm" squared variant="danger" :disabled="!polygon.found.length" title="删除该区域生成街景"
                 @click="clearPolygon(polygon as Polygon)">
@@ -149,9 +148,9 @@
           更改生成数量上限
         </Button>
         <div class="flex gap-1">
-          <Clipboard :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider" />
+          <Clipboard :data="selected as Polygon[]" :disabled="!totalLocs" />
           <Clipboard_Prefix :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider" />
-          <ExportToJSON :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider" />
+          <ExportToJSON :data="selected as Polygon[]" :disabled="!totalLocs" />
           <ExportToCSV :data="selected as Polygon[]" :disabled="!totalLocs" />
           <Button size="sm" squared variant="danger" :disabled="!totalLocs" title="删除所有生成街景" @click="clearAllLocations">
             <TrashBinIcon class="w-5 h-5" />
@@ -170,11 +169,8 @@
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
         </div>
         <Collapsible :is-open="panels.generatorSettings" class="mt-1 p-1 pr-2">
-          <div class="flex items-center relative gap-1">
+          <div class="flex items-center justify-between">
             街景服务
-            <Tooltip>
-              在切换街景服务前请先将已生成的街景导出，否则无法正常导入图寻。
-            </Tooltip>
             <select class="ml-4" v-model="settings.provider" @change="toggleMap(settings.provider)">
               <option value="apple">苹果</option>
               <option value="bing">必应</option>
@@ -184,11 +180,11 @@
               <option value="kakao">Kakao</option>
             </select>
           </div>
-          <div class="flex mt-1">
+          <div class="flex mt-1 justify-between">
             生成器数量
             <div class="flex items-center">
               <input type="number" v-model.number="settings.numOfGenerators" min="1" max="10"
-                class="w-10 h-5 ml-6 px-2 py-1 border rounded text-right" />
+                class="w-10 h-5 px-2 py-1 border rounded text-right" />
               <Slider v-model="settings.numOfGenerators" :min="1" :max="10" :step="1" :tooltips="false"
                 class="w-36 ml-4 mr-1" />
             </div>
@@ -1153,6 +1149,7 @@ function addLoc(pano: StreetViewPanoramaData, polygon: Polygon) {
     pitch,
     zoom,
     imageDate: pano.imageDate,
+    source: `${settings.provider === 'tencent' ? 'qq' :settings.provider}_pano` || '',
     links: [
       ...new Set(pano.links.map((loc) => loc.pano).concat(pano.time.map((loc) => loc.pano))),
     ].sort(),

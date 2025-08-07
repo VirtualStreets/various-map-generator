@@ -11,7 +11,6 @@ import FileExportIcon from '@/assets/icons/file-export.svg'
 const props = defineProps<{
   data: Polygon[]
   disabled?: boolean
-  prefix?: string
 }>()
 
 function handleExport() {
@@ -21,7 +20,6 @@ function handleExport() {
   props.data.forEach((polygon) => {
     const updated = polygon.found.map((panorama) => ({
       ...panorama,
-      source: `${props.prefix === 'tencent' ? 'qq' : props.prefix}_pano` || '',
       links: []
     }))
     data = data.concat(updated)

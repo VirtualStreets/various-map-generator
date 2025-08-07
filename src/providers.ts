@@ -3,8 +3,6 @@ import { getClosestPanoAtCoords } from "@/apple/tile";
 import { AppleLookAroundPano } from "@/apple/types";
 import gcoord from 'gcoord'
 
-
-
 const applePanoCache = new Map<string, StreetViewPanoramaData>()
 
 // Apple Look Around

@@ -37,6 +37,7 @@ interface Panorama {
   zoom: number
   imageDate?: string
   links?: string[]
+  source?: string
 }
 
 type TileOperators = 'AND' | 'OR'
@@ -78,18 +79,18 @@ interface StreetViewLink {
 }
 
 interface StreetViewLocation {
-  pano: string;
-  latLng: LatLng;
-  description?: string;
-  shortDescription?: string;
-  altitude?: number;
-  country?: string;
+  pano: string
+  latLng: LatLng
+  description?: string
+  shortDescription?: string
+  altitude?: number
+  country?: string
 }
 
 interface StreetViewTileData {
-  centerHeading: number;
-  tileSize: Size;
-  worldSize: Size;
+  centerHeading: number
+  tileSize: Size
+  worldSize: Size
   getTileUrl: (
     pano: string,
     tileZoom: number,
@@ -99,21 +100,21 @@ interface StreetViewTileData {
 }
 
 interface TimePoint {
-  pano: string;
-  date: Date;
+  pano: string
+  date: Date
 }
 
 interface StreetViewPanoramaData {
-  location: StreetViewLocation;
-  links: StreetViewLink[];
-  tiles: StreetViewTileData;
-  imageDate: string;
-  copyright: string;
-  time: TimePoint[];
+  location: StreetViewLocation
+  links: StreetViewLink[]
+  tiles: StreetViewTileData
+  imageDate: string
+  copyright: string
+  time: TimePoint[]
 }
 
 interface StreetViewLocationRequest {
-  location?: { lat: number | (() => number); lng: number | (() => number) };
-  pano?: string;
-  radius?: number;
+  location?: { lat: number | (() => number); lng: number | (() => number) }
+  pano?: string
+  radius?: number
 }

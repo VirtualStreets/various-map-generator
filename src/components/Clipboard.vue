@@ -22,7 +22,6 @@ const { copy, copied, isSupported } = useClipboard()
 const props = defineProps<{
   data: Polygon[]
   disabled?: boolean
-  prefix?: string
 }>()
 
 function handleCopy() {
@@ -30,7 +29,6 @@ function handleCopy() {
   props.data.forEach((polygon) => {
     const withSource = polygon.found.map((item) => ({
       ...item,
-      source: `${props.prefix === 'tencent' ? 'qq' : props.prefix}_pano` || '',
       links:[]
     }))
     data = data.concat(withSource)
