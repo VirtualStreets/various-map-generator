@@ -90,15 +90,16 @@ export function getCameraGeneration(
     if (height === 1664) return 1;
 
     if (height === 6656) {
-      const targetDate = gen3Dates.get(country) ?? '9999-99';
-      const imageMonth = dateToMonthNumber(imageDate);
-      const targetMonth = dateToMonthNumber(targetDate);
+      if (pano.location?.service === 'launch') {
+        const targetDate = gen3Dates.get(country) ?? '9999-99';
+        const imageMonth = dateToMonthNumber(imageDate);
+        const targetMonth = dateToMonthNumber(targetDate);
 
-      if (imageMonth >= dateToMonthNumber('2022-01') ||
-        (imageMonth >= targetMonth && (country !== 'US' || lat > 52))) {
-        return 'badcam';
+        if (imageMonth >= dateToMonthNumber('2022-01') ||
+          (imageMonth >= targetMonth && (country !== 'US' || lat > 52))) {
+          return 'badcam';
+        }
       }
-
       if (gen2Countries.has(country) && imageDate <= '2011-11') {
         return imageDate >= '2010-09' ? 23 : 2;
       }

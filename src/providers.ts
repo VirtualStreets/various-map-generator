@@ -20,6 +20,7 @@ function parseGoogle(data: any): google.maps.StreetViewPanoramaData {
         let country = null;
         let desc_raw = null;
         let shortDesc_raw = null;
+        let service = null;
 
         const panoId = data[1][0][1][1];
         const lat = data[1][0][5][0][1][0][2];
@@ -47,6 +48,9 @@ function parseGoogle(data: any): google.maps.StreetViewPanoramaData {
             roadName = data[1][0][5][0][12][0][0][0][2][0];
         } catch (e) { }
         try {
+            service = data[1][0][6][5][2];
+        } catch (e) { }
+        try {
             desc_raw = data[1][0][3][2][1][0]
         } catch (e) {
             try { desc_raw = data[1][0][3][0][0] } catch (error) { }
@@ -67,7 +71,8 @@ function parseGoogle(data: any): google.maps.StreetViewPanoramaData {
                 description: !desc_raw && !shortDesc_raw ? null : `${shortDesc_raw}, ${desc_raw}`,
                 shortDescription: shortDesc_raw,
                 altitude,
-                country
+                country,
+                service
             },
             links: linksRaw ? linksRaw.map((link: any) => ({
                 pano: nodes[link[0]][0][1],
