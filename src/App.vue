@@ -4,7 +4,7 @@
   <div class="absolute bottom-1 left-1/2 -translate-x-1/2 font-bold text-xs text-black">
     Zoom : {{ currentZoom }}
   </div>
-  <div class="absolute top-1 left-1 w-90 max-h-[calc(100vh-50px)] flex flex-col gap-1">
+  <div class="absolute top-1 left-1 w-95 max-h-[calc(100vh-50px)] flex flex-col gap-1">
     <Logo />
     <div class="flex-1 min-h-0 flex flex-col gap-1">
       <div v-if="!state.started" class="container">
@@ -49,7 +49,7 @@
               <option :value=false>关闭</option>
             </select>
           </div>
-          <div v-if="settings.notification.enabled" class="flex-1 min-h-0 overflow-y-auto ml-4 mb-1">
+          <div v-if="settings.notification.enabled" class="flex-1 min-h-0 overflow-y-auto ml-8 mb-1">
             <Checkbox v-model="settings.notification.anyLocation">
               找到任意一个街景
             </Checkbox>
