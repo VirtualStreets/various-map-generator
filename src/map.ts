@@ -82,7 +82,7 @@ const gsvLayer2 = L.tileLayer(
   { maxZoom: 20 }
 )
 const gsvLayer3 = L.tileLayer(
-  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e3*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
+  'https://maps.googleapis.com/maps/vt?pb=%211m5%211m4%211i{z}%212i{x}%213i{y}%214i256%212m8%211e2%212ssvv%214m2%211scc%212s*211m3*211e3*212b1*213e2*211m3*211e10*212b1*213e2*212b1*214b1%214m2%211ssvl%212s*212b1%213m16%212sen%213sUS%2112m4%211e68%212m2%211sset%212sRoadmap%2112m3%211e37%212m1%211ssmartmaps%2112m4%211e26%212m2%211sstyles%212sp.c%3A%23d6336c%2Cs.e%3Ag.f%7Cp.c%3A%23d6336c%7Cp.w%3A1%2Cs.e%3Ag.s%7Cp.c%3A%23fcc2d7%7Cp.w%3A3%215m1%215f1.3499999046325684',
   { maxZoom: 20 }
 )
 

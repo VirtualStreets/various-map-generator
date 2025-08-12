@@ -1,12 +1,5 @@
 <template>
-  <Button
-    v-if="isSupported"
-    size="sm"
-    squared
-    :disabled
-    title="Copy to clipboard"
-    @click="handleCopy"
-  >
+  <Button v-if="isSupported" size="sm" squared :disabled title="Copy to clipboard" @click="handleCopy">
     <ClipboardCheckedIcon v-if="copied" class="w-5 h-5" />
     <ClipboardIcon v-else class="w-5 h-5" />
   </Button>
@@ -22,7 +15,7 @@ const { copy, copied, isSupported } = useClipboard()
 const props = defineProps<{
   data: Polygon[]
   disabled?: boolean
-  prefix?: string
+  mode?: string
 }>()
 
 function handleCopy() {
@@ -31,7 +24,9 @@ function handleCopy() {
   props.data.forEach((polygon) => {
     const withSource = polygon.found.map((item) => ({
       ...item,
-      source: `${props.prefix}_pano` || '',
+      panoId: props.mode === 'disable' ? null :
+        props.mode === 'prefix' ? `${item.source?.includes('qq') ? 'TENCENT' :
+          item.source?.replace('_pano', '').toUpperCase()}:${item.panoId}` : item.panoId,
       links: []
     }))
     data = data.concat(withSource)

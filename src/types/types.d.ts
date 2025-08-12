@@ -30,13 +30,14 @@ interface Polygon extends L.Polygon {
 }
 
 interface Panorama {
-  panoId: string
+  panoId: any
   lat: LatLng.lat
   lng: LatLng.lng
   heading: number
   pitch: number
   zoom: number
   imageDate?: string
+  source?: string
   links?: string[]
 }
 

@@ -16,7 +16,7 @@
         <Collapsible :is-open="panels.general" class="flex flex-col gap-1 max-h-[140px] overflow-y-auto mt-2 p-1">
           <div class="flex items-center justify-between ml-1 mr-1">
             Theme :
-            <select v-model="themeMode" class="ml-10">
+            <select v-model="themeMode" class="w-20 ml-10">
               <option value="auto">System</option>
               <option value="light">Light</option>
               <option value="dark">Dark</option>
@@ -24,7 +24,7 @@
           </div>
           <div class="flex items-center justify-between ml-1 mr-1">
             Notifications :
-            <select v-model="settings.notification.enabled" class="w-18 ml-2">
+            <select v-model="settings.notification.enabled" class="w-20 ml-2">
               <option :value=true>On</option>
               <option :value=false>Off</option>
             </select>
@@ -40,6 +40,15 @@
               All polygons completed
             </Checkbox>
           </div>
+          <div class="flex items-center justify-between ml-1 mr-1">
+            PanoId :
+            <select v-model="settings.panoId" class="w-20 ml-10">
+              <option value="enable">Enbale</option>
+              <option value="disable">Disable</option>
+              <option value="prefix">Prefix</option>
+            </select>
+          </div>
+
         </Collapsible>
       </div>
     </div>
@@ -106,11 +115,8 @@
             </div>
 
             <div class="flex gap-1">
-              <Clipboard :data="[polygon as Polygon]" :disabled="!polygon.found.length" :prefix="settings.provider" />
-              <Clipboard_Prefix :data="[polygon as Polygon]" :disabled="!polygon.found.length"
-                :prefix="settings.provider" />
-              <ExportToJSON :data="[polygon as Polygon]" :disabled="!polygon.found.length"
-                :prefix="settings.provider" />
+              <Clipboard :data="[polygon as Polygon]" :disabled="!polygon.found.length" :mode="settings.panoId" />
+              <ExportToJSON :data="[polygon as Polygon]" :disabled="!polygon.found.length" :mode="settings.panoId" />
               <ExportToCSV :data="[polygon as Polygon]" :disabled="!polygon.found.length" />
               <Button size="sm" squared variant="danger" :disabled="!polygon.found.length"
                 title="Delete locations for polygon" @click="clearPolygon(polygon as Polygon)">
@@ -129,9 +135,8 @@
           Edit cap for all
         </Button>
         <div class="flex gap-1">
-          <Clipboard :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider" />
-          <Clipboard_Prefix :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider" />
-          <ExportToJSON :data="selected as Polygon[]" :disabled="!totalLocs" :prefix="settings.provider" />
+          <Clipboard :data="selected as Polygon[]" :disabled="!totalLocs" :mode="settings.panoId" />
+          <ExportToJSON :data="selected as Polygon[]" :disabled="!totalLocs" :mode="settings.panoId" />
           <ExportToCSV :data="selected as Polygon[]" :disabled="!totalLocs" />
           <Button size="sm" squared variant="danger" :disabled="!totalLocs" title="Delete all locations"
             @click="clearAllLocations">
@@ -612,7 +617,6 @@ import Spinner from '@/components/Elements/Spinner.vue'
 import Tooltip from '@/components/Elements/Tooltip.vue'
 import Logo from '@/components/Elements/Logo.vue'
 import Clipboard from '@/components/Clipboard.vue'
-import Clipboard_Prefix from './components/Clipboard_Prefix.vue'
 import ExportToJSON from '@/components/ExportToJSON.vue'
 import ExportToCSV from '@/components/ExportToCSV.vue'
 import FileImportIcon from '@/assets/icons/file-import.svg'
@@ -1275,6 +1279,7 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
     pitch,
     zoom,
     imageDate: pano.imageDate,
+    source: `${settings.provider === 'tencent' ? 'qq' :settings.provider}_pano` || '',
     links: [
       ...new Set(pano.links.map((loc) => loc.pano).concat(pano.time.map((loc) => loc.pano))),
     ].sort(),

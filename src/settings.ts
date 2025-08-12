@@ -12,6 +12,8 @@ const defaultSettings = {
     allPolygonsComplete: false,
   },
 
+  panoId: 'enable',
+
   numOfGenerators: 1,
   speed: 100,
   radius: 500,
@@ -347,7 +349,7 @@ const defaultSettings = {
   checkImports: false,
 }
 
-const storedSettings = useStorage('map_generator__settings_v2', defaultSettings)
+const storedSettings = useStorage('map_generator__settings_v3', defaultSettings)
 const settings = reactive(storedSettings.value)
 settings.toDate = currentDate
 settings.toYear = currentYear
