@@ -43,7 +43,7 @@
           <div class="flex items-center justify-between ml-1 mr-1">
             PanoId :
             <select v-model="settings.panoId" class="w-20 ml-10">
-              <option value="enable">Enbale</option>
+              <option value="enable">Enable</option>
               <option value="disable">Disable</option>
               <option value="prefix">Prefix</option>
             </select>
