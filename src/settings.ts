@@ -50,10 +50,10 @@ const defaultSettings = {
       5: true
     },
     naver: {
-      1:true,
-      3:true,
-      13:true,
-      15:true
+      1: true,
+      3: true,
+      13: true,
+      15: true
     },
     yandex: {
       1: true,

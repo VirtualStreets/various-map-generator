@@ -40,15 +40,6 @@
               All polygons completed
             </Checkbox>
           </div>
-          <div class="flex items-center justify-between ml-1 mr-1">
-            PanoId :
-            <select v-model="settings.panoId" class="w-20 ml-10">
-              <option value="enable">Enable</option>
-              <option value="disable">Disable</option>
-              <option value="prefix">Prefix</option>
-            </select>
-          </div>
-
         </Collapsible>
       </div>
     </div>
@@ -159,8 +150,9 @@
           <Collapsible :is-open="panels.generatorSettings" class="mt-1 p-1 pr-2">
             <div class="flex items-center justify-between">
               Provider :
-              <select v-model="settings.provider" @change="toggleMap(settings.provider)">
+              <select v-model="settings.provider" class="w-21" @change="toggleMap(settings.provider)">
                 <option value="google">Google</option>
+                <option value="googleZoom">Zoom</option>
                 <option value="apple">Apple</option>
                 <option value="bing">Bing</option>
                 <option value="yandex">Yandex</option>
@@ -168,6 +160,14 @@
                 <option value="baidu">Baidu</option>
                 <option value="naver">Naver</option>
                 <option value="kakao">Kakao</option>
+              </select>
+            </div>
+            <div class="flex items-center justify-between">
+              PanoId :
+              <select v-model="settings.panoId" class="w-21 ml-10">
+                <option value="enable">Enable</option>
+                <option value="disable">Disable</option>
+                <option value="prefix">Prefix</option>
               </select>
             </div>
             <div class="flex justify-between">
@@ -238,8 +238,8 @@
               <Checkbox v-if="!settings.rejectDescription" v-model="settings.rejectNoDescription">
                 Reject locations without description
               </Checkbox>
-              <Checkbox v-if="settings.provider === 'google'" v-model="settings.ignoreBadcam">Ignore BadCam</Checkbox>
-              <Checkbox v-if="settings.provider === 'google'" v-model="settings.rejectDescription">Find trekker coverage
+              <Checkbox v-if="settings.provider.includes('google')" v-model="settings.rejectDescription">Find trekker
+                coverage
               </Checkbox>
 
               <Checkbox v-model="settings.findNightCoverage" v-if="settings.provider === 'tencent'">
@@ -259,11 +259,12 @@
                   <input type="range" v-model.number="settings.linksDepth" min="1" max="10" />
                 </div>
               </div>
-
+              <Checkbox v-if="settings.provider.includes('google')" v-model="settings.ignoreBadcam">Ignore BadCam
+              </Checkbox>
               <Checkbox v-model="settings.findByGeneration.enabled"
-                v-if="['google', 'apple', 'bing', 'naver', 'yandex'].includes(settings.provider)">Find by
+                v-if="['google', 'googleZoom', 'apple', 'bing', 'naver', 'yandex'].includes(settings.provider)">Find by
                 generation</Checkbox>
-              <div v-if="settings.findByGeneration.enabled && settings.provider === 'google'" class="ml-6">
+              <div v-if="settings.findByGeneration.enabled && settings.provider.includes('google')" class="ml-6">
                 <Checkbox v-model="settings.findByGeneration.google[1]">Gen 1</Checkbox>
                 <Checkbox v-model="settings.findByGeneration.google[2]">Gen 2</Checkbox>
                 <Checkbox v-model="settings.findByGeneration.google[3]">Gen 3</Checkbox>
@@ -349,7 +350,7 @@
               </div>
             </div>
 
-            <div v-if="settings.provider != 'google'" class="flex items-center">
+            <div v-if="!settings.provider.includes('google')" class="flex items-center">
               <Checkbox v-model="settings.filterByMinutes.enabled">Filter by minutes</Checkbox>
               <Slider v-if="settings.filterByMinutes.enabled" v-model="settings.filterByMinutes.range" :min="0"
                 :max="1439" :step="5" :showTooltip="'focus'" :range="true" class="w-48 ml-2" :format="val => {
@@ -492,7 +493,7 @@
               </label>
             </div>
 
-            <Checkbox v-if="['apple', 'bing', 'baidu', 'google'].includes(settings.provider)"
+            <Checkbox v-if="['apple', 'bing', 'baidu', 'google', 'googleZoom'].includes(settings.provider)"
               v-model="settings.filterByAltitude.enabled">
               Filter by altitude</Checkbox>
             <div v-if="settings.filterByAltitude.enabled" class="ml-6">
@@ -564,7 +565,7 @@
         </div>
         <div class="flex-1 min-h-0">
           <Collapsible :is-open="panels.marker" class="p-1">
-            <Checkbox v-model="settings.markers.noBlueLine" v-if="settings.provider == 'google'"
+            <Checkbox v-model="settings.markers.noBlueLine" v-if="settings.provider.includes('google')"
               v-on:change="updateMarkerLayers('noBlueLine')">
               <span class="h-3 w-3 bg-[#E412D2] rounded-full"></span>No blue line
             </Checkbox>
@@ -573,13 +574,13 @@
             </Checkbox>
             <Checkbox v-model="settings.markers.gen4" @change="updateMarkerLayers('gen4')">
               <span class="h-3 w-3 bg-[#2880CA] rounded-full"></span>
-              {{ settings.provider !== 'google' ? 'Update' : 'Gen 4 Update' }}
+              {{ !settings.provider.includes('google') ? 'Update' : 'Gen 4 Update' }}
             </Checkbox>
-            <Checkbox v-model="settings.markers.gen2Or3" v-if="settings.provider == 'google'"
+            <Checkbox v-model="settings.markers.gen2Or3" v-if="settings.provider.includes('google')"
               v-on:change="updateMarkerLayers('gen2Or3')">
               <span class="h-3 w-3 bg-[#9A28CA] rounded-full"></span>Gen 2 or 3 Update
             </Checkbox>
-            <Checkbox v-model="settings.markers.gen1" v-if="settings.provider == 'google'"
+            <Checkbox v-model="settings.markers.gen1" v-if="settings.provider.includes('google')"
               v-on:change="updateMarkerLayers('gen1')">
               <span class="h-3 w-3 bg-[#24AC20] rounded-full"></span>Gen 1 Update
             </Checkbox>
@@ -901,7 +902,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       if (settings.provider === 'yandex' && !res.copyright?.includes('Yandex')) return false
 
       // Ignore Google BadCam
-      if (settings.ignoreBadcam && settings.provider === 'google') {
+      if (settings.ignoreBadcam && settings.provider.includes('google')) {
         if (res.imageDate >= '2019-01' && res.tiles?.worldSize?.height === 6656) {
           const validRes = await getNonBadcamRes(res.location.pano);
           if (validRes) {
@@ -935,9 +936,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       return getPano(res.location.shortDescription, polygon)
     }
 
-    if (
-      settings.filterByMinutes.enabled && settings.provider != 'google'
-    ) {
+    if (settings.filterByMinutes.enabled && !settings.provider.includes('google')) {
       var panoMinutes
       switch (settings.provider) {
         case 'baidu':
@@ -1037,7 +1036,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
 
     // Find Generation
     if (
-      ['google', 'apple', 'yandex', 'bing', 'naver'].includes(settings.provider) &&
+      ['google', 'googleZoom', 'apple', 'yandex', 'bing', 'naver'].includes(settings.provider) &&
       settings.findByGeneration.enabled &&
       ((!settings.rejectOfficial && !settings.checkAllDates) || settings.selectMonths)
     ) {
@@ -1110,7 +1109,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
 
     if (
       settings.findByGeneration.enabled &&
-      ['google', 'apple', 'yandex', 'bing', 'naver'].includes(settings.provider)
+      ['google', 'googleZoom', 'apple', 'yandex', 'bing', 'naver'].includes(settings.provider)
     ) {
       const gen = getCameraGeneration(pano, settings.provider)
       if (gen === 0) return false
@@ -1279,7 +1278,7 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
     pitch,
     zoom,
     imageDate: pano.imageDate,
-    source: `${settings.provider === 'tencent' ? 'qq' :settings.provider}_pano` || '',
+    source: `${settings.provider === 'tencent' ? 'qq' : settings.provider}_pano` || '',
     links: [
       ...new Set(pano.links.map((loc) => loc.pano).concat(pano.time.map((loc) => loc.pano))),
     ].sort(),
@@ -1298,11 +1297,11 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
   if (!previousPano && settings.provider != 'naver') {
     checkHasBlueLine(pano.location.latLng.toJSON()).then((hasBlueLine) => {
       addLocation(location, polygon,
-        settings.provider != 'google' ? icons.newLoc : (hasBlueLine ? icons.newLoc : icons.noBlueLine))
+        !settings.provider.includes('google') ? icons.newLoc : (hasBlueLine ? icons.newLoc : icons.noBlueLine))
     })
   } else {
     StreetViewProviders.getPanorama(settings.provider, { pano: previousPano }, (previousPano) => {
-      if (settings.provider != 'google') return addLocation(location, polygon, icons.gen4)
+      if (!settings.provider.includes('google')) return addLocation(location, polygon, icons.gen4)
       if (previousPano?.tiles?.worldSize.height === 1664) {
         // Gen 1
         return addLocation(location, polygon, icons.gen1)
@@ -1382,6 +1381,7 @@ function addLocation(
 
           switch (settings.provider) {
             case 'google':
+            case 'googleZoom':
               url = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}&heading=${heading}&pitch=${pitch}&fov=${180 / 2 ** zoom}`
               break
             case 'yandex':

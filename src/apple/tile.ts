@@ -1,6 +1,8 @@
 import { Proto } from "@/apple/proto";
 import { AppleLookAroundPano } from "./types";
 import {
+  wgs84_to_tile_coord,
+  tile_coord_to_wgs84,
   distanceBetween,
   radians_to_degrees
 } from "@/composables/utils";
@@ -10,22 +12,6 @@ function protobuf_tile_offset_to_wsg84(x_offset: number, y_offset: number, tile_
   let pano_y = tile_y + (255 - (y_offset / 64.0)) / (256 - 1);
   let coords = tile_coord_to_wgs84(pano_x, pano_y, 17);
   return coords;
-}
-
-function wgs84_to_tile_coord(lat: number, lng: number, zoom: number) {
-  const latRad = (lat * Math.PI) / 180.0;
-  const scale = 1 << zoom;
-  const x = ((lng + 180.0) / 360.0) * scale;
-  const y = (1.0 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2.0 * scale;
-  return [Math.floor(x), Math.floor(y)];
-}
-
-function tile_coord_to_wgs84(x: number, y: number, zoom: number) {
-  const scale = 1 << zoom;
-  const lonDeg = (x / scale) * 360.0 - 180.0;
-  const latRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * y / scale)));
-  const latDeg = (latRad * 180.0) / Math.PI;
-  return [latDeg, lonDeg];
 }
 
 function getCameraType(face: any): string {

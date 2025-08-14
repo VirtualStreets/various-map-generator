@@ -1,11 +1,64 @@
 import { extractDateFromPanoId, formatTimeStr } from '@/composables/utils'
 import { getClosestPanoAtCoords } from "@/apple/tile";
 import { AppleLookAroundPano } from "@/apple/types";
-import { createPayload } from '@/composables/utils';
+import { createPayload, wgs84_to_tile_coord } from '@/composables/utils';
 import gcoord from 'gcoord'
 
 let svService: google.maps.StreetViewService | null = null
 const applePanoCache = new Map<string, google.maps.StreetViewPanoramaData>()
+const googleZoomCache = new Map<string, string[]>()
+const providerMap: Record<string, Function> = {
+    google: getFromGoogle,
+    apple: getFromApple,
+    tencent: getFromTencent,
+    bing: getFromBing,
+    baidu: getFromBaidu,
+    yandex: getFromYandex,
+    kakao: getFromKakao,
+    naver: getFromNaver,
+    googleZoom: getFromGoogleZoom,
+};
+
+// Google Zoom (tile coordinate)
+async function getFromGoogleZoom(
+    request: google.maps.StreetViewLocationRequest & { pano?: string },
+    onCompleted: (
+        res: google.maps.StreetViewPanoramaData | null,
+        status: google.maps.StreetViewStatus,
+    ) => void,
+) {
+    try {
+        if (request.location) {
+            const { lat, lng }: any = request.location;
+            const [x, y] = wgs84_to_tile_coord(lat, lng, 17);
+            const cacheKey = `${x},${y}`;
+            let panoIds = googleZoomCache.get(cacheKey);
+            if (!panoIds) {
+                const url = `https://www.google.com/maps/photometa/ac/v1?pb=!1m1!1smaps_sv.tactile!6m3!1i${x}!2i${y}!3i17!8b1`;
+                const resp = await fetch(url);
+                let text = await resp.text();
+                if (text.startsWith(")]}'")) {
+                    text = text.slice(5);
+                }
+                const data = JSON.parse(text);
+                panoIds = Array.isArray(data?.[1]?.[1]) ? data[1][1].map((item: any) => item?.[0]?.[0]?.[1]) : [];
+                googleZoomCache.set(cacheKey, panoIds);
+            }
+            if (Array.isArray(panoIds) && panoIds.length) {
+                const result = panoIds[Math.floor(Math.random() * panoIds.length)];
+                if (result) return await getFromGoogle({ pano: result }, onCompleted);
+                else onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS);
+            } else {
+                onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS);
+            }
+        }
+        else if (request.pano) {
+            return await getFromGoogle(request, onCompleted);
+        }
+    } catch (err) {
+        onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR);
+    }
+}
 
 function getStreetViewService() {
     if (!svService) {
@@ -355,7 +408,6 @@ async function getFromTencent(
 
         onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (err) {
-        console.log(request)
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
     }
 }
@@ -698,39 +750,12 @@ const StreetViewProviders = {
             status: google.maps.StreetViewStatus,
         ) => void,
     ) => {
-        if (provider === 'google') {
-            await getFromGoogle(request, onCompleted)
-            return
+        const fn = providerMap[provider];
+        if (typeof fn === "function") {
+            await fn(request, onCompleted);
+        } else {
+            onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR);
         }
-        else if (provider === "apple") {
-            await getFromApple(request, onCompleted);
-            return;
-        }
-        else if (provider === 'tencent') {
-            await getFromTencent(request, onCompleted)
-            return
-        }
-        else if (provider === "bing") {
-            await getFromBing(request, onCompleted);
-            return;
-        }
-        else if (provider === 'baidu') {
-            await getFromBaidu(request, onCompleted)
-            return
-        }
-        else if (provider === 'yandex') {
-            await getFromYandex(request, onCompleted)
-            return
-        }
-        else if (provider === 'kakao') {
-            await getFromKakao(request, onCompleted)
-            return
-        }
-        else if (provider === 'naver') {
-            await getFromNaver(request, onCompleted)
-            return
-        }
-        onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
     },
 }
 

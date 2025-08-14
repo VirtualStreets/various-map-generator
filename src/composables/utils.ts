@@ -11,6 +11,7 @@ export function sendNotification(title: string, body: string) {
 export function isOfficial(pano: string, provider: string) {
   switch (provider) {
     case 'google':
+    case 'googleZoom':
       return pano.length === 22  // Checks if pano ID is 22 characters long. Otherwise, it's an Ari
     // return (!/^\xA9 (?:\d+ )?Google$/.test(pano.copyright))
     case 'yandex':
@@ -44,6 +45,22 @@ export function getStreetViewStatus(key: keyof typeof google.maps.StreetViewStat
 
 export function makeLatLng(lat: number, lng: number): google.maps.LatLng {
   return new google.maps.LatLng(lat, lng)
+}
+
+export function wgs84_to_tile_coord(lat: number, lng: number, zoom: number) {
+  const latRad = (lat * Math.PI) / 180.0;
+  const scale = 1 << zoom;
+  const x = ((lng + 180.0) / 360.0) * scale;
+  const y = (1.0 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2.0 * scale;
+  return [Math.floor(x), Math.floor(y)];
+}
+
+export function tile_coord_to_wgs84(x: number, y: number, zoom: number) {
+  const scale = 1 << zoom;
+  const lonDeg = (x / scale) * 360.0 - 180.0;
+  const latRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * y / scale)));
+  const latDeg = (latRad * 180.0) / Math.PI;
+  return [latDeg, lonDeg];
 }
 
 export function isAcceptableCurve(
