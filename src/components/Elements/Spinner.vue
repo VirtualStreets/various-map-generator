@@ -6,7 +6,6 @@ import AppleIcon from '@/assets/icons/apple.svg'
 import YandexIcon from '@/assets/icons/yandex.svg'
 import BingIcon from '@/assets/icons/bing.svg'
 import BaiduIcon from '@/assets/icons/baidu.svg'
-import TencentIcon from '@/assets/icons/tencent.svg'
 import KakaoIcon from '@/assets/icons/kakao.svg'
 import NaverIcon from '@/assets/icons/naver.svg'
 
