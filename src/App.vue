@@ -6,7 +6,11 @@
   </div>
   <div class="absolute top-1 left-1 min-w-90 max-w-[calc(80vw)] 
   max-h-[calc(100vh-50px)] flex flex-col gap-1">
-    <Logo />
+    <h1
+      class="logo px-2 py-0.5 justify-center rounded-sm flex items-center gap-0.5 text-xl tracking-tighter text-shadow-[0_0_3px_#000]">
+      Various MapGenerat
+      <Spinner :icon="settings.provider" /> r
+    </h1>
     <div class="flex-1 min-h-0 flex flex-col gap-1">
       <div v-if="!state.started" class="container flex flex-col">
         <div class="relative cursor-pointer" @click="panels.general = !panels.general">
@@ -97,7 +101,7 @@
               @click="changePolygonName(polygon.feature.properties)">
               {{ getPolygonName(polygon.feature.properties) }}
             </label>
-            <Spinner v-if="state.started && polygon.isProcessing" />
+            <Spinner v-if="state.started && polygon.isProcessing" :icon="settings.provider" />
 
             <div class="ml-auto flex items-center gap-1">
               {{ polygon.found.length }}
@@ -616,7 +620,6 @@ import Button from '@/components/Elements/Button.vue'
 import Checkbox from '@/components/Elements/Checkbox.vue'
 import Spinner from '@/components/Elements/Spinner.vue'
 import Tooltip from '@/components/Elements/Tooltip.vue'
-import Logo from '@/components/Elements/Logo.vue'
 import Clipboard from '@/components/Clipboard.vue'
 import ExportToJSON from '@/components/ExportToJSON.vue'
 import ExportToCSV from '@/components/ExportToCSV.vue'

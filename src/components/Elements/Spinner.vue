@@ -1,15 +1,43 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import GeoIcon from '@/assets/icons/geoicon.svg'
-const { size } = defineProps({
-  size: {
-    type: String,
-    default: '1',
-  },
+import GoogleIcon from '@/assets/icons/google.svg'
+import AppleIcon from '@/assets/icons/apple.svg'
+import YandexIcon from '@/assets/icons/yandex.svg'
+import BingIcon from '@/assets/icons/bing.svg'
+import BaiduIcon from '@/assets/icons/baidu.svg'
+import TencentIcon from '@/assets/icons/tencent.svg'
+import KakaoIcon from '@/assets/icons/kakao.svg'
+import NaverIcon from '@/assets/icons/naver.svg'
+
+
+const props = defineProps<{
+  size?: string
+  icon?: string
+}>()
+
+const { size = '1' } = props
+
+const icons: any = {
+  geo: GeoIcon,
+  google: GoogleIcon,
+  googleZoom:GoogleIcon,
+  apple: AppleIcon,
+  yandex: YandexIcon,
+  bing: BingIcon,
+  baidu:BaiduIcon,
+  tencent:TencentIcon,
+  kakao:KakaoIcon,
+  naver:NaverIcon
+}
+
+const iconComponent = computed(() => {
+  return icons[props.icon ?? 'apple'] ?? GeoIcon
 })
 </script>
 
 <template>
-  <GeoIcon :style="{ width: size + 'rem' }" />
+  <component :is="iconComponent" :style="{ width: size + 'rem' }"/>
 </template>
 
 <style scoped>
