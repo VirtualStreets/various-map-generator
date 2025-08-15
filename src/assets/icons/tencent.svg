@@ -1,9 +1,0 @@
-<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="24" cy="24" r="24" fill="#fc3f1d"/>
-
-  <g transform="translate(4, 4) scale(0.83)">
-    <path fill="#FFFFFF" d="M32,24h-7l8-18h7L32,24z 
-      M27,36.689c0-4.168-0.953-8.357-2.758-12.117L15,6H8l10.833,21.169
-      C20.251,30.123,21,33.415,21,36.689V42h6V36.689z"/>
-  </g>
-</svg>

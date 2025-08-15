@@ -26,13 +26,12 @@ const icons: any = {
   yandex: YandexIcon,
   bing: BingIcon,
   baidu:BaiduIcon,
-  tencent:TencentIcon,
   kakao:KakaoIcon,
   naver:NaverIcon
 }
 
 const iconComponent = computed(() => {
-  return icons[props.icon ?? 'apple'] ?? GeoIcon
+  return icons[props.icon ?? 'geo'] ?? GeoIcon
 })
 </script>
 
