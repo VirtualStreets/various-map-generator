@@ -14,6 +14,7 @@ export function isOfficial(pano: string, provider: string) {
     case 'googleZoom':
       return pano.length === 22  // Checks if pano ID is 22 characters long. Otherwise, it's an Ari
     // return (!/^\xA9 (?:\d+ )?Google$/.test(pano.copyright))
+    case 'mapycz':
     case 'yandex':
     case 'apple':
     case 'bing':
@@ -376,4 +377,39 @@ export function isValidGeoJSON(data: unknown) {
 
   const type = (data as { type?: unknown }).type
   return type === 'Feature' || type === 'FeatureCollection'
+}
+
+function opkToRotationMatrixYXZ(omega: number, phi: number, kappa: number): number[][] {
+  const cz = Math.cos(phi), sz = Math.sin(phi);        // (phi)
+  const cx = Math.cos(-omega), sx = Math.sin(-omega);  // (-omega)
+  const cy = Math.cos(kappa), sy = Math.sin(kappa);    // (kappa)
+
+  // ZXY = Ry * Rx * Rz
+  return [
+    [cz * cy - sz * sx * sy, -sz * cx, cz * sy + sz * sx * cy],
+    [sz * cy + cz * sx * sy,  cz * cx, sz * sy - cz * sx * cy],
+    [-cx * sy,                sx,      cx * cy              ]
+  ];
+}
+
+function matrixToEulerYXZ(m: number[][]): { heading: number, pitch: number, roll: number } {
+  let heading: number, pitch: number, roll: number;
+
+  if (Math.abs(m[2][1]) < 0.999999) {
+    pitch = Math.asin(m[2][1]);
+    heading = Math.atan2(-m[2][0], m[2][2]); 
+    roll = Math.atan2(-m[0][1], m[1][1]);
+  } else {
+    pitch = Math.PI / 2 * Math.sign(m[2][1]);
+    heading = Math.atan2(m[1][0], m[0][0]);
+    roll = 0;
+  }
+
+  return { heading, pitch, roll };
+}
+export function opk_to_hpr(
+  omega: number, phi: number, kappa: number
+): { heading: number, pitch: number, roll: number } {
+  const m = opkToRotationMatrixYXZ(deg2rad(omega), deg2rad(phi), deg2rad(kappa));
+  return matrixToEulerYXZ(m);
 }

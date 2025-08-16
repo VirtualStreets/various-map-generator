@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import GeoIcon from '@/assets/icons/geoicon.svg'
 import GoogleIcon from '@/assets/icons/google.svg'
 import AppleIcon from '@/assets/icons/apple.svg'
+import MapyCZIcon from '@/assets/icons/mapycz.svg'
 import YandexIcon from '@/assets/icons/yandex.svg'
 import BingIcon from '@/assets/icons/bing.svg'
 import BaiduIcon from '@/assets/icons/baidu.svg'
@@ -26,7 +27,8 @@ const icons: any = {
   bing: BingIcon,
   baidu:BaiduIcon,
   kakao:KakaoIcon,
-  naver:NaverIcon
+  naver:NaverIcon,
+  mapycz: MapyCZIcon
 }
 
 const iconComponent = computed(() => {

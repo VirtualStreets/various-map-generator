@@ -1,12 +1,14 @@
 import { extractDateFromPanoId, formatTimeStr } from '@/composables/utils'
 import { getClosestPanoAtCoords } from "@/apple/tile";
 import { AppleLookAroundPano } from "@/apple/types";
-import { createPayload, wgs84_to_tile_coord } from '@/composables/utils';
+import { createPayload, wgs84_to_tile_coord, opk_to_hpr } from '@/composables/utils';
+import { MapyCzApi } from '@/mapycz/MapyCZAPI';
 import gcoord from 'gcoord'
 
 let svService: google.maps.StreetViewService | null = null
 const applePanoCache = new Map<string, google.maps.StreetViewPanoramaData>()
 const googleZoomCache = new Map<string, string[]>()
+const mapyczPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
 const providerMap: Record<string, Function> = {
     google: getFromGoogle,
     apple: getFromApple,
@@ -17,7 +19,9 @@ const providerMap: Record<string, Function> = {
     kakao: getFromKakao,
     naver: getFromNaver,
     googleZoom: getFromGoogleZoom,
+    mapycz: getFromMapyCZ,
 };
+const MAPYCZ_API = new MapyCzApi();
 
 // Google Zoom (tile coordinate)
 async function getFromGoogleZoom(
@@ -738,6 +742,86 @@ async function getFromBaidu(
         onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (err) {
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
+    }
+}
+
+// MapyCZ provider
+async function getFromMapyCZ(
+    request: google.maps.StreetViewLocationRequest & { pano?: string },
+    onCompleted: (
+        res: google.maps.StreetViewPanoramaData | null,
+        status: google.maps.StreetViewStatus,
+    ) => void,
+) {
+    try {
+        if (request.pano && applePanoCache.has(request.pano)) {
+            onCompleted(mapyczPanoCache.get(request.pano)!, google.maps.StreetViewStatus.OK)
+            return
+        }
+        let result: any = null;
+        let panoId: string = '';
+
+        if (request.pano) {
+            // Load panorama by ID
+            result = await MAPYCZ_API.loadPanoramaDetails(parseInt(request.pano));
+            panoId = request.pano;
+        } else if (request.location) {
+            // Load panorama by location
+            const { lat, lng }: any = request.location;
+            result = await MAPYCZ_API.loadPanoramaGetBest(lng, lat, request.radius || 50);
+            panoId = result?.pid.toString() ?? result?.panInfo?.pid.toString();
+        }
+
+        if (!panoId) {
+            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS);
+            return;
+        }
+        if (result?.panInfo) result = result.panInfo;
+
+        const date = new Date(result.createdAt * 1000) || new Date();
+        const { heading, pitch, roll } = opk_to_hpr(result.omega, result.phi, result.kappa);
+        let neighbours: any[] = [];
+        try {
+            neighbours = await MAPYCZ_API.loadPanoramaNeighbours(parseInt(panoId));
+        } catch (error) {
+        }
+        const links: google.maps.StreetViewLink[] = neighbours?.map(neighbour => {
+
+            return {
+                pano: neighbour.near?.pid?.toString() || neighbour.far?.pid?.toString(),
+                heading: neighbour.angle,
+                description: neighbour.near?.provider || neighbour.far?.provider || 'MapyCZ',
+            };
+        }).filter(link => link.pano);
+
+        const panorama: google.maps.StreetViewPanoramaData = {
+            location: {
+                pano: panoId,
+                latLng: new google.maps.LatLng(result.mark.lat, result.mark.lon),
+                description: result.provider,
+                altitude: result.mark?.alt,
+                service: result.provider
+            },
+            copyright: 'MapyCZ',
+            imageDate: date.toISOString(),
+            links,
+            time: request.pano ? [] : [{
+                date: date,
+                pano: panoId
+            } as any],
+            tiles: {
+                getTileUrl: () => '',
+                centerHeading: heading ?? 0,
+                tileSize: new google.maps.Size(512, 512),
+                worldSize: new google.maps.Size(8192, 4096),
+            },
+        };
+        console.log(panorama);
+        mapyczPanoCache.set(panoId, panorama)
+        onCompleted(panorama, google.maps.StreetViewStatus.OK);
+    } catch (error) {
+        console.error('MapyCZ error:', error);
+        onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR);
     }
 }
 

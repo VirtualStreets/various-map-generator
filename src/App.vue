@@ -165,6 +165,7 @@
                 <option value="baidu">Baidu</option>
                 <option value="naver">Naver</option>
                 <option value="kakao">Kakao</option>
+                <option value="mapycz">MapyCZ</option>
               </select>
             </div>
             <div class="flex items-center justify-between">
@@ -681,6 +682,7 @@ import {
   tencentToGcj02
 } from '@/composables/utils.ts'
 import StreetViewProviders from './providers'
+import { degToRad, radToDeg } from 'web-merc-projection/util'
 const { currentDate } = getCurrentDate()
 const themeMode = useColorMode()
 
@@ -961,6 +963,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
         case 'bing':
         case 'naver':
         case 'yandex':
+        case 'mapycz':
         case 'kakao':
           panoMinutes = Number(res.imageDate.slice(11, 13)) * 60 + Number(res.imageDate.slice(14, 16))
           break
@@ -1251,8 +1254,10 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
       heading = pano.tiles.centerHeading
     } else if (settings.heading.reference === 'backward') {
       heading = (pano.tiles.centerHeading + 180) % 360
+      if (settings.provider === 'mapycz') heading = degToRad((radToDeg(pano.tiles.centerHeading) + 180) % 360)
     } else if (settings.heading.reference === 'link' && pano.links.length > 0) {
       heading = pano.links[0].heading
+      if (settings.provider === 'mapycz') heading = degToRad(heading)
     }
     if (settings.heading.randomInRange) {
       heading += randomInRange(settings.heading.range[0], settings.heading.range[1])
@@ -1303,7 +1308,7 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
   const previousPano = time[time.length - 2]?.pano
 
   // New road
-  if (!previousPano && settings.provider != 'naver') {
+  if (!previousPano && settings.provider.includes('google')) {
     checkHasBlueLine(pano.location.latLng.toJSON()).then((hasBlueLine) => {
       addLocation(location, polygon,
         !settings.provider.includes('google') ? icons.newLoc : (hasBlueLine ? icons.newLoc : icons.noBlueLine))
@@ -1413,6 +1418,9 @@ function addLocation(
               break
             case 'naver':
               url = `https://map.naver.com/p?c=10.00,0,0,0,adh&p=${location.panoId},${heading > 180 ? (heading - 360) : heading},${pitch},80`
+              break
+            case 'mapycz':
+              url = `https://mapy.cz/app?pid=${location.panoId}&yaw=${heading}&pitch=${pitch}&x=${location.lng}&y=${location.lat}&z=15`
               break
             default:
               url = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}&heading=${heading}&pitch=${pitch}&fov=${180 / 2 ** zoom}`
