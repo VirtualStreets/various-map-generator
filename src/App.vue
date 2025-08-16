@@ -589,6 +589,11 @@
               <span class="h-3 w-3 bg-[#24AC20] rounded-full"></span>Gen 1 Update
             </Checkbox>
             <Checkbox v-model="settings.markers.cluster" v-on:change="updateClusters" title="For lag reduction.">
+              <span class="inline-block w-3 h-3 rounded-full" style="background: 
+              linear-gradient(90deg, #FF5F6D, #FFC371, #F9F871, #A1FFCE, #58CFFB, #845EC2);
+              background-size: 600% 600%;
+              animation: gradientShift 5s ease infinite;">
+              </span>
               Cluster markers
             </Checkbox>
             <Button :disabled="!totalLocs" size="sm" variant="warning"
@@ -1625,5 +1630,17 @@ option {
 .leaflet-bottom .leaflet-control {
   margin-left: 4px;
   margin-bottom: 4px;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 </style>
