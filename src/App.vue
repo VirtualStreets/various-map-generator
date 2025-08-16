@@ -6,11 +6,12 @@
   </div>
   <div class="absolute top-1 left-1 min-w-90 max-w-[calc(80vw)] 
   max-h-[calc(100vh-50px)] flex flex-col gap-1">
-    <h1
-      class="logo px-2 py-0.5 justify-center rounded-sm flex items-center gap-0.5 text-xl tracking-tighter text-shadow-[0_0_3px_#000]">
-      Various MapGenerat
-      <Spinner :icon="settings.provider" /> r
-    </h1>
+    <div class="container">
+      <h1 class="logo px-2 py-0.5 flex gap-0.5 items-center justify-center text-xl tracking-tighter">
+        Various MapGenerat
+        <Spinner :icon="settings.provider" /> r
+      </h1>
+    </div>
     <div class="flex-1 min-h-0 flex flex-col gap-1">
       <div v-if="!state.started" class="container flex flex-col">
         <div class="relative cursor-pointer" @click="panels.general = !panels.general">
@@ -592,7 +593,7 @@
               <span class="inline-block w-3 h-3 rounded-full" style="background: 
               linear-gradient(90deg, #FF5F6D, #FFC371, #F9F871, #A1FFCE, #58CFFB, #845EC2);
               background-size: 600% 600%;
-              animation: gradientShift 5s ease infinite;">
+              animation: gradientFlow 5s ease infinite;">
               </span>
               Cluster markers
             </Checkbox>
@@ -1552,6 +1553,7 @@ Array.prototype.chunk = function (n) {
 :root {
   --bg-color: white;
   --text-color: black;
+  --text-shadow: rgba(0, 0, 0, 0.2);
   --container-bg: rgba(255, 255, 255, 0.7);
   --leaflet-bg: #f0f0f0;
   --leaflet-control-bg: rgba(255, 255, 255, 0.6);
@@ -1561,6 +1563,7 @@ Array.prototype.chunk = function (n) {
 html.dark {
   --bg-color: #121212;
   --text-color: #eee;
+  --text-shadow: rgba(255, 255, 255, 0.2);
   --container-bg: rgba(0, 0, 0, 0.7);
   --leaflet-bg: #2c2c2c;
   --leaflet-control-bg: rgba(0, 0, 0, 0.6);
@@ -1578,8 +1581,14 @@ body {
 }
 
 .logo {
-  color: var(--text-color);
-  background-color: var(--container-bg);
+  background: linear-gradient(270deg, #E412D2, #CA283F, #FF5F6D, #FFC371, #24AC20, #2880CA, #9A28CA);
+  background-size: 600% 600%;
+  animation: gradientFlow 8s ease infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 1px var(--text-shadow);
 }
 
 .tooltip {
@@ -1632,13 +1641,15 @@ option {
   margin-bottom: 4px;
 }
 
-@keyframes gradientShift {
+@keyframes gradientFlow {
   0% {
     background-position: 0% 50%;
   }
+
   50% {
     background-position: 100% 50%;
   }
+
   100% {
     background-position: 0% 50%;
   }
