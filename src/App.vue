@@ -18,7 +18,7 @@
           <h2>General</h2>
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
         </div>
-        <Collapsible :is-open="panels.general" class="flex flex-col gap-1 max-h-[140px] overflow-y-auto mt-2 p-1">
+        <Collapsible :is-open="panels.general" class="flex flex-col gap-1 max-h-[160px] overflow-y-auto mt-2 p-1">
           <div class="flex items-center justify-between ml-1 mr-1">
             Theme :
             <select v-model="themeMode" class="w-20 ml-10">
@@ -33,6 +33,17 @@
               <option :value=true>On</option>
               <option :value=false>Off</option>
             </select>
+          </div>
+          <div v-if="settings.provider === 'mapycz'" class="flex items-center justify-between ml-1 mr-1 gap-2">
+            <span>MapyCZ API Key :</span>
+            <div class="gap-1">
+              <input :type="showMapyCzApiKey ? 'text' : 'password'" v-model="settings.apiKeys.mapycz"
+                @input="updateMapyCzApiKey" class="w-48 h-6 px-2 py-1 border rounded"
+                placeholder="Enter your API key">
+              <button @click="showMapyCzApiKey = !showMapyCzApiKey" class="ml-1 mr-1" type="button">
+              <component :is="showMapyCzApiKey ? EyeClosedIcon : EyeOpenIcon" class="w-4 h-4 stroke-current" /> </input>
+              </button>
+            </div>
           </div>
           <div v-if="settings.notification.enabled" class="flex-1 min-h-0 overflow-y-auto ml-4 mb-1">
             <Checkbox v-model="settings.notification.anyLocation">
@@ -641,9 +652,12 @@ import FileExportIcon from '@/assets/icons/file-export.svg'
 import MarkerIcon from '@/assets/icons/marker.svg'
 import TrashBinIcon from '@/assets/icons/trash-bin.svg'
 import ChevronDownIcon from '@/assets/icons/chevron-down.svg'
+import EyeOpenIcon from '@/assets/icons/eye-open.svg'
+import EyeClosedIcon from '@/assets/icons/eye-closed.svg'
 
 import { useStore } from '@/store'
 import { settings } from '@/settings'
+import { updateMapyCzApiKey } from '@/providers'
 
 import {
   L,
@@ -734,6 +748,7 @@ const panels = useStorage('map_generator__panels_v1', {
 const { selected, select, state } = useStore()
 const allFoundPanoIds = new Set<string>()
 const generationStartTime = ref<number>(0)
+const showMapyCzApiKey = ref<boolean>(false)
 
 const canBeStarted = computed(() =>
   selected.value.some((country) => country.found.length < country.nbNeeded),
@@ -1435,7 +1450,7 @@ function addLocation(
               url = `https://map.naver.com/p?c=10.00,0,0,0,adh&p=${location.panoId},${heading > 180 ? (heading - 360) : heading},${pitch},80`
               break
             case 'mapycz':
-              url = `https://mapy.cz/app?pid=${location.panoId}&newest=0&yaw=${heading}&pitch=${pitch}&x=${location.lng}&y=${location.lat}&z=15`
+              url = `https://mapy.cz/app?pid=${location.panoId}&yaw=${heading}&pitch=${pitch}&x=${location.lng}&y=${location.lat}&z=15`
               break
             case 'mapillary':
               url = `https://www.mapillary.com/app/?lat=${location.lat}&lng=${location.lng}&z=15&pKey=${location.panoId}&focus=photo&x=${heading}&y=${pitch}&zoom=${zoom}`
@@ -1627,6 +1642,10 @@ select,
 option {
   color: var(--text-color);
   background-color: var(--container-bg) !important;
+}
+
+.stroke-current {
+  stroke: currentColor;
 }
 
 .leaflet-container {

@@ -25,6 +25,7 @@ import { YandexLayer } from './layers/yandexLayer'
 import { AppleLayer } from './layers/appleLayer'
 import { TencentCoverageLayer } from './layers/tencentLayer'
 import { NaverLayer } from './layers/naverLayer'
+//import { OpenMapLayer } from './layers/openmapLayer'
 import { MapillaryLayer } from './layers/mapillaryLayer'
 
 import { useStore } from '@/store'
@@ -66,6 +67,11 @@ const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 })
 
+const cartoLayer=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png', {
+  minZoom: 1,
+  maxZoom: 20
+})
+
 const bingMapsLayer = L.layerGroup([bingBaseLayer, bingTerrainLayer])
 
 const petalMapsLayer = L.tileLayer("https://maprastertile-drcn.dbankcdn.cn/display-service/v1/online-render/getTile/24.12.10.10/{z}/{x}/{y}/?language=en&p=46&scale=2&mapType=ROADMAP&presetStyleId=standard&pattern=JPG&key=DAEDANitav6P7Q0lWzCzKkLErbrJG4kS1u%2FCpEe5ZyxW5u0nSkb40bJ%2BYAugRN03fhf0BszLS1rCrzAogRHDZkxaMrloaHPQGO6LNg==",
@@ -93,10 +99,13 @@ const baiduCoverageLayer = new BaiduLayer({ filter: "hue-rotate(140deg) saturate
 
 const yandexCoverageLayer = new YandexLayer()
 
+//const mapyczCoverageLayer = L.tileLayer('https://mapserver.mapy.cz/panorama_hybrid-m/{z}-{x}-{y}', { minZoom: 5, subdomains: ["0", "1", "2", "3"] })
+
 const baseMaps = {
   "Google Roadmap": roadmapLayer,
   "Google Satellite": satelliteLayer,
   "Google Terrain": terrainLayer,
+  Carto: cartoLayer,
   OSM: osmLayer,
   Bing: bingMapsLayer,
   Tencent: tencentBaseLayer,
@@ -113,8 +122,10 @@ const overlayMaps = {
   'Yandex Panorama': yandexCoverageLayer,
   'Naver Panorama (Only Works at Zoom Level 15+)': NaverLayer,
   'Mapillary (Only Works at Zoom Level 15+)': MapillaryLayer,
+  //'Mapy.cz Panorama  (Only Works at Zoom Level 5+)': mapyczCoverageLayer,
   'Tencent Street View': TencentCoverageLayer,
   'Baidu Street View': baiduCoverageLayer,
+  //'Streetview.vn': OpenMapLayer,
 }
 
 const allLayers = [
@@ -300,12 +311,18 @@ function toggleMap(provider: string) {
     baiduCoverageLayer.addTo(map)
   }
   else if (provider === 'yandex') {
+    resetLayer()
+    roadmapLayer.addTo(map)
     yandexCoverageLayer.addTo(map)
   }
   else if (provider === 'naver') {
+    resetLayer()
+    cartoLayer.addTo(map)
     NaverLayer.addTo(map)
   }
   else if (provider === 'mapillary') {
+    resetLayer()
+    roadmapLayer.addTo(map)
     MapillaryLayer.addTo(map)
   }
 }

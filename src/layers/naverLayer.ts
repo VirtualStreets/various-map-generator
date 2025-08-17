@@ -1,8 +1,9 @@
 import * as L from 'leaflet';
 import VectorTileLayer from 'leaflet-vector-tile-layer';
 
-function determineLineWidth(level:number, zoom: number): number {
-    return (zoom > 18 ? 8 : 4 ) / level;
+function determineLineWidth(level: number): number {
+
+    return 4 / (level + 1);
 }
 
 function createVectorLayer(minZoom: number, maxZoom: number,): L.Layer {
@@ -10,7 +11,7 @@ function createVectorLayer(minZoom: number, maxZoom: number,): L.Layer {
         style: (feature: any, zoom: number) => {
             return {
                 color: 'rgba(254, 145, 62, 1)',
-                weight: determineLineWidth(feature.properties.dp_level,zoom),
+                weight: determineLineWidth(feature.properties.dp_level),
                 opacity: 1,
                 fill: false,
             };

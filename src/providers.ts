@@ -2,15 +2,21 @@ import { extractDateFromPanoId, formatTimeStr } from '@/composables/utils'
 import { getClosestPanoAtCoords } from "@/apple/tile";
 import { AppleLookAroundPano } from "@/apple/types";
 import { createPayload, wgs84_to_tile_coord, opk_to_hpr } from '@/composables/utils';
-import { MapyCzApi } from '@/mapycz/MapyCZAPI';
+import { MapyCzApi } from '@/mapycz/mapycz_api';
 import { MapillaryAPI } from '@/mapillary/mapillary_api';
+import { settings } from '@/settings';
 import gcoord from 'gcoord'
+import { degToRad } from 'web-merc-projection/util';
 
 let svService: google.maps.StreetViewService | null = null
 const applePanoCache = new Map<string, google.maps.StreetViewPanoramaData>()
 const googleZoomCache = new Map<string, string[]>()
 const mapyczPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
 const mapillaryPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
+const naverPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
+const MAPYCZ_API = new MapyCzApi();
+const MAPILLARY_API = new MapillaryAPI();
+
 const providerMap: Record<string, Function> = {
     google: getFromGoogle,
     apple: getFromApple,
@@ -24,8 +30,14 @@ const providerMap: Record<string, Function> = {
     mapycz: getFromMapyCZ,
     mapillary: getFromMapillary,
 };
-const MAPYCZ_API = new MapyCzApi();
-const MAPILLARY_API = new MapillaryAPI();
+
+
+export function updateMapyCzApiKey() {
+    MAPYCZ_API.setApiKey(settings.apiKeys.mapycz);
+}
+
+// Initialize API key on startup
+updateMapyCzApiKey();
 
 // Google Zoom (tile coordinate)
 async function getFromGoogleZoom(
@@ -606,8 +618,13 @@ async function getFromNaver(
 
         let panoId: string | undefined
         let heading: number | undefined
+
         if (request.pano) {
             panoId = request.pano
+            if (naverPanoCache.has(panoId)) {
+                onCompleted(naverPanoCache.get(panoId)!, google.maps.StreetViewStatus.OK)
+                return
+            }
         } else if (request.location) {
             const { lat, lng } = request.location
             const uri = `https://cors-proxy.ac4.stocc.dev/https://panorama.map.naver.com/api/v2/nearby/${lng}/${lat}?lang=en`
@@ -625,8 +642,10 @@ async function getFromNaver(
         }
 
         const uri = `https://cors-proxy.ac4.stocc.dev/https://panorama.map.naver.com/metadataV3/basic/${panoId}?lang=en`
-        const resp = await fetch(uri)
-        const result = await resp.json()
+        const history_uri = `https://cors-proxy.ac4.stocc.dev/https://panorama.map.naver.com/metadata/timeline/${panoId}`
+        const [resultResp, timelineResp] = await Promise.all([fetch(uri), fetch(history_uri)]);
+        const result = await resultResp.json();
+        const timeline = await timelineResp.json();
 
         if (!result?.id) {
             onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
@@ -634,7 +653,19 @@ async function getFromNaver(
         }
         const date = result.info?.photodate
 
-        const res: google.maps.StreetViewPanoramaData = {
+        let history: Array<{ date: Date, pano: string }> = [];
+
+        if (timeline.timeline?.panoramas && Array.isArray(timeline.timeline?.panoramas)) {
+            const panoramas = timeline.timeline?.panoramas.slice(1);
+
+            history = panoramas.map((item: any[]) => ({
+                pano: item[0], // id
+                date: new Date(item[4])
+            }));
+            history.sort((a, b) => a.date.getTime() - b.date.getTime());
+        }
+
+        const panorama: google.maps.StreetViewPanoramaData = {
             location: {
                 pano: panoId,
                 latLng: new google.maps.LatLng(result.latitude, result.longitude),
@@ -655,14 +686,14 @@ async function getFromNaver(
                 worldSize: new google.maps.Size(8192, 4096),
             },
             copyright: '© Naver',
-            time: [{
+            time: history.length > 0 ? history : [{
                 date: new Date(date),
                 pano: panoId
-            } as any
-            ],
+            } as any],
         }
 
-        onCompleted(res, google.maps.StreetViewStatus.OK)
+        naverPanoCache.set(panoId, panorama)
+        onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (err) {
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
     }
@@ -782,15 +813,15 @@ async function getFromMapyCZ(
         }
         if (result?.panInfo) result = result.panInfo;
 
-        const date = new Date(result.createdAt * 1000) || new Date();
+        const date = result.createdAtTimestamp ? new Date(result.createdAtTimestamp * 1000) : new Date(result.createdAt * 1000);
         const { heading, pitch, roll } = opk_to_hpr(result.omega, result.phi, result.kappa);
+
         let neighbours: any[] = [];
         try {
             neighbours = await MAPYCZ_API.loadPanoramaNeighbours(parseInt(panoId));
         } catch (error) {
         }
         const links: google.maps.StreetViewLink[] = neighbours?.map(neighbour => {
-
             return {
                 pano: neighbour.near?.pid?.toString() || neighbour.far?.pid?.toString(),
                 heading: neighbour.angle,
@@ -806,8 +837,8 @@ async function getFromMapyCZ(
                 altitude: result.mark?.alt,
                 service: result.provider
             },
-            copyright: 'MapyCZ',
-            imageDate: date.toISOString(),
+            copyright: '© MapyCZ',
+            imageDate: result.createdAtTimestamp ? result.createdAt : date.toISOString(),
             links,
             time: request.pano ? [] : [{
                 date: date,
@@ -815,11 +846,12 @@ async function getFromMapyCZ(
             } as any],
             tiles: {
                 getTileUrl: () => '',
-                centerHeading: heading ?? 0,
+                centerHeading: result.extra?.carDirection ? degToRad(result.extra?.carDirection) : heading,
                 tileSize: new google.maps.Size(512, 512),
                 worldSize: new google.maps.Size(8192, 4096),
             },
         };
+
         mapyczPanoCache.set(panoId, panorama)
         onCompleted(panorama, google.maps.StreetViewStatus.OK);
     } catch (error) {
@@ -876,7 +908,7 @@ async function getFromMapillary(
                 altitude: result.computed_altitude,
                 service: result.is_pano
             },
-            copyright: 'Mapillary',
+            copyright: '© Mapillary',
             imageDate: date.toISOString(),
             links: [], // Mapillary doesn't provide direct neighboring images in this format
             time: request.pano ? [] : [{
@@ -884,7 +916,7 @@ async function getFromMapillary(
                 pano: panoId
             } as any],
             tiles: {
-                getTileUrl:()=>'',
+                getTileUrl: () => '',
                 centerHeading: heading,
                 tileSize: new google.maps.Size(512, 512),
                 worldSize: new google.maps.Size(2048, 1024),
