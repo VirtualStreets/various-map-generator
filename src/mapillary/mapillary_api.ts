@@ -105,7 +105,7 @@ export class MapillaryAPI {
             'is_pano', 
             'make', 
             'model',
-            'thumb_1024_url',
+            'thumb_2048_url',
             'compass_angle',
             'computed_compass_angle'
         ];
@@ -173,9 +173,12 @@ export class MapillaryAPI {
             'is_pano',
             'make',
             'model',
-            'thumb_1024_url',
+            'thumb_2048_url',
             'compass_angle',
-            'sequence'
+            'computed_compass_angle',
+            'sequence',
+            'mesh',
+            'merge_cc'
         ];
 
         const params = new URLSearchParams();

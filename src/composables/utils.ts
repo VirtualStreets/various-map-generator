@@ -409,9 +409,23 @@ function matrixToEulerYXZ(m: number[][]): { heading: number, pitch: number, roll
 
   return { heading, pitch, roll };
 }
+
 export function opk_to_hpr(
   omega: number, phi: number, kappa: number
 ): { heading: number, pitch: number, roll: number } {
   const m = opkToRotationMatrixYXZ(deg2rad(omega), deg2rad(phi), deg2rad(kappa));
   return matrixToEulerYXZ(m);
+}
+
+export function headingToMapillaryX(heading: number, imageHeading: number = 0): number {
+    let relativeHeading = heading - imageHeading;
+    relativeHeading = ((relativeHeading % 360) + 360) % 360;
+    let x = 0.5 - (relativeHeading / 360);
+    if (x < 0) x += 1;
+    return Math.max(0, Math.min(1, x));
+}
+
+export function pitchToMapillaryY(pitch: number): number {
+    const y = 0.5 - (pitch / 180);
+    return Math.max(0, Math.min(1, y));
 }

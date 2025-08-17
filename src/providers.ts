@@ -884,7 +884,7 @@ async function getFromMapillary(
                 pano: panoId
             } as any],
             tiles: {
-                getTileUrl: () => '',
+                getTileUrl:()=>'',
                 centerHeading: heading,
                 tileSize: new google.maps.Size(512, 512),
                 worldSize: new google.maps.Size(2048, 1024),

@@ -269,7 +269,8 @@
               <Checkbox v-if="settings.provider.includes('google')" v-model="settings.ignoreBadcam">Ignore BadCam
               </Checkbox>
               <Checkbox v-model="settings.findByGeneration.enabled"
-                v-if="['google', 'googleZoom', 'apple', 'bing', 'naver', 'yandex', 'mapillary'].includes(settings.provider)">Find by
+                v-if="['google', 'googleZoom', 'apple', 'bing', 'naver', 'yandex', 'mapillary'].includes(settings.provider)">
+                Find by
                 generation</Checkbox>
               <div v-if="settings.findByGeneration.enabled && settings.provider.includes('google')" class="ml-6">
                 <Checkbox v-model="settings.findByGeneration.google[1]">Gen 1</Checkbox>
@@ -684,10 +685,13 @@ import {
   readFileAsText,
   getPolygonName,
   changePolygonName,
-  tencentToGcj02
+  tencentToGcj02,
+  headingToMapillaryX,
+  pitchToMapillaryY
 } from '@/composables/utils.ts'
 import StreetViewProviders from './providers'
 import { degToRad, radToDeg } from 'web-merc-projection/util'
+import { PanoramaNeighbourType } from './mapycz/types'
 const { currentDate } = getCurrentDate()
 const themeMode = useColorMode()
 
@@ -1258,20 +1262,24 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
   if (settings.heading.adjust) {
     if (settings.heading.reference === 'forward') {
       heading = pano.tiles.centerHeading
+      if (settings.provider === 'mapillary') heading = 0.5
     } else if (settings.heading.reference === 'backward') {
       heading = (pano.tiles.centerHeading + 180) % 360
       if (settings.provider === 'mapycz') heading = degToRad((radToDeg(pano.tiles.centerHeading) + 180) % 360)
-    } else if (settings.heading.reference === 'link' && pano.links.length > 0) {
-      heading = pano.links[0].heading
+      else if (settings.provider === 'mapillary') heading = 0
+    } else if (settings.heading.reference === 'link') {
+      if (pano.links.length > 0) heading = pano.links[0].heading
+      else heading = pano.tiles.centerHeading
       if (settings.provider === 'mapycz') heading = degToRad(heading)
     }
     if (settings.heading.randomInRange) {
       heading += randomInRange(settings.heading.range[0], settings.heading.range[1])
+      if (settings.provider === 'mapillary') heading = headingToMapillaryX(heading, pano.tiles.centerHeading)
     } else {
       heading += Math.random() < 0.5 ? settings.heading.range[0] : settings.heading.range[1]
+      if (settings.provider === 'mapillary') heading = headingToMapillaryX(heading, pano.tiles.centerHeading)
     }
   }
-
   let pitch = 0
   if (settings.pitch.adjust) {
     if (settings.pitch.randomInRange) {
@@ -1280,6 +1288,7 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
       pitch = Math.random() < 0.5 ? settings.pitch.range[0] : settings.pitch.range[1]
     }
   }
+  if (settings.provider === 'mapillary') pitch = pitchToMapillaryY(pitch)
 
   let zoom = 0
   if (settings.zoom.adjust) {
@@ -1426,10 +1435,10 @@ function addLocation(
               url = `https://map.naver.com/p?c=10.00,0,0,0,adh&p=${location.panoId},${heading > 180 ? (heading - 360) : heading},${pitch},80`
               break
             case 'mapycz':
-              url = `https://mapy.cz/app?pid=${location.panoId}&newest=1&yaw=${heading}&pitch=${pitch}&x=${location.lng}&y=${location.lat}&z=15`
+              url = `https://mapy.cz/app?pid=${location.panoId}&newest=0&yaw=${heading}&pitch=${pitch}&x=${location.lng}&y=${location.lat}&z=15`
               break
             case 'mapillary':
-              url = `https://www.mapillary.com/app/?lat=${location.lat}&lng=${location.lng}&z=15&pKey=${location.panoId}&focus=photo`
+              url = `https://www.mapillary.com/app/?lat=${location.lat}&lng=${location.lng}&z=15&pKey=${location.panoId}&focus=photo&x=${heading}&y=${pitch}&zoom=${zoom}`
               break
             default:
               url = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}&heading=${heading}&pitch=${pitch}&fov=${180 / 2 ** zoom}`
