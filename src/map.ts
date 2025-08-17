@@ -25,6 +25,7 @@ import { YandexLayer } from './layers/yandexLayer'
 import { AppleLayer } from './layers/appleLayer'
 import { TencentCoverageLayer } from './layers/tencentLayer'
 import { NaverLayer } from './layers/naverLayer'
+import { MapillaryLayer } from './layers/mapillaryLayer'
 
 import { useStore } from '@/store'
 const { selected, select, state } = useStore()
@@ -65,7 +66,7 @@ const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 })
 
-const bingMapsLayer=L.layerGroup([bingBaseLayer, bingTerrainLayer])
+const bingMapsLayer = L.layerGroup([bingBaseLayer, bingTerrainLayer])
 
 const petalMapsLayer = L.tileLayer("https://maprastertile-drcn.dbankcdn.cn/display-service/v1/online-render/getTile/24.12.10.10/{z}/{x}/{y}/?language=en&p=46&scale=2&mapType=ROADMAP&presetStyleId=standard&pattern=JPG&key=DAEDANitav6P7Q0lWzCzKkLErbrJG4kS1u%2FCpEe5ZyxW5u0nSkb40bJ%2BYAugRN03fhf0BszLS1rCrzAogRHDZkxaMrloaHPQGO6LNg==",
   { maxZoom: 18 }
@@ -107,10 +108,11 @@ const overlayMaps = {
   'Google Street View Official Only': gsvLayer2,
   'Google Unofficial coverage only': gsvLayer3,
   'Apple Look Around': appleCoverageLayer,
-  'Apple Look Around (Only Works at Zoom Level 10+)':AppleLayer,
+  'Apple Look Around (Only Works at Zoom Level 10+)': AppleLayer,
   'Bing Streetside': bingStreetideLayer,
   'Yandex Panorama': yandexCoverageLayer,
-  'Naver Panorama (Only Works at Zoom Level 15+)' : NaverLayer,
+  'Naver Panorama (Only Works at Zoom Level 15+)': NaverLayer,
+  'Mapillary (Only Works at Zoom Level 15+)': MapillaryLayer,
   'Tencent Street View': TencentCoverageLayer,
   'Baidu Street View': baiduCoverageLayer,
 }
@@ -273,7 +275,7 @@ function toggleMap(provider: string) {
       }
     });
   }
-  if (provider === 'google') {
+  if (provider.includes('google')) {
     resetLayer()
     roadmapLayer.addTo(map)
     gsvLayer2.addTo(map)
@@ -302,6 +304,9 @@ function toggleMap(provider: string) {
   }
   else if (provider === 'naver') {
     NaverLayer.addTo(map)
+  }
+  else if (provider === 'mapillary') {
+    MapillaryLayer.addTo(map)
   }
 }
 

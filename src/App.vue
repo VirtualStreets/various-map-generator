@@ -155,9 +155,10 @@
           <Collapsible :is-open="panels.generatorSettings" class="mt-1 p-1 pr-2">
             <div class="flex items-center justify-between">
               Provider :
-              <select v-model="settings.provider" class="w-21" @change="toggleMap(settings.provider)">
+              <select v-model="settings.provider" class="w-23" @change="toggleMap(settings.provider)">
                 <option value="google">Google</option>
                 <option value="googleZoom">Zoom</option>
+                <option value="mapillary">Mapillary</option>
                 <option value="apple">Apple</option>
                 <option value="bing">Bing</option>
                 <option value="yandex">Yandex</option>
@@ -170,7 +171,7 @@
             </div>
             <div class="flex items-center justify-between">
               PanoId :
-              <select v-model="settings.panoId" class="w-21 ml-10">
+              <select v-model="settings.panoId" class="w-23 ml-10">
                 <option value="enable">Enable</option>
                 <option value="disable">Disable</option>
                 <option value="prefix">Prefix</option>
@@ -268,7 +269,7 @@
               <Checkbox v-if="settings.provider.includes('google')" v-model="settings.ignoreBadcam">Ignore BadCam
               </Checkbox>
               <Checkbox v-model="settings.findByGeneration.enabled"
-                v-if="['google', 'googleZoom', 'apple', 'bing', 'naver', 'yandex'].includes(settings.provider)">Find by
+                v-if="['google', 'googleZoom', 'apple', 'bing', 'naver', 'yandex', 'mapillary'].includes(settings.provider)">Find by
                 generation</Checkbox>
               <div v-if="settings.findByGeneration.enabled && settings.provider.includes('google')" class="ml-6">
                 <Checkbox v-model="settings.findByGeneration.google[1]">Gen 1</Checkbox>
@@ -298,6 +299,10 @@
                 <Checkbox v-model="settings.findByGeneration.yandex[1]">Gen 1</Checkbox>
                 <Checkbox v-model="settings.findByGeneration.yandex[2]">Gen 2</Checkbox>
                 <Checkbox v-model="settings.findByGeneration.yandex.trekker">Trekker</Checkbox>
+              </div>
+              <div v-if="settings.findByGeneration.enabled && settings.provider === 'mapillary'" class="ml-6">
+                <Checkbox v-model="settings.findByGeneration.mapillary[1]">Panorama</Checkbox>
+                <Checkbox v-model="settings.findByGeneration.mapillary[2]">Photo</Checkbox>
               </div>
             </div>
 
@@ -965,6 +970,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
         case 'yandex':
         case 'mapycz':
         case 'kakao':
+        case 'mapillary':
           panoMinutes = Number(res.imageDate.slice(11, 13)) * 60 + Number(res.imageDate.slice(14, 16))
           break
       }
@@ -1048,7 +1054,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
 
     // Find Generation
     if (
-      ['google', 'googleZoom', 'apple', 'yandex', 'bing', 'naver'].includes(settings.provider) &&
+      ['google', 'googleZoom', 'apple', 'yandex', 'bing', 'naver', 'mapillary'].includes(settings.provider) &&
       settings.findByGeneration.enabled &&
       ((!settings.rejectOfficial && !settings.checkAllDates) || settings.selectMonths)
     ) {
@@ -1121,7 +1127,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
 
     if (
       settings.findByGeneration.enabled &&
-      ['google', 'googleZoom', 'apple', 'yandex', 'bing', 'naver'].includes(settings.provider)
+      ['google', 'googleZoom', 'apple', 'yandex', 'bing', 'naver', 'mapillary'].includes(settings.provider)
     ) {
       const gen = getCameraGeneration(pano, settings.provider)
       if (gen === 0) return false
@@ -1420,7 +1426,10 @@ function addLocation(
               url = `https://map.naver.com/p?c=10.00,0,0,0,adh&p=${location.panoId},${heading > 180 ? (heading - 360) : heading},${pitch},80`
               break
             case 'mapycz':
-              url = `https://mapy.cz/app?pid=${location.panoId}&yaw=${heading}&pitch=${pitch}&x=${location.lng}&y=${location.lat}&z=15`
+              url = `https://mapy.cz/app?pid=${location.panoId}&newest=1&yaw=${heading}&pitch=${pitch}&x=${location.lng}&y=${location.lat}&z=15`
+              break
+            case 'mapillary':
+              url = `https://www.mapillary.com/app/?lat=${location.lat}&lng=${location.lng}&z=15&pKey=${location.panoId}&focus=photo`
               break
             default:
               url = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}&heading=${heading}&pitch=${pitch}&fov=${180 / 2 ** zoom}`

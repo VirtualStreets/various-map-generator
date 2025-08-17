@@ -18,10 +18,11 @@ export function isOfficial(pano: string, provider: string) {
     case 'yandex':
     case 'apple':
     case 'bing':
-    case 'tencent':
     case 'baidu':
     case 'naver':
     case 'kakao':
+    case 'mapillary':
+    case 'tencent':
       return true
     default:
       return false
@@ -101,7 +102,6 @@ export function getCameraGeneration(
   const lat = location?.latLng?.lat() ?? 0;
   const imageDate = pano.imageDate ?? '';
   const { width, height } = pano.tiles.worldSize;
-
   if (provider === 'google') {
 
     if (height === 8192) return 4;
@@ -139,6 +139,8 @@ export function getCameraGeneration(
     if (width === 5632) return 1;
     return 'trekker';
   }
+
+  else if (provider === 'mapillary') return pano.location?.service ? 1 : 2;
 
   return 0;
 }
@@ -387,8 +389,8 @@ function opkToRotationMatrixYXZ(omega: number, phi: number, kappa: number): numb
   // ZXY = Ry * Rx * Rz
   return [
     [cz * cy - sz * sx * sy, -sz * cx, cz * sy + sz * sx * cy],
-    [sz * cy + cz * sx * sy,  cz * cx, sz * sy - cz * sx * cy],
-    [-cx * sy,                sx,      cx * cy              ]
+    [sz * cy + cz * sx * sy, cz * cx, sz * sy - cz * sx * cy],
+    [-cx * sy, sx, cx * cy]
   ];
 }
 
@@ -397,7 +399,7 @@ function matrixToEulerYXZ(m: number[][]): { heading: number, pitch: number, roll
 
   if (Math.abs(m[2][1]) < 0.999999) {
     pitch = Math.asin(m[2][1]);
-    heading = Math.atan2(-m[2][0], m[2][2]); 
+    heading = Math.atan2(-m[2][0], m[2][2]);
     roll = Math.atan2(-m[0][1], m[1][1]);
   } else {
     pitch = Math.PI / 2 * Math.sign(m[2][1]);

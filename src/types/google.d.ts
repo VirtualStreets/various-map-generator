@@ -9,6 +9,6 @@ declare namespace google.maps {
   interface StreetViewLocation {
     altitude?: number | null
     country?: string | null
-    service?: string | null
+    service?: any
   }
 }

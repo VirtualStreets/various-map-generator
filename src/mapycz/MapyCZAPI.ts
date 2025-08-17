@@ -85,7 +85,8 @@ export class MapyCzApi {
         MapyCzApi.API_METHOD_GETBEST,
         parseFloat(lon.toString()),
         parseFloat(lat.toString()),
-        parseFloat(radius.toString())
+        parseFloat(radius.toString()),
+        {newest: 1} // Ensure we get the newest panorama
       );
       const response = await this.makeApiRequest(MapyCzApi.API_ENDPOINT_PANORAMA, xmlBody);
       return PanoramaType.cast(response.result);

@@ -9,7 +9,7 @@ import BingIcon from '@/assets/icons/bing.svg'
 import BaiduIcon from '@/assets/icons/baidu.svg'
 import KakaoIcon from '@/assets/icons/kakao.svg'
 import NaverIcon from '@/assets/icons/naver.svg'
-
+import MapillaryIcon from '@/assets/icons/mapillary.svg'
 
 const props = defineProps<{
   size?: string
@@ -28,7 +28,8 @@ const icons: any = {
   baidu:BaiduIcon,
   kakao:KakaoIcon,
   naver:NaverIcon,
-  mapycz: MapyCZIcon
+  mapycz: MapyCZIcon,
+  mapillary:MapillaryIcon,
 }
 
 const iconComponent = computed(() => {

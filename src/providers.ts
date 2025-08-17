@@ -3,12 +3,14 @@ import { getClosestPanoAtCoords } from "@/apple/tile";
 import { AppleLookAroundPano } from "@/apple/types";
 import { createPayload, wgs84_to_tile_coord, opk_to_hpr } from '@/composables/utils';
 import { MapyCzApi } from '@/mapycz/MapyCZAPI';
+import { MapillaryAPI } from '@/mapillary/mapillary_api';
 import gcoord from 'gcoord'
 
 let svService: google.maps.StreetViewService | null = null
 const applePanoCache = new Map<string, google.maps.StreetViewPanoramaData>()
 const googleZoomCache = new Map<string, string[]>()
 const mapyczPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
+const mapillaryPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
 const providerMap: Record<string, Function> = {
     google: getFromGoogle,
     apple: getFromApple,
@@ -20,8 +22,10 @@ const providerMap: Record<string, Function> = {
     naver: getFromNaver,
     googleZoom: getFromGoogleZoom,
     mapycz: getFromMapyCZ,
+    mapillary: getFromMapillary,
 };
 const MAPYCZ_API = new MapyCzApi();
+const MAPILLARY_API = new MapillaryAPI();
 
 // Google Zoom (tile coordinate)
 async function getFromGoogleZoom(
@@ -754,7 +758,7 @@ async function getFromMapyCZ(
     ) => void,
 ) {
     try {
-        if (request.pano && applePanoCache.has(request.pano)) {
+        if (request.pano && mapyczPanoCache.has(request.pano)) {
             onCompleted(mapyczPanoCache.get(request.pano)!, google.maps.StreetViewStatus.OK)
             return
         }
@@ -816,11 +820,79 @@ async function getFromMapyCZ(
                 worldSize: new google.maps.Size(8192, 4096),
             },
         };
-        console.log(panorama);
         mapyczPanoCache.set(panoId, panorama)
         onCompleted(panorama, google.maps.StreetViewStatus.OK);
     } catch (error) {
-        console.error('MapyCZ error:', error);
+        onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR);
+    }
+}
+
+async function getFromMapillary(
+    request: google.maps.StreetViewLocationRequest & { pano?: string },
+    onCompleted: (
+        res: google.maps.StreetViewPanoramaData | null,
+        status: google.maps.StreetViewStatus,
+    ) => void,
+) {
+    try {
+        if (request.pano && mapillaryPanoCache.has(request.pano)) {
+            onCompleted(mapillaryPanoCache.get(request.pano)!, google.maps.StreetViewStatus.OK)
+            return
+        }
+        let result: any = null;
+        let panoId: string = '';
+
+        if (request.pano) {
+            result = await MAPILLARY_API.getImageById(request.pano);
+            panoId = request.pano;
+        } else if (request.location) {
+            const { lat, lng }: any = request.location;
+            const searchResult = await MAPILLARY_API.searchImagesByLocation(lng, lat, request.radius || 50, { limit: 1 });
+
+            if (!searchResult.data || searchResult.data.length === 0) {
+                onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS);
+                return;
+            }
+
+            result = searchResult.data[0];
+            panoId = result.id;
+        }
+
+        const [longitude, latitude] = result.computed_geometry?.coordinates || result.geometry?.coordinates;
+        if (!result || !panoId || !latitude || !longitude) {
+            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS);
+            return;
+        }
+
+        const date = result.captured_at ? new Date(result.captured_at) : new Date();
+
+        const heading = result.computed_compass_angle || result.compass_angle || 0;
+
+        const panorama: google.maps.StreetViewPanoramaData = {
+            location: {
+                pano: panoId,
+                latLng: new google.maps.LatLng(latitude, longitude),
+                description: `${result.make || ''} - ${result.model || ''}`.trim(),
+                altitude: result.computed_altitude,
+                service: result.is_pano
+            },
+            copyright: 'Mapillary',
+            imageDate: date.toISOString(),
+            links: [], // Mapillary doesn't provide direct neighboring images in this format
+            time: request.pano ? [] : [{
+                date: date,
+                pano: panoId
+            } as any],
+            tiles: {
+                getTileUrl: () => '',
+                centerHeading: heading,
+                tileSize: new google.maps.Size(512, 512),
+                worldSize: new google.maps.Size(2048, 1024),
+            },
+        };
+        mapillaryPanoCache.set(panoId, panorama);
+        onCompleted(panorama, google.maps.StreetViewStatus.OK);
+    } catch (error) {
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR);
     }
 }

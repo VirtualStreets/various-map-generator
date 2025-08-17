@@ -59,7 +59,11 @@ const defaultSettings = {
       1: true,
       2: true,
       "trekker": false
-    }
+    },
+    mapillary: {
+      0: true, // Photo
+      1: true, // Panorama
+    },
   },
   rejectDateless: true,
   rejectNoDescription: true,
@@ -349,7 +353,7 @@ const defaultSettings = {
   checkImports: false,
 }
 
-const storedSettings = useStorage('map_generator__settings_v3', defaultSettings)
+const storedSettings = useStorage('map_generator__settings_v4', defaultSettings)
 const settings = reactive(storedSettings.value)
 settings.toDate = currentDate
 settings.toYear = currentYear
