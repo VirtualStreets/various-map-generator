@@ -1,6 +1,6 @@
 import { type AxiosInstance, type AxiosResponse } from "axios";
 import { create } from "xmlbuilder2";
-import { HttpClient } from "@/mapycz/HttpClient";
+import { HttpClient } from "@/mapycz/client";
 import {
   PlaceType,
   PanoramaType,

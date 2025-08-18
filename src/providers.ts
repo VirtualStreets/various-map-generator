@@ -1,11 +1,17 @@
-import { extractDateFromPanoId, formatTimeStr } from '@/composables/utils'
-import { getClosestPanoAtCoords } from "@/apple/tile";
-import { AppleLookAroundPano } from "@/apple/types";
-import { createPayload, wgs84_to_tile_coord, opk_to_hpr } from '@/composables/utils';
-import { MapyCzApi } from '@/mapycz/mapycz_api';
-import { MapillaryAPI } from '@/mapillary/mapillary_api';
+import {
+    extractDateFromPanoId,
+    formatTimeStr,
+    createPayload,
+    wgs84_to_tile_coord,
+    opk_to_hpr
+} from '@/composables/utils';
+import { getClosestPanoAtCoords } from '@/apple/tile';
+import type { AppleLookAroundPano } from '@/apple/types';
+import { MapyCzApi } from '@/mapycz/api';
+import { MapillaryAPI } from '@/mapillary/api';
+import { OpenMapAPI } from './openmap/api';
 import { settings } from '@/settings';
-import gcoord from 'gcoord'
+import gcoord from 'gcoord';
 import { degToRad } from 'web-merc-projection/util';
 
 let svService: google.maps.StreetViewService | null = null
@@ -14,8 +20,10 @@ const googleZoomCache = new Map<string, string[]>()
 const mapyczPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
 const mapillaryPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
 const naverPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
+const openMapPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
 const MAPYCZ_API = new MapyCzApi();
 const MAPILLARY_API = new MapillaryAPI();
+const OPENMAP_API = new OpenMapAPI();
 
 const providerMap: Record<string, Function> = {
     google: getFromGoogle,
@@ -29,6 +37,7 @@ const providerMap: Record<string, Function> = {
     googleZoom: getFromGoogleZoom,
     mapycz: getFromMapyCZ,
     mapillary: getFromMapillary,
+    openmap: getFromOpenMap,
 };
 
 
@@ -447,8 +456,7 @@ async function getFromBing(
         if (request.pano) {
             panoId = request.pano
         } else if (request.location) {
-            const lat = typeof request.location.lat === 'function' ? request.location.lat() : request.location.lat
-            const lng = typeof request.location.lng === 'function' ? request.location.lng() : request.location.lng
+            const { lat, lng }: any = request.location
             const radius = request.radius || 50
             const rangeDeg = radius / 1000 / 111;
             const uri = new URL(BING_SEARCH_URL)
@@ -780,7 +788,7 @@ async function getFromBaidu(
     }
 }
 
-// MapyCZ provider
+// MapyCZ
 async function getFromMapyCZ(
     request: google.maps.StreetViewLocationRequest & { pano?: string },
     onCompleted: (
@@ -840,7 +848,7 @@ async function getFromMapyCZ(
             copyright: '© MapyCZ',
             imageDate: result.createdAtTimestamp ? result.createdAt : date.toISOString(),
             links,
-            time: request.pano ? [] : [{
+            time: [{
                 date: date,
                 pano: panoId
             } as any],
@@ -859,6 +867,7 @@ async function getFromMapyCZ(
     }
 }
 
+// Mapillary
 async function getFromMapillary(
     request: google.maps.StreetViewLocationRequest & { pano?: string },
     onCompleted: (
@@ -927,6 +936,79 @@ async function getFromMapillary(
     } catch (error) {
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR);
     }
+}
+
+// OpenMap
+async function getFromOpenMap(
+    request: google.maps.StreetViewLocationRequest & { pano?: string },
+    onCompleted: (
+        res: google.maps.StreetViewPanoramaData | null,
+        status: google.maps.StreetViewStatus,
+    ) => void,
+) {
+    try {
+        let feature: any = null;
+        let links: google.maps.StreetViewLink[] = [];
+        if (request.pano) {
+            if (openMapPanoCache.has(request.pano)) {
+                onCompleted(openMapPanoCache.get(request.pano)!, google.maps.StreetViewStatus.OK);
+                return;
+            }
+            feature = OPENMAP_API.getFeature(request.pano);
+        }
+        else if (request.location) {
+            const { lat, lng }: any = request.location;
+            const features = await OPENMAP_API.searchFeatures(lat, lng, request.radius || 50);
+            if (!features.length) {
+                onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS);
+                return;
+            }
+            const featureIndex = Math.floor(Math.random() * features.length);
+            feature = features[featureIndex];
+            const prevFeature = features[featureIndex - 1] ?? null;
+            const nextFeature = features[featureIndex + 1] ?? null;
+            links.push(...[prevFeature, nextFeature]
+                .filter(f => f && f.sequences.some(seq => feature.sequences.includes(seq)))
+                .map(f => ({
+                    pano: f.id,
+                    heading: f.heading || 0,
+                    description: 'OpenMap',
+                }))
+            );
+        }
+        if (!feature) {
+            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS);
+            return;
+        }
+        const panorama = {
+            location: {
+                pano: feature.id,
+                latLng: new google.maps.LatLng(feature.lat, feature.lng),
+                description: 'OpenMap',
+                country: 'VN',
+            },
+            links,
+            tiles: {
+                centerHeading: feature.heading || 0,
+                tileSize: new google.maps.Size(512, 512),
+                worldSize: new google.maps.Size(8192, 4096),
+                getTileUrl: () => '',
+            },
+            imageDate: feature.time,
+            copyright: '© OpenMap',
+            time: [{
+                date: new Date(feature.time),
+                pano: feature.id
+            } as any],
+        };
+
+        openMapPanoCache.set(feature.id, panorama);
+        onCompleted(panorama, google.maps.StreetViewStatus.OK);
+    }
+    catch (error) {
+        onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR);
+    }
+
 }
 
 const StreetViewProviders = {

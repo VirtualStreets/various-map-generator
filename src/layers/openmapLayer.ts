@@ -1,19 +1,12 @@
 import * as L from 'leaflet';
 import VectorTileLayer from 'leaflet-vector-tile-layer';
 
-function determineLineWidth(zoom: number): number {
-    return zoom > 12 ? 4 : zoom > 10 ? 3 : 1.5;
-}
-
-function determineRadius(zoom: number): number {
-    return zoom > 12 ? 16 : zoom > 10 ? 8 : 4;
-}
 function createVectorLayer(minZoom: number, maxZoom: number,): L.Layer {
     return VectorTileLayer('https://gpx-tiles.streetview.vn/{z}/{x}/{y}.mvt', {
-        style: (feature: any, zoom: number) => {
+        style: (feature: any) => {
             if (feature.type === 1) {
                 return {
-                    radius: determineRadius(zoom),
+                    radius: 5,
                     color: 'rgba(101, 163, 248, 1)',
                     fillColor: 'rgba(183, 210, 248, 1)',
                     fillOpacity: 0.3,
@@ -22,7 +15,7 @@ function createVectorLayer(minZoom: number, maxZoom: number,): L.Layer {
             }
             return {
                 color: 'rgba(101, 163, 248, 1)',
-                weight: determineLineWidth(zoom),
+                weight: 2.5,
                 opacity: 1,
                 fill: false,
             };
@@ -37,4 +30,4 @@ function createVectorLayer(minZoom: number, maxZoom: number,): L.Layer {
     });
 }
 
-export const OpenMapLayer = createVectorLayer(6, 19);
+export const OpenMapLayer = createVectorLayer(10, 19);

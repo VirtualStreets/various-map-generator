@@ -22,6 +22,7 @@ export function isOfficial(pano: string, provider: string) {
     case 'naver':
     case 'kakao':
     case 'mapillary':
+    case 'openmap':
     case 'tencent':
       return true
     default:
@@ -63,6 +64,22 @@ export function tile_coord_to_wgs84(x: number, y: number, zoom: number) {
   const latRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * y / scale)));
   const latDeg = (latRad * 180.0) / Math.PI;
   return [latDeg, lonDeg];
+}
+
+export function pixelToLatLng(
+  x: number,
+  y: number,
+  zoom: number,
+  tileX: number,
+  tileY: number,
+  tileSize: number): [number, number] {
+  const n = Math.pow(2, zoom);
+  const globalX = (tileX * tileSize + x) / tileSize;
+  const globalY = (tileY * tileSize + y) / tileSize;
+  const lng = globalX / n * 360 - 180;
+  const latRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * globalY / n)));
+  const lat = latRad * 180 / Math.PI;
+  return [lat, lng];
 }
 
 export function isAcceptableCurve(
@@ -418,14 +435,14 @@ export function opk_to_hpr(
 }
 
 export function headingToMapillaryX(heading: number, imageHeading: number = 0): number {
-    let relativeHeading = heading - imageHeading;
-    relativeHeading = ((relativeHeading % 360) + 360) % 360;
-    let x = 0.5 - (relativeHeading / 360);
-    if (x < 0) x += 1;
-    return Math.max(0, Math.min(1, x));
+  let relativeHeading = heading - imageHeading;
+  relativeHeading = ((relativeHeading % 360) + 360) % 360;
+  let x = 0.5 - (relativeHeading / 360);
+  if (x < 0) x += 1;
+  return Math.max(0, Math.min(1, x));
 }
 
 export function pitchToMapillaryY(pitch: number): number {
-    const y = 0.5 - (pitch / 180);
-    return Math.max(0, Math.min(1, y));
+  const y = 0.5 - (pitch / 180);
+  return Math.max(0, Math.min(1, y));
 }

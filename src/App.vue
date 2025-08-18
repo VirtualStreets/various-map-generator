@@ -166,7 +166,7 @@
           <Collapsible :is-open="panels.generatorSettings" class="mt-1 p-1 pr-2">
             <div class="flex items-center justify-between">
               Provider :
-              <select v-model="settings.provider" class="w-23" @change="toggleMap(settings.provider)">
+              <select v-model="settings.provider" class="w-24" @change="toggleMap(settings.provider)">
                 <option value="google">Google</option>
                 <option value="googleZoom">Zoom</option>
                 <option value="mapillary">Mapillary</option>
@@ -178,11 +178,12 @@
                 <option value="naver">Naver</option>
                 <option value="kakao">Kakao</option>
                 <option value="mapycz">MapyCZ</option>
+                <option value="openmap">Openmap</option>
               </select>
             </div>
             <div class="flex items-center justify-between">
               PanoId :
-              <select v-model="settings.panoId" class="w-23 ml-10">
+              <select v-model="settings.panoId" class="w-24 ml-10">
                 <option value="enable">Enable</option>
                 <option value="disable">Disable</option>
                 <option value="prefix">Prefix</option>
@@ -989,6 +990,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
         case 'yandex':
         case 'mapycz':
         case 'kakao':
+        case 'openmap':
         case 'mapillary':
           panoMinutes = Number(res.imageDate.slice(11, 13)) * 60 + Number(res.imageDate.slice(14, 16))
           break
@@ -1455,6 +1457,9 @@ function addLocation(
             case 'mapillary':
               url = `https://www.mapillary.com/app/?lat=${location.lat}&lng=${location.lng}&z=15&pKey=${location.panoId}&focus=photo&x=${heading}&y=${pitch}&zoom=${zoom}`
               break
+            case 'openmap':
+              url = `https://vn-map.netlify.app/#zoom=15&center=${location.lat},${location.lng}&pano=${location.panoId}&ppos=${location.lat},${location.lng}&heading=${heading}&pitch=${pitch}`
+              break
             default:
               url = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}&heading=${heading}&pitch=${pitch}&fov=${180 / 2 ** zoom}`
           }
@@ -1629,6 +1634,7 @@ body {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   color: transparent;
+  font-weight: 500;
   text-shadow: 0 0 1px var(--text-shadow);
 }
 

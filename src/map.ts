@@ -25,7 +25,7 @@ import { YandexLayer } from './layers/yandexLayer'
 import { AppleLayer } from './layers/appleLayer'
 import { TencentCoverageLayer } from './layers/tencentLayer'
 import { NaverLayer } from './layers/naverLayer'
-//import { OpenMapLayer } from './layers/openmapLayer'
+import { OpenMapLayer } from './layers/openmapLayer'
 import { MapillaryLayer } from './layers/mapillaryLayer'
 
 import { useStore } from '@/store'
@@ -122,10 +122,10 @@ const overlayMaps = {
   'Yandex Panorama': yandexCoverageLayer,
   'Naver Panorama (Only Works at Zoom Level 15+)': NaverLayer,
   'Mapillary (Only Works at Zoom Level 15+)': MapillaryLayer,
+  'Streetview.vn (Only Works at Zoom Level 10+)': OpenMapLayer,
   //'Mapy.cz Panorama  (Only Works at Zoom Level 5+)': mapyczCoverageLayer,
   'Tencent Street View': TencentCoverageLayer,
   'Baidu Street View': baiduCoverageLayer,
-  //'Streetview.vn': OpenMapLayer,
 }
 
 const allLayers = [
@@ -324,6 +324,11 @@ function toggleMap(provider: string) {
     resetLayer()
     roadmapLayer.addTo(map)
     MapillaryLayer.addTo(map)
+  }
+  else if (provider === 'openmap') {
+    resetLayer()
+    roadmapLayer.addTo(map)
+    OpenMapLayer.addTo(map)
   }
 }
 
