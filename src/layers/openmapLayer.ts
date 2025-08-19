@@ -24,10 +24,10 @@ function createVectorLayer(minZoom: number, maxZoom: number,): L.Layer {
         simplifyFactor: 2,
         rendererFactory: () => L.canvas({ padding: 0.5 }),
         minZoom,
-        maxNativeZoom: 20,
+        maxNativeZoom: 18,
         maxZoom,
         interactive: false,
     });
 }
 
-export const OpenMapLayer = createVectorLayer(10, 19);
+export const OpenMapLayer = createVectorLayer(10, 20);

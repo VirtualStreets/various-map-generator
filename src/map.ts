@@ -27,6 +27,7 @@ import { TencentCoverageLayer } from './layers/tencentLayer'
 import { NaverLayer } from './layers/naverLayer'
 import { OpenMapLayer } from './layers/openmapLayer'
 import { MapillaryLayer } from './layers/mapillaryLayer'
+import { ASIGLayer } from './layers/asigLayer'
 
 import { useStore } from '@/store'
 const { selected, select, state } = useStore()
@@ -123,9 +124,11 @@ const overlayMaps = {
   'Naver Panorama (Only Works at Zoom Level 15+)': NaverLayer,
   'Mapillary (Only Works at Zoom Level 15+)': MapillaryLayer,
   'Streetview.vn (Only Works at Zoom Level 10+)': OpenMapLayer,
+  'AlbaniaStreetView (Only Works at Zoom Level 10+)': ASIGLayer,
   //'Mapy.cz Panorama  (Only Works at Zoom Level 5+)': mapyczCoverageLayer,
   'Tencent Street View': TencentCoverageLayer,
   'Baidu Street View': baiduCoverageLayer,
+  
 }
 
 const allLayers = [
@@ -329,6 +332,11 @@ function toggleMap(provider: string) {
     resetLayer()
     roadmapLayer.addTo(map)
     OpenMapLayer.addTo(map)
+  }
+  else if (provider === 'asig') {
+    resetLayer()
+    roadmapLayer.addTo(map)
+    ASIGLayer.addTo(map)
   }
 }
 

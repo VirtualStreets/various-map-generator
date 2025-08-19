@@ -38,10 +38,10 @@
             <span>MapyCZ API Key :</span>
             <div class="gap-1">
               <input :type="showMapyCzApiKey ? 'text' : 'password'" v-model="settings.apiKeys.mapycz"
-                @input="updateMapyCzApiKey" class="w-48 h-6 px-2 py-1 border rounded"
-                placeholder="Enter your API key">
+                @input="updateMapyCzApiKey" class="w-48 h-6 px-2 py-1 border rounded" placeholder="Enter your API key">
               <button @click="showMapyCzApiKey = !showMapyCzApiKey" class="ml-1 mr-1" type="button">
-              <component :is="showMapyCzApiKey ? EyeClosedIcon : EyeOpenIcon" class="w-4 h-4 stroke-current" /> </input>
+                <component :is="showMapyCzApiKey ? EyeClosedIcon : EyeOpenIcon" class="w-4 h-4 stroke-current" />
+                </input>
               </button>
             </div>
           </div>
@@ -179,6 +179,7 @@
                 <option value="kakao">Kakao</option>
                 <option value="mapycz">MapyCZ</option>
                 <option value="openmap">Openmap</option>
+                <option value="asig">ASIG</option>
               </select>
             </div>
             <div class="flex items-center justify-between">
@@ -992,6 +993,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
         case 'kakao':
         case 'openmap':
         case 'mapillary':
+        case 'asig':
           panoMinutes = Number(res.imageDate.slice(11, 13)) * 60 + Number(res.imageDate.slice(14, 16))
           break
       }
@@ -1316,6 +1318,7 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
     }
   }
 
+
   const location: Panorama = {
     panoId: pano.location.pano,
     lat: pano.location.latLng.lat(),
@@ -1338,7 +1341,6 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
     ? pano.time.filter((entry) => isOfficial(entry.pano, settings.provider))
     : pano.time
   const previousPano = time[time.length - 2]?.pano
-
   // New road
   if (!previousPano && settings.provider.includes('google')) {
     checkHasBlueLine(pano.location.latLng.toJSON()).then((hasBlueLine) => {
@@ -1346,6 +1348,7 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
         !settings.provider.includes('google') ? icons.newLoc : (hasBlueLine ? icons.newLoc : icons.noBlueLine))
     })
   } else {
+    if (!previousPano) return addLocation(location, polygon, icons.gen4)
     StreetViewProviders.getPanorama(settings.provider, { pano: previousPano }, (previousPano) => {
       if (!settings.provider.includes('google')) return addLocation(location, polygon, icons.gen4)
       if (previousPano?.tiles?.worldSize.height === 1664) {
@@ -1459,6 +1462,9 @@ function addLocation(
               break
             case 'openmap':
               url = `https://vn-map.netlify.app/#zoom=15&center=${location.lat},${location.lng}&pano=${location.panoId}&ppos=${location.lat},${location.lng}&heading=${heading}&pitch=${pitch}`
+              break
+            case 'asig':
+              url = `https://360.asig.gov.al/AlbaniaStreetView/player2/?sv_startup_pano=${location.panoId}&sv_startup_heading=${heading}&sv_startup_tilt=&sv_startup_zoom=${zoom}&map_center=${location.lat},${location.lng}&map_zoom=15&v_lat=${location.lat}&v_lng=${location.lng}&vl_showshare=yes`
               break
             default:
               url = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}&heading=${heading}&pitch=${pitch}&fov=${180 / 2 ** zoom}`

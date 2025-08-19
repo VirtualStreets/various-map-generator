@@ -3,6 +3,7 @@ import {
     formatTimeStr,
     createPayload,
     wgs84_to_tile_coord,
+    radiusToZoom,
     opk_to_hpr
 } from '@/composables/utils';
 import { getClosestPanoAtCoords } from '@/apple/tile';
@@ -10,6 +11,7 @@ import type { AppleLookAroundPano } from '@/apple/types';
 import { MapyCzApi } from '@/mapycz/api';
 import { MapillaryAPI } from '@/mapillary/api';
 import { OpenMapAPI } from './openmap/api';
+import { ASIGTileGenerator } from './agis/tile';
 import { settings } from '@/settings';
 import gcoord from 'gcoord';
 import { degToRad } from 'web-merc-projection/util';
@@ -21,6 +23,8 @@ const mapyczPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
 const mapillaryPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
 const naverPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
 const openMapPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
+const asigPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
+
 const MAPYCZ_API = new MapyCzApi();
 const MAPILLARY_API = new MapillaryAPI();
 const OPENMAP_API = new OpenMapAPI();
@@ -38,6 +42,7 @@ const providerMap: Record<string, Function> = {
     mapycz: getFromMapyCZ,
     mapillary: getFromMapillary,
     openmap: getFromOpenMap,
+    asig: getFromASIG
 };
 
 
@@ -1010,6 +1015,82 @@ async function getFromOpenMap(
     }
 
 }
+
+async function getFromASIG(
+    request: google.maps.StreetViewLocationRequest & { pano?: string },
+    onCompleted: (
+        res: google.maps.StreetViewPanoramaData | null,
+        status: google.maps.StreetViewStatus,
+    ) => void,) {
+    if (request.pano) {
+        if (asigPanoCache.has(request.pano)) {
+            onCompleted(asigPanoCache.get(request.pano)!, google.maps.StreetViewStatus.OK)
+            return
+        }
+        else onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
+    }
+
+    else if (request.location) {
+        try {
+            const { lat, lng }: any = request.location
+            const data = await ASIGTileGenerator.getTileGeoJsonByLatLng(lat, lng, 15)
+            if (data && data.features.length > 0) {
+                const pointFeatures = data.features.filter((f: { geometry: { type: string; }; }) => f.geometry?.type === 'Point');
+                const feature = pointFeatures[Math.floor(Math.random() * pointFeatures.length)].properties;
+
+                const idMatch = feature.id.match(/camera-\d+-\d+/);
+                const numMatch = feature.id.match(/(\d{9,})$/);
+                let links: any[] = [];
+                if (numMatch && idMatch) {
+                    const num = parseInt(numMatch[1], 10);
+                    const prevId = `${idMatch[0]}-${String(num - 1).padStart(numMatch[1].length, '0')}`;
+                    const nextId = `${idMatch[0]}-${String(num + 1).padStart(numMatch[1].length, '0')}`;
+
+                    for (const pf of pointFeatures) {
+                        if (pf.properties.id === prevId || pf.properties.id === nextId) {
+                            links.push({
+                                pano: pf.properties.id,
+                                heading: pf.properties.id === nextId ? pf.properties.heading : (pf.properties.heading + 180) % 360,
+                                description: 'AIGS',
+                            });
+                        }
+                    }
+                }
+                const panorama = {
+                    location: {
+                        pano: feature.id,
+                        latLng: new google.maps.LatLng(feature.lat, feature.lon),
+                        description: 'AIGS',
+                        country: 'AL',
+                        altitude: feature.height
+                    },
+                    links,
+                    tiles: {
+                        centerHeading: feature.heading,
+                        tileSize: new google.maps.Size(512, 512),
+                        worldSize: new google.maps.Size(8192, 4096),
+                        getTileUrl: () => '',
+                    },
+                    imageDate: feature.date,
+                    copyright: '© AIGS',
+                    time: [{
+                        date: new Date(feature.date),
+                        pano: feature.id
+                    } as any],
+                };
+
+                asigPanoCache.set(feature.id, panorama);
+                onCompleted(panorama, google.maps.StreetViewStatus.OK);
+            }
+            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS);
+        }
+        catch (error) {
+            onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
+        }
+
+    }
+}
+
 
 const StreetViewProviders = {
     getPanorama: async (

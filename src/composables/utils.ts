@@ -24,6 +24,7 @@ export function isOfficial(pano: string, provider: string) {
     case 'mapillary':
     case 'openmap':
     case 'tencent':
+    case 'asig':
       return true
     default:
       return false
@@ -445,4 +446,12 @@ export function headingToMapillaryX(heading: number, imageHeading: number = 0): 
 export function pitchToMapillaryY(pitch: number): number {
   const y = 0.5 - (pitch / 180);
   return Math.max(0, Math.min(1, y));
+}
+
+export function radiusToZoom(radius: number): number {
+  const equator = 40075016.686;
+  const tileSize = 256;
+  let zoom = Math.log2(equator / (radius * tileSize));
+  zoom = Math.max(10, Math.min(15, Math.round(zoom)));
+  return zoom;
 }
