@@ -2,7 +2,7 @@ import * as L from 'leaflet';
 import VectorTileLayer from 'leaflet-vector-tile-layer';
 
 function createVectorLayer(minZoom: number): L.Layer {
-    return VectorTileLayer('https://tiles.aws-prod.ja.is/tilesets/v11/ja360/tiles/{z}/{x}/{y}.pbf', {
+    return VectorTileLayer('https://cors-proxy.ac4.stocc.dev/https://tiles.aws-prod.ja.is/tilesets/v11/ja360/tiles/{z}/{x}/{y}.pbf', {
         style: (feature:any) => {
             return {
                 color: 'rgba(178, 21, 226, 1)',

@@ -340,6 +340,11 @@ function toggleMap(provider: string) {
     roadmapLayer.addTo(map)
     ASIGLayer.addTo(map)
   }
+  else if (provider === 'ja') {
+    resetLayer()
+    roadmapLayer.addTo(map)
+    JaLayer.addTo(map)
+  }
 }
 
 const copyCoords = (e: L.ContextMenuItemClickEvent) => {

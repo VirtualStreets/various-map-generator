@@ -77,8 +77,8 @@ async function getCoverageTileRaw(tileX: number, tileY: number) {
     "maps-tile-z": "17",
     "maps-auth-token": "w31CPGRO/n7BsFPh8X7kZnFG0LDj9pAuR8nTtH3xhH8=",
   });
-  const CORS_PROXY = "https://cors-proxy.ac4.stocc.dev/"
-  const url = CORS_PROXY + "https://gspe76-ssl.ls.apple.com/api/tile?";
+
+  const url = "https://cors-proxy.ac4.stocc.dev/https://gspe76-ssl.ls.apple.com/api/tile?";
   const res = await fetch(url, { headers });
   if (!res.ok) {
     const text = await res.text();
