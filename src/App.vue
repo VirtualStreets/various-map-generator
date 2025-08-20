@@ -518,7 +518,8 @@
               </label>
             </div>
 
-            <Checkbox v-if="['apple', 'bing', 'baidu', 'google', 'googleZoom'].includes(settings.provider)"
+            <Checkbox
+              v-if="['apple', 'bing', 'baidu', 'google', 'googleZoom', 'asig', 'mapillary', 'mapycz', 'naver'].includes(settings.provider)"
               v-model="settings.filterByAltitude.enabled">
               Filter by altitude</Checkbox>
             <div v-if="settings.filterByAltitude.enabled" class="ml-6">
@@ -1087,12 +1088,13 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
     }
 
     if (settings.filterByAltitude.enabled) {
-
-      if (
-        pano.location.altitude < settings.filterByAltitude.range[0] ||
-        pano.location.altitude > settings.filterByAltitude.range[1]
-      )
-        return false
+      if (['apple', 'bing', 'baidu', 'google', 'googleZoom', 'asig', 'mapillary', 'mapycz', 'naver'].includes(settings.provider)) {
+        if (
+          pano.location.altitude < settings.filterByAltitude.range[0] ||
+          pano.location.altitude > settings.filterByAltitude.range[1]
+        )
+          return false
+      }
     }
 
     if (settings.getCurve) {
