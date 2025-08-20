@@ -1,3 +1,6 @@
+import proj4 from 'proj4';
+
+
 export function sendNotification(title: string, body: string) {
   try {
     if (Notification.permission === 'granted') {
@@ -25,6 +28,7 @@ export function isOfficial(pano: string, provider: string) {
     case 'openmap':
     case 'tencent':
     case 'asig':
+    case 'ja':
       return true
     default:
       return false
@@ -49,6 +53,12 @@ export function getStreetViewStatus(key: keyof typeof google.maps.StreetViewStat
 
 export function makeLatLng(lat: number, lng: number): google.maps.LatLng {
   return new google.maps.LatLng(lat, lng)
+}
+
+proj4.defs('EPSG:3057', '+proj=tmerc +lat_0=65 +lon_0=-19 +k=1 +x_0=500000 +y_0=500000 +ellps=GRS80 +units=m +no_defs');
+
+export function wgs84_to_isn93(lat: number, lng: number): [number, number] {
+  return proj4('EPSG:4326', 'EPSG:3057', [lng, lat]);
 }
 
 export function wgs84_to_tile_coord(lat: number, lng: number, zoom: number) {
@@ -448,10 +458,17 @@ export function pitchToMapillaryY(pitch: number): number {
   return Math.max(0, Math.min(1, y));
 }
 
-export function radiusToZoom(radius: number): number {
-  const equator = 40075016.686;
-  const tileSize = 256;
-  let zoom = Math.log2(equator / (radius * tileSize));
-  zoom = Math.max(10, Math.min(15, Math.round(zoom)));
-  return zoom;
+export function calculateTilesInRadius(lat: number, lng: number, radius: number, zoom: number,): number[] {
+  const tileSizeMeters = 40075000 / Math.pow(2, zoom);
+  const [tileX, tileY] = wgs84_to_tile_coord(lat, lng, zoom);
+
+  let minX = tileX, maxX = tileX, minY = tileY, maxY = tileY;
+  if (radius > tileSizeMeters / 2) {
+    const tileRadius = Math.ceil(radius / tileSizeMeters);
+    minX = tileX - tileRadius;
+    maxX = tileX + tileRadius;
+    minY = tileY - tileRadius;
+    maxY = tileY + tileRadius;
+  }
+  return [minX, minY, maxX, maxY]
 }

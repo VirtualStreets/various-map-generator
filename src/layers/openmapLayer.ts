@@ -6,7 +6,7 @@ function createVectorLayer(minZoom: number, maxZoom: number,): L.Layer {
         style: (feature: any) => {
             if (feature.type === 1) {
                 return {
-                    radius: 5,
+                    radius: 4,
                     color: 'rgba(101, 163, 248, 1)',
                     fillColor: 'rgba(183, 210, 248, 1)',
                     fillOpacity: 0.3,
@@ -15,7 +15,7 @@ function createVectorLayer(minZoom: number, maxZoom: number,): L.Layer {
             }
             return {
                 color: 'rgba(101, 163, 248, 1)',
-                weight: 2.5,
+                weight: 2,
                 opacity: 1,
                 fill: false,
             };

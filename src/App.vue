@@ -179,6 +179,7 @@
                 <option value="kakao">Kakao</option>
                 <option value="mapycz">MapyCZ</option>
                 <option value="openmap">Openmap</option>
+                <option value="ja">Já360</option>
                 <option value="asig">ASIG</option>
               </select>
             </div>
@@ -704,11 +705,12 @@ import {
   changePolygonName,
   tencentToGcj02,
   headingToMapillaryX,
-  pitchToMapillaryY
+  pitchToMapillaryY,
+  wgs84_to_isn93
 } from '@/composables/utils.ts'
-import StreetViewProviders from './providers'
+import StreetViewProviders from '@/providers'
 import { degToRad, radToDeg } from 'web-merc-projection/util'
-import { PanoramaNeighbourType } from './mapycz/types'
+
 const { currentDate } = getCurrentDate()
 const themeMode = useColorMode()
 
@@ -1078,13 +1080,14 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
 
     // Find Generation
     if (
-      ['google', 'googleZoom', 'apple', 'yandex', 'bing', 'naver', 'mapillary'].includes(settings.provider) &&
       settings.findByGeneration.enabled &&
       ((!settings.rejectOfficial && !settings.checkAllDates) || settings.selectMonths)
     ) {
-      const gen = getCameraGeneration(pano, settings.provider)
-      if (gen === 0) return false
-      if (!settings.findByGeneration[settings.provider][gen]) return false
+      if (['google', 'googleZoom', 'apple', 'yandex', 'bing', 'naver', 'mapillary'].includes(settings.provider)) {
+        const gen = getCameraGeneration(pano, settings.provider)
+        if (gen === 0) return false
+        if (!settings.findByGeneration[settings.provider][gen]) return false
+      }
     }
 
     if (settings.filterByAltitude.enabled) {
@@ -1151,12 +1154,13 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
     if (!pano.time?.length) return false
 
     if (
-      settings.findByGeneration.enabled &&
-      ['google', 'googleZoom', 'apple', 'yandex', 'bing', 'naver', 'mapillary'].includes(settings.provider)
+      settings.findByGeneration.enabled
     ) {
-      const gen = getCameraGeneration(pano, settings.provider)
-      if (gen === 0) return false
-      if (!settings.findByGeneration[settings.provider][gen]) return false
+      if (['google', 'googleZoom', 'apple', 'yandex', 'bing', 'naver', 'mapillary'].includes(settings.provider)) {
+        const gen = getCameraGeneration(pano, settings.provider)
+        if (gen === 0) return false
+        if (!settings.findByGeneration[settings.provider][gen]) return false
+      }
     }
 
     let dateWithin = false
@@ -1467,6 +1471,10 @@ function addLocation(
               break
             case 'asig':
               url = `https://360.asig.gov.al/AlbaniaStreetView/player2/?sv_startup_pano=${location.panoId}&sv_startup_heading=${heading}&sv_startup_tilt=&sv_startup_zoom=${zoom}&map_center=${location.lat},${location.lng}&map_zoom=15&v_lat=${location.lat}&v_lng=${location.lng}&vl_showshare=yes`
+              break
+            case 'ja':
+              const [x, y]= wgs84_to_isn93(location.lat, location.lng)
+              url = `https://ja.is/kort/?x=${(x)}&y=${(y)}&nz=15&ja360=1&jh=${heading}`
               break
             default:
               url = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}&heading=${heading}&pitch=${pitch}&fov=${180 / 2 ** zoom}`

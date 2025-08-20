@@ -5,7 +5,7 @@ const MAPILLARY_VECTOR_TILE_URL = 'https://tiles.mapillary.com/maps/vtp/mly1_pub
 
 export function createMapillaryVectorTileLayer(minZoom: number, maxZoom: number): L.Layer {
     return VectorTileLayer(MAPILLARY_VECTOR_TILE_URL, {
-        style: (feature: any, zoom:number) => {
+        style: (feature: any) => {
             switch (feature.type) {
                 case 2: // LineString - sequences
                     return {

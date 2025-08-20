@@ -11,6 +11,7 @@ import KakaoIcon from '@/assets/icons/kakao.svg'
 import NaverIcon from '@/assets/icons/naver.svg'
 import MapillaryIcon from '@/assets/icons/mapillary.svg'
 import OpenMapIcon from '@/assets/icons/openmap.svg'
+import jaIcon from '@/assets/icons/ja.svg'
 
 const props = defineProps<{
   size?: string
@@ -31,7 +32,8 @@ const icons: any = {
   naver:NaverIcon,
   mapycz: MapyCZIcon,
   mapillary:MapillaryIcon,
-  openmap: OpenMapIcon
+  openmap: OpenMapIcon,
+  ja:jaIcon
 }
 
 const iconComponent = computed(() => {

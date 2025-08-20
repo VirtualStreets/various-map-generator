@@ -22,25 +22,24 @@ function determineLineWidth(zoom: number): number {
 }
 
 
-function createVectorLayer(minZoom: number, maxZoom: number,): L.Layer {
+function createVectorLayer(minZoom: number): L.Layer {
     return VectorTileLayer('https://lookmap.eu.pythonanywhere.com/bluelines2/{z}/{x}/{y}/', {
-        style: (feature: any, zoom: number) => {
+        style: (feature: any, level: number) => {
             if (feature.type !== 2) {
                 return { opacity: 0, radius: 0, weight: 0 };
             }
             return {
                 color: determineLineColor(feature.properties),
-                weight: determineLineWidth(zoom),
+                weight: determineLineWidth(level),
                 opacity: 1,
                 fill: false,
             };
         },
         minZoom,
         maxNativeZoom: 14,
-        maxZoom,
         interactive: false,
     });
 }
 
 
-export const AppleLayer = createVectorLayer(10, 15);
+export const AppleLayer = createVectorLayer(10);

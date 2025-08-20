@@ -3,10 +3,10 @@ import {
     formatTimeStr,
     createPayload,
     wgs84_to_tile_coord,
-    radiusToZoom,
-    opk_to_hpr
+    opk_to_hpr,
 } from '@/composables/utils';
-import { getClosestPanoAtCoords } from '@/apple/tile';
+import { cacheManager } from '@/cache';
+import { getPano } from '@/apple/tile';
 import type { AppleLookAroundPano } from '@/apple/types';
 import { MapyCzApi } from '@/mapycz/api';
 import { MapillaryAPI } from '@/mapillary/api';
@@ -17,13 +17,6 @@ import gcoord from 'gcoord';
 import { degToRad } from 'web-merc-projection/util';
 
 let svService: google.maps.StreetViewService | null = null
-const applePanoCache = new Map<string, google.maps.StreetViewPanoramaData>()
-const googleZoomCache = new Map<string, string[]>()
-const mapyczPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
-const mapillaryPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
-const naverPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
-const openMapPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
-const asigPanoCache = new Map<string, google.maps.StreetViewPanoramaData>();
 
 const MAPYCZ_API = new MapyCzApi();
 const MAPILLARY_API = new MapillaryAPI();
@@ -42,7 +35,8 @@ const providerMap: Record<string, Function> = {
     mapycz: getFromMapyCZ,
     mapillary: getFromMapillary,
     openmap: getFromOpenMap,
-    asig: getFromASIG
+    asig: getFromASIG,
+    ja: getFromJa360,
 };
 
 
@@ -66,7 +60,7 @@ async function getFromGoogleZoom(
             const { lat, lng }: any = request.location;
             const [x, y] = wgs84_to_tile_coord(lat, lng, 17);
             const cacheKey = `${x},${y}`;
-            let panoIds = googleZoomCache.get(cacheKey);
+            let panoIds = cacheManager.get('google', cacheKey);
             if (!panoIds) {
                 const url = `https://www.google.com/maps/photometa/ac/v1?pb=!1m1!1smaps_sv.tactile!6m3!1i${x}!2i${y}!3i17!8b1`;
                 const resp = await fetch(url);
@@ -76,7 +70,7 @@ async function getFromGoogleZoom(
                 }
                 const data = JSON.parse(text);
                 panoIds = Array.isArray(data?.[1]?.[1]) ? data[1][1].map((item: any) => item?.[0]?.[0]?.[1]) : [];
-                googleZoomCache.set(cacheKey, panoIds);
+                cacheManager.set('google', cacheKey, panoIds);
             }
             if (Array.isArray(panoIds) && panoIds.length) {
                 const result = panoIds[Math.floor(Math.random() * panoIds.length)];
@@ -248,15 +242,15 @@ async function getFromApple(
     try {
         let apple: AppleLookAroundPano | null = null
 
-        if (request.pano && applePanoCache.has(request.pano)) {
-            onCompleted(applePanoCache.get(request.pano)!, google.maps.StreetViewStatus.OK)
+        if (request.pano && cacheManager.has('apple', request.pano)) {
+            onCompleted(cacheManager.get('apple', request.pano)!, google.maps.StreetViewStatus.OK)
             return
         }
 
         if (request.location) {
             const lat = typeof request.location.lat === 'function' ? request.location.lat() : request.location.lat
             const lng = typeof request.location.lng === 'function' ? request.location.lng() : request.location.lng
-            apple = await getClosestPanoAtCoords(lat, lng)
+            apple = await getPano(lat, lng)
         }
 
         if (!apple?.panoId) {
@@ -285,7 +279,7 @@ async function getFromApple(
             time: [{ pano: apple.panoId, date: date } as any],
         }
 
-        applePanoCache.set(apple.panoId, panorama)
+        cacheManager.set('apple', apple.panoId, panorama)
 
         onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (error) {
@@ -302,6 +296,10 @@ async function getFromYandex(
     ) => void,
 ) {
     try {
+        if (request.pano && cacheManager.has('yandex', request.pano)) {
+            onCompleted(cacheManager.get('yandex', request.pano)!, google.maps.StreetViewStatus.OK)
+            return
+        }
         let panoId: string | undefined
 
         if (request.pano) {
@@ -361,7 +359,7 @@ async function getFromYandex(
                 },
             ].sort((a, b) => a.date.getTime() - b.date.getTime()),
         }
-
+        cacheManager.set('yandex', panoId, panorama)
         onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (err) {
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
@@ -377,6 +375,11 @@ async function getFromTencent(
     ) => void,
 ) {
     try {
+        if (request.pano && cacheManager.has('tencent', request.pano)) {
+            onCompleted(cacheManager.get('tencent', request.pano)!, google.maps.StreetViewStatus.OK)
+            return
+        }
+
         let panoId: string | undefined
 
         if (request.pano) {
@@ -439,7 +442,7 @@ async function getFromTencent(
                 },
             ].sort((a, b) => a.date.getTime() - b.date.getTime()),
         }
-
+        cacheManager.set('tencent', panoId, panorama)
         onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (err) {
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
@@ -455,16 +458,20 @@ async function getFromBing(
     ) => void,
 ) {
     try {
-        let panoId: string | undefined
-        const BING_SEARCH_URL = "https://t.ssl.ak.tiles.virtualearth.net/tiles/cmd/StreetSideBubbleMetaData"
+        if (request.pano && cacheManager.has('bing', request.pano)) {
+            onCompleted(cacheManager.get('bing', request.pano)!, google.maps.StreetViewStatus.OK)
+            return
+        }
 
+        let panoId: string | undefined
+        const uri = new URL("https://t.ssl.ak.tiles.virtualearth.net/tiles/cmd/StreetSideBubbleMetaData")
         if (request.pano) {
             panoId = request.pano
+            uri.searchParams.set("id", panoId)
         } else if (request.location) {
             const { lat, lng }: any = request.location
             const radius = request.radius || 50
             const rangeDeg = radius / 1000 / 111;
-            const uri = new URL(BING_SEARCH_URL)
             uri.searchParams.set("count", "50");
             uri.searchParams.set("north", (lat + rangeDeg).toString());
             uri.searchParams.set("south", (lat - rangeDeg).toString());
@@ -485,8 +492,6 @@ async function getFromBing(
             return
         }
 
-        const uri = new URL(BING_SEARCH_URL)
-        uri.searchParams.set("id", panoId)
         const resp = await fetch(uri)
         const json = await resp.json()
         const result = json?.[1]
@@ -539,7 +544,7 @@ async function getFromBing(
             copyright: '© Bing Streetside',
             time: [{ pano: result.panoId, date: date }],
         }
-
+        cacheManager.set('bing', panoId, panorama)
         onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (err) {
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
@@ -555,6 +560,12 @@ async function getFromKakao(
     ) => void,
 ) {
     try {
+
+        if (request.pano && cacheManager.has('kakao', request.pano)) {
+            onCompleted(cacheManager.get('kakao', request.pano)!, google.maps.StreetViewStatus.OK)
+            return
+        }
+
         let uri: string
 
         if (request.pano) {
@@ -582,7 +593,7 @@ async function getFromKakao(
         const panoId = result.id.toString()
         const heading = (parseFloat(result.angle) + 180) % 360
 
-        const res: google.maps.StreetViewPanoramaData = {
+        const panorama: google.maps.StreetViewPanoramaData = {
             location: {
                 pano: panoId,
                 latLng: new google.maps.LatLng(result.wgsy, result.wgsx),
@@ -612,8 +623,8 @@ async function getFromKakao(
                 },
             ].sort((a, b) => a.date.getTime() - b.date.getTime()),
         }
-
-        onCompleted(res, google.maps.StreetViewStatus.OK)
+        cacheManager.set('kakao', panoId, panorama)
+        onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (err) {
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
     }
@@ -634,8 +645,8 @@ async function getFromNaver(
 
         if (request.pano) {
             panoId = request.pano
-            if (naverPanoCache.has(panoId)) {
-                onCompleted(naverPanoCache.get(panoId)!, google.maps.StreetViewStatus.OK)
+            if (cacheManager.has('naver', panoId)) {
+                onCompleted(cacheManager.get('naver', panoId)!, google.maps.StreetViewStatus.OK)
                 return
             }
         } else if (request.location) {
@@ -705,7 +716,7 @@ async function getFromNaver(
             } as any],
         }
 
-        naverPanoCache.set(panoId, panorama)
+        cacheManager.set('naver', panoId, panorama)
         onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (err) {
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
@@ -721,6 +732,11 @@ async function getFromBaidu(
     ) => void,
 ) {
     try {
+        if (request.pano && cacheManager.has('baidu', request.pano)) {
+            onCompleted(cacheManager.get('baidu', request.pano)!, google.maps.StreetViewStatus.OK)
+            return
+        }
+
         let panoId: string | undefined
 
         if (request.pano) {
@@ -786,7 +802,7 @@ async function getFromBaidu(
                 },
             ].sort((a, b) => a.date.getTime() - b.date.getTime()),
         }
-
+        cacheManager.set('baidu', panoId, panorama)
         onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (err) {
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
@@ -802,8 +818,8 @@ async function getFromMapyCZ(
     ) => void,
 ) {
     try {
-        if (request.pano && mapyczPanoCache.has(request.pano)) {
-            onCompleted(mapyczPanoCache.get(request.pano)!, google.maps.StreetViewStatus.OK)
+        if (request.pano && cacheManager.has('mapycz', request.pano)) {
+            onCompleted(cacheManager.get('mapycz', request.pano)!, google.maps.StreetViewStatus.OK)
             return
         }
         let result: any = null;
@@ -865,7 +881,7 @@ async function getFromMapyCZ(
             },
         };
 
-        mapyczPanoCache.set(panoId, panorama)
+        cacheManager.set('mapycz', panoId, panorama)
         onCompleted(panorama, google.maps.StreetViewStatus.OK);
     } catch (error) {
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR);
@@ -881,8 +897,8 @@ async function getFromMapillary(
     ) => void,
 ) {
     try {
-        if (request.pano && mapillaryPanoCache.has(request.pano)) {
-            onCompleted(mapillaryPanoCache.get(request.pano)!, google.maps.StreetViewStatus.OK)
+        if (request.pano && cacheManager.has('mapillary', request.pano)) {
+            onCompleted(cacheManager.get('mapillary', request.pano)!, google.maps.StreetViewStatus.OK)
             return
         }
         let result: any = null;
@@ -936,7 +952,7 @@ async function getFromMapillary(
                 worldSize: new google.maps.Size(2048, 1024),
             },
         };
-        mapillaryPanoCache.set(panoId, panorama);
+        cacheManager.set('mapillary', panoId, panorama);
         onCompleted(panorama, google.maps.StreetViewStatus.OK);
     } catch (error) {
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR);
@@ -955,15 +971,15 @@ async function getFromOpenMap(
         let feature: any = null;
         let links: google.maps.StreetViewLink[] = [];
         if (request.pano) {
-            if (openMapPanoCache.has(request.pano)) {
-                onCompleted(openMapPanoCache.get(request.pano)!, google.maps.StreetViewStatus.OK);
+            if (cacheManager.has('openmap', request.pano)) {
+                onCompleted(cacheManager.get('openmap', request.pano)!, google.maps.StreetViewStatus.OK);
                 return;
             }
             feature = OPENMAP_API.getFeature(request.pano);
         }
         else if (request.location) {
             const { lat, lng }: any = request.location;
-            const features = await OPENMAP_API.searchFeatures(lat, lng, request.radius || 50);
+            const features = await OPENMAP_API.searchFeatures(lat, lng);
             if (!features.length) {
                 onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS);
                 return;
@@ -1007,7 +1023,7 @@ async function getFromOpenMap(
             } as any],
         };
 
-        openMapPanoCache.set(feature.id, panorama);
+        cacheManager.set('openmap', feature.id, panorama);
         onCompleted(panorama, google.maps.StreetViewStatus.OK);
     }
     catch (error) {
@@ -1016,6 +1032,7 @@ async function getFromOpenMap(
 
 }
 
+// ASIG
 async function getFromASIG(
     request: google.maps.StreetViewLocationRequest & { pano?: string },
     onCompleted: (
@@ -1023,8 +1040,8 @@ async function getFromASIG(
         status: google.maps.StreetViewStatus,
     ) => void,) {
     if (request.pano) {
-        if (asigPanoCache.has(request.pano)) {
-            onCompleted(asigPanoCache.get(request.pano)!, google.maps.StreetViewStatus.OK)
+        if (cacheManager.has('asig', request.pano)) {
+            onCompleted(cacheManager.get('asig', request.pano)!, google.maps.StreetViewStatus.OK)
             return
         }
         else onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
@@ -1068,7 +1085,7 @@ async function getFromASIG(
                     tiles: {
                         centerHeading: feature.heading,
                         tileSize: new google.maps.Size(512, 512),
-                        worldSize: new google.maps.Size(8192, 4096),
+                        worldSize: new google.maps.Size(2048, 1024),
                         getTileUrl: () => '',
                     },
                     imageDate: feature.date,
@@ -1079,7 +1096,7 @@ async function getFromASIG(
                     } as any],
                 };
 
-                asigPanoCache.set(feature.id, panorama);
+                cacheManager.set('asig', feature.id, panorama);
                 onCompleted(panorama, google.maps.StreetViewStatus.OK);
             }
             onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS);
@@ -1090,6 +1107,77 @@ async function getFromASIG(
 
     }
 }
+
+// Já360
+async function getFromJa360(
+    request: google.maps.StreetViewLocationRequest & { pano?: string },
+    onCompleted: (
+        res: google.maps.StreetViewPanoramaData | null,
+        status: google.maps.StreetViewStatus,
+    ) => void,
+) {
+    try {
+        if (request.pano && cacheManager.has('ja', request.pano)) {
+            onCompleted(cacheManager.get('ja', request.pano)!, google.maps.StreetViewStatus.OK)
+            return
+        }
+
+        let panoId: string | undefined
+
+        if (request.pano) {
+            panoId = request.pano
+        } else if (request.location) {
+            const { lat, lng } = request.location
+            const uri = `https://ja.is/kort/closest/?lat=${lat}&lng=${lng}&meters=${request.radius || 50}`
+            const resp = await fetch(uri)
+            const result = await resp.json()
+            panoId = result?.id?.toString()
+        }
+
+        if (!panoId) {
+            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
+            return
+        }
+
+        const uri = `https://ja.is/kort/scene/?json=1&image_id=${panoId}`
+        const resp = await fetch(uri)
+        const result = await resp.json()
+
+        if (!result || !result.image || !result?.image?.id) {
+            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
+            return
+        }
+        const panorama: google.maps.StreetViewPanoramaData = {
+            location: {
+                pano: panoId,
+                latLng: new google.maps.LatLng(result.image?.lat, result.image?.lng),
+                description: result.streets?.street.name || 'Já360',
+                country: 'IS'
+            },
+            links: result.streets?.street.azimuths.map((r: any, idx: number) => ({
+                pano: `${panoId.slice(0, -1)}${idx}`,
+                heading: r,
+                description: result.streets?.street.name || 'Já360',
+            })) ?? [],
+            tiles: {
+                centerHeading: result.image?.heading,
+                tileSize: new google.maps.Size(512, 512),
+                worldSize: new google.maps.Size(8192, 4096),
+                getTileUrl: () => '',
+            },
+            imageDate: result.image?.month,
+            time: [{
+                date: new Date(result.image?.month),
+                pano: panoId
+            } as any],
+        }
+        cacheManager.set('ja', panoId, panorama)
+        onCompleted(panorama, google.maps.StreetViewStatus.OK)
+    } catch (err) {
+        onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
+    }
+}
+
 
 
 const StreetViewProviders = {

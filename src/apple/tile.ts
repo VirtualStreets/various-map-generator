@@ -82,7 +82,7 @@ async function getCoverageTileRaw(tileX: number, tileY: number) {
   const res = await fetch(url, { headers });
   if (!res.ok) {
     const text = await res.text();
-    console.error("Fetch failed:", res.status, text);
+    //console.error("Fetch failed:", res.status, text);
     throw new Error("Non-200 response");
   }
   const buf = await res.arrayBuffer();
@@ -127,12 +127,12 @@ async function getCoverageInMapTile(x: number, y: number): Promise<AppleLookArou
     tileCache[key] = coverage;
     return coverage;
   } catch (error) {
-    console.error("Error fetching coverage for tile", x, y, error);
+    //console.error("Error fetching coverage for tile", x, y, error);
     return [];
   }
 }
 
-export async function getClosestPanoAtCoords(lat: number, lng: number): Promise<AppleLookAroundPano | null> {
+export async function getPano(lat: number, lng: number): Promise<AppleLookAroundPano | null> {
   try {
     const [x, y] = wgs84_to_tile_coord(lat, lng, 17);
     const coverage = await getCoverageInMapTile(x, y);
@@ -149,7 +149,7 @@ export async function getClosestPanoAtCoords(lat: number, lng: number): Promise<
     }
     return closest;
   } catch (error) {
-    console.error('getClosestPanoAtCoords error:', error);
+    //console.error('getClosestPanoAtCoords error:', error);
     return null;
   }
 }

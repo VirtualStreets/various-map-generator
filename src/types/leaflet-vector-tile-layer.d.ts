@@ -2,7 +2,7 @@ declare module 'leaflet-vector-tile-layer' {
   import * as L from 'leaflet';
 
   export interface VectorTileLayerOptions extends L.GridLayerOptions {
-    style?: (feature: any, zoom: number) => L.PathOptions;
+    style?: (feature: any, level:any) => L.PathOptions;
     minZoom?: number;
     maxZoom?: number;
     interactive?: boolean;

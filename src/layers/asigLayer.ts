@@ -34,6 +34,7 @@ class GeoJsonTileLayer extends L.GridLayer {
 
     createTile(coords: L.Coords, done: (error?: Error, tile?: HTMLElement) => void): HTMLElement {
         const tile = L.DomUtil.create('div', 'leaflet-tile');
+        tile.style.pointerEvents= 'none'; // Disable pointer events for the tile
         const layerGroup = L.layerGroup();
         const tileKey = `${coords.z}_${coords.x}_${coords.y}`;
         this._tileLayerGroups.set(tileKey, layerGroup);
@@ -58,7 +59,7 @@ class GeoJsonTileLayer extends L.GridLayer {
                         }
                     }
                     const geoJsonLayer = L.geoJSON({ ...data, features }, {
-
+                        interactive: false,
                         style: (feature: any) => {
                             if (feature.geometry.type === 'LineString') {
                                 return {} as any;

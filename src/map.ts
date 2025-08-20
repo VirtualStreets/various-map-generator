@@ -28,6 +28,7 @@ import { NaverLayer } from './layers/naverLayer'
 import { OpenMapLayer } from './layers/openmapLayer'
 import { MapillaryLayer } from './layers/mapillaryLayer'
 import { ASIGLayer } from './layers/asigLayer'
+import { JaLayer } from './layers/jaLayer'
 
 import { useStore } from '@/store'
 const { selected, select, state } = useStore()
@@ -68,7 +69,7 @@ const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 })
 
-const cartoLayer=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png', {
+const cartoLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png', {
   minZoom: 1,
   maxZoom: 20
 })
@@ -124,11 +125,12 @@ const overlayMaps = {
   'Naver Panorama (Only Works at Zoom Level 15+)': NaverLayer,
   'Mapillary (Only Works at Zoom Level 15+)': MapillaryLayer,
   'Streetview.vn (Only Works at Zoom Level 10+)': OpenMapLayer,
-  'AlbaniaStreetView (Only Works at Zoom Level 10+)': ASIGLayer,
   //'Mapy.cz Panorama  (Only Works at Zoom Level 5+)': mapyczCoverageLayer,
-  'Tencent Street View': TencentCoverageLayer,
-  'Baidu Street View': baiduCoverageLayer,
-  
+  'Tencent Street View (Only Works at Zoom Level 5+)': TencentCoverageLayer,
+  'Baidu Street View (Only Works at Zoom Level 5+)': baiduCoverageLayer,
+  'Já 360 (Only Works at Zoom Level 5+)': JaLayer,
+  'AlbaniaStreetView': ASIGLayer,
+
 }
 
 const allLayers = [

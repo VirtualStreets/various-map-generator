@@ -8,7 +8,6 @@ export interface OpenMapFeature {
 }
 
 export interface OpenMapTileInfo {
-    z: number;
     x: number;
     y: number;
     url: string;
