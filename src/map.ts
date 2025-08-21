@@ -334,16 +334,19 @@ function toggleMap(provider: string) {
     resetLayer()
     roadmapLayer.addTo(map)
     OpenMapLayer.addTo(map)
+    map.flyTo([14.0583, 108.2772], map.getZoom()) // Center on Vietnam
   }
   else if (provider === 'asig') {
     resetLayer()
     roadmapLayer.addTo(map)
     ASIGLayer.addTo(map)
+    map.flyTo([41.3275, 19.8189], map.getZoom()) // Center on Albania
   }
   else if (provider === 'ja') {
     resetLayer()
     roadmapLayer.addTo(map)
     JaLayer.addTo(map)
+    map.flyTo([64.9631, -19.0208], map.getZoom()) // Center on Iceland
   }
 }
 

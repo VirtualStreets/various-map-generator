@@ -39,6 +39,9 @@ interface Panorama {
   imageDate?: string
   source?: string
   links?: string[]
+  extra?: {
+    tags: string[]
+  }
 }
 
 type TileOperators = 'AND' | 'OR'

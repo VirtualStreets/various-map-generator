@@ -1337,6 +1337,9 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
     links: [
       ...new Set(pano.links.map((loc) => loc.pano).concat(pano.time.map((loc) => loc.pano))),
     ].sort(),
+    extra: {
+      tags: [settings.provider]
+    }
   }
 
   const index = location.links.indexOf(pano.location.pano)
@@ -1350,6 +1353,7 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
   // New road
   if (!previousPano && settings.provider.includes('google')) {
     checkHasBlueLine(pano.location.latLng.toJSON()).then((hasBlueLine) => {
+      location.extra.tags.push(hasBlueLine ? 'newroad' : 'noblueline')
       addLocation(location, polygon,
         !settings.provider.includes('google') ? icons.newLoc : (hasBlueLine ? icons.newLoc : icons.noBlueLine))
     })
@@ -1359,12 +1363,15 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
       if (!settings.provider.includes('google')) return addLocation(location, polygon, icons.gen4)
       if (previousPano?.tiles?.worldSize.height === 1664) {
         // Gen 1
+        location.extra.tags.push('gen1update')
         return addLocation(location, polygon, icons.gen1)
       } else if (previousPano?.tiles?.worldSize.height === 6656) {
         // Gen 2 or 3
+        location.extra.tags.push('gen2or3update')
         return addLocation(location, polygon, icons.gen2Or3)
       } else {
         // Gen 4
+        location.extra.tags.push('gen4update')
         return addLocation(location, polygon, icons.gen4)
       }
     })
@@ -1473,7 +1480,7 @@ function addLocation(
               url = `https://360.asig.gov.al/AlbaniaStreetView/player2/?sv_startup_pano=${location.panoId}&sv_startup_heading=${heading}&sv_startup_tilt=&sv_startup_zoom=${zoom}&map_center=${location.lat},${location.lng}&map_zoom=15&v_lat=${location.lat}&v_lng=${location.lng}&vl_showshare=yes`
               break
             case 'ja':
-              const [x, y]= wgs84_to_isn93(location.lat, location.lng)
+              const [x, y] = wgs84_to_isn93(location.lat, location.lng)
               url = `https://ja.is/kort/?x=${(x)}&y=${(y)}&nz=15&ja360=1&jh=${heading}`
               break
             default:
