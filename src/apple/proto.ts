@@ -112,7 +112,7 @@ export class Proto {
     const root = protobuf.parse(mapTile).root;
     const type = root.lookupType("GroundMetadataTile");
     const message = type.decode(array);
-    return type.toObject(message, { defaults: true });
+    return type.toObject(message, { defaults: true, longs: String });
   }
 
 }

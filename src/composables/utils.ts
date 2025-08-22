@@ -208,9 +208,10 @@ export function getCameraGeneration(
     return 0;
   }
 
-  else if (provider === 'apple' || provider === 'bing' || provider === 'naver') {
-    if (pano.location?.shortDescription === '2' && provider === 'naver') return 1
-    return Number(pano.location?.shortDescription);
+  else if (provider === 'apple' || provider === 'bing' || provider === 'naver' || provider === 'mapillary') {
+    if (pano.location?.service === 2 && provider === 'naver') return 1
+    else if (provider === 'mapillary') return pano.location?.service ? 1 : 2
+    return pano.location?.service;
   }
 
   else if (provider === 'yandex') {
@@ -219,8 +220,6 @@ export function getCameraGeneration(
     if (width === 5632) return 1;
     return 'trekker';
   }
-
-  else if (provider === 'mapillary') return pano.location?.service ? 1 : 2;
 
   return 0;
 }

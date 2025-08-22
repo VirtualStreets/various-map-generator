@@ -299,7 +299,7 @@ function toggleMap(provider: string) {
   else if (provider === 'apple') {
     resetLayer()
     appleCoverageLayer.addTo(map)
-    roadmapLayer.addTo(map)
+    cartoLayer.addTo(map)
     AppleLayer.addTo(map)
   }
   else if (provider === 'bing') {

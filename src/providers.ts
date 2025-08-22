@@ -249,8 +249,7 @@ async function getFromApple(
         }
 
         if (request.location) {
-            const lat = typeof request.location.lat === 'function' ? request.location.lat() : request.location.lat
-            const lng = typeof request.location.lng === 'function' ? request.location.lng() : request.location.lng
+            const { lat, lng }: any = request.location
             apple = await getPano(lat, lng)
         }
 
@@ -262,11 +261,11 @@ async function getFromApple(
         const date = new Date(apple.date)
         const panorama: google.maps.StreetViewPanoramaData = {
             location: {
-                pano: apple.panoId,
+                pano: apple.panoId.toString(),
                 latLng: new google.maps.LatLng(apple.lat, apple.lng),
-                shortDescription: apple.coverage_type == 3 ? "backpack" : (apple.camera_type),
                 description: '© Apple Look Around',
-                altitude: await getElevation( apple.lat,apple.lng),
+                service: apple.coverage_type == 3 ? "backpack" : (apple.camera_type),
+                altitude: await getElevation(apple.lat, apple.lng),
             },
             links: [],
             tiles: {
@@ -279,7 +278,6 @@ async function getFromApple(
             copyright: "© Apple Look Around",
             time: [{ pano: apple.panoId, date: date } as any],
         }
-
         cacheManager.set('apple', apple.panoId, panorama)
 
         onCompleted(panorama, google.maps.StreetViewStatus.OK)
@@ -335,7 +333,8 @@ async function getFromYandex(
             location: {
                 pano: panoId,
                 latLng: new google.maps.LatLng(result.Data.Point.coordinates[1], result.Data.Point.coordinates[0]),
-                description: result.Data.Point.name
+                description: result.Data.Point.name,
+                altitude: await getElevation(result.Data.Point.coordinates[1], result.Data.Point.coordinates[0]),
             },
             links: result.Annotation?.Thoroughfares?.map((r: any) => ({
                 pano: new URL(r.Connection.href).searchParams.get('oid'),
@@ -418,6 +417,7 @@ async function getFromTencent(
                 latLng: new google.maps.LatLng(result.addr.y_lat, result.addr.x_lng),
                 description: result.basic.append_addr,
                 shortDescription: result.basic.mode === "night" ? panoId : (trans_svid || null),
+                altitude: await getElevation(result.addr.y_lat, result.addr.x_lng),
                 country: 'CN'
             },
             links: result.all_scenes?.map((r: any) => ({
@@ -531,7 +531,7 @@ async function getFromBing(
                 pano: panoId,
                 latLng: new google.maps.LatLng(result.la, result.lo),
                 description: String(result.ml),
-                shortDescription: String(result.ml),
+                service: result.ml,
                 altitude: result.al
             },
             links,
@@ -599,6 +599,7 @@ async function getFromKakao(
                 pano: panoId,
                 latLng: new google.maps.LatLng(result.wgsy, result.wgsx),
                 description: result.addr,
+                altitude: await getElevation(result.wgsy, result.wgsx),
                 country: 'KR'
             },
             links: result.spot?.map((r: any) => ({
@@ -695,7 +696,7 @@ async function getFromNaver(
                 pano: panoId,
                 latLng: new google.maps.LatLng(result.latitude, result.longitude),
                 description: result.info?.description,
-                shortDescription: result.dtl_type,
+                service: result.dtl_type,
                 altitude: result.altitude,
                 country: 'KR'
             },
@@ -1007,6 +1008,7 @@ async function getFromOpenMap(
                 pano: feature.id,
                 latLng: new google.maps.LatLng(feature.lat, feature.lng),
                 description: 'OpenMap',
+                altitude: await getElevation(feature.lat, feature.lng),
                 country: 'VN',
             },
             links,

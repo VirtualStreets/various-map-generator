@@ -123,7 +123,6 @@ async function getCoverageInMapTile(x: number, y: number): Promise<AppleLookArou
 
       coverage.push(p);
     }
-
     tileCache[key] = coverage;
     return coverage;
   } catch (error) {
@@ -136,10 +135,10 @@ export async function getPano(lat: number, lng: number): Promise<AppleLookAround
   try {
     const [x, y] = wgs84_to_tile_coord(lat, lng, 17);
     const coverage = await getCoverageInMapTile(x, y);
+
     if (coverage && coverage.length === 0) return null;
     let closest: AppleLookAroundPano | null = null;
     let smallestDistance = Infinity;
-
     for (const pano of coverage) {
       const dist = distanceBetween({ lat, lng }, { lat: pano.lat, lng: pano.lng });
       if (dist < smallestDistance) {
