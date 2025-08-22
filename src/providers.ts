@@ -4,7 +4,6 @@ import {
     createPayload,
     wgs84_to_tile_coord,
     opk_to_hpr,
-    getElevation
 } from '@/composables/utils';
 import { cacheManager } from '@/cache';
 import { getPano } from '@/apple/tile';
@@ -264,8 +263,7 @@ async function getFromApple(
                 pano: apple.panoId.toString(),
                 latLng: new google.maps.LatLng(apple.lat, apple.lng),
                 description: '© Apple Look Around',
-                service: apple.coverage_type == 3 ? "backpack" : (apple.camera_type),
-                altitude: await getElevation(apple.lat, apple.lng),
+                service: apple.coverage_type == 3 ? "backpack" : (apple.camera_type)
             },
             links: [],
             tiles: {
@@ -279,7 +277,6 @@ async function getFromApple(
             time: [{ pano: apple.panoId, date: date } as any],
         }
         cacheManager.set('apple', apple.panoId, panorama)
-
         onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (error) {
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
@@ -333,8 +330,7 @@ async function getFromYandex(
             location: {
                 pano: panoId,
                 latLng: new google.maps.LatLng(result.Data.Point.coordinates[1], result.Data.Point.coordinates[0]),
-                description: result.Data.Point.name,
-                altitude: await getElevation(result.Data.Point.coordinates[1], result.Data.Point.coordinates[0]),
+                description: result.Data.Point.name
             },
             links: result.Annotation?.Thoroughfares?.map((r: any) => ({
                 pano: new URL(r.Connection.href).searchParams.get('oid'),
@@ -417,7 +413,6 @@ async function getFromTencent(
                 latLng: new google.maps.LatLng(result.addr.y_lat, result.addr.x_lng),
                 description: result.basic.append_addr,
                 shortDescription: result.basic.mode === "night" ? panoId : (trans_svid || null),
-                altitude: await getElevation(result.addr.y_lat, result.addr.x_lng),
                 country: 'CN'
             },
             links: result.all_scenes?.map((r: any) => ({
@@ -599,7 +594,6 @@ async function getFromKakao(
                 pano: panoId,
                 latLng: new google.maps.LatLng(result.wgsy, result.wgsx),
                 description: result.addr,
-                altitude: await getElevation(result.wgsy, result.wgsx),
                 country: 'KR'
             },
             links: result.spot?.map((r: any) => ({
@@ -1008,7 +1002,6 @@ async function getFromOpenMap(
                 pano: feature.id,
                 latLng: new google.maps.LatLng(feature.lat, feature.lng),
                 description: 'OpenMap',
-                altitude: await getElevation(feature.lat, feature.lng),
                 country: 'VN',
             },
             links,

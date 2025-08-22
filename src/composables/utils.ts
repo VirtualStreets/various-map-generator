@@ -78,12 +78,12 @@ export async function getElevation(lat: number, lon: number): Promise<number | n
           : null
     },
     {
-      url: `https://www.elevation-api.eu/v1/elevation/${lat}/${lon}?json`,
+      url: `https://cors-proxy.ac4.stocc.dev/https://www.elevation-api.eu/v1/elevation/${lat}/${lon}?json`,
       parse: (resp: any) =>
         typeof resp?.elevation === 'number' ? resp.elevation : null
     },
     {
-      url: `https://api.opentopodata.org/v1/test-dataset?locations=${lat},${lon}`,
+      url: `https://cors-proxy.ac4.stocc.dev/https://api.opentopodata.org/v1/test-dataset?locations=${lat},${lon}`,
       parse: (resp: any) =>
         Array.isArray(resp.results) && resp.results[0]?.elevation !== undefined
           ? resp.results[0].elevation
