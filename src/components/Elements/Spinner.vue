@@ -47,7 +47,7 @@ const iconComponent = computed(() => {
 
 <style scoped>
 svg {
-  animation: spin 10s infinite ease-in-out;
+  animation: spin 8s infinite ease-in-out;
 }
 @keyframes spin {
   0% {

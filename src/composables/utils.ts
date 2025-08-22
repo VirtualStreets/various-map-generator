@@ -61,6 +61,58 @@ export function wgs84_to_isn93(lat: number, lng: number): [number, number] {
   return proj4('EPSG:4326', 'EPSG:3057', [lng, lat]);
 }
 
+export async function getElevation(lat: number, lon: number): Promise<number | null> {
+  const endpoints: { url: string, parse: (resp: any) => number | null }[] = [
+    {
+      url: `https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`,
+      parse: (resp: any) =>
+        Array.isArray(resp.results) && resp.results[0]?.elevation !== undefined
+          ? resp.results[0].elevation
+          : null
+    },
+    {
+      url: `https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`,
+      parse: (resp: any) =>
+        Array.isArray(resp.elevation) && typeof resp.elevation[0] === 'number'
+          ? resp.elevation[0]
+          : null
+    },
+    {
+      url: `https://www.elevation-api.eu/v1/elevation/${lat}/${lon}?json`,
+      parse: (resp: any) =>
+        typeof resp?.elevation === 'number' ? resp.elevation : null
+    },
+    {
+      url: `https://api.opentopodata.org/v1/test-dataset?locations=${lat},${lon}`,
+      parse: (resp: any) =>
+        Array.isArray(resp.results) && resp.results[0]?.elevation !== undefined
+          ? resp.results[0].elevation
+          : null
+    },
+  ];
+
+  const indices = Array(endpoints.length).fill(0).map((_, i) => i);
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+
+  for (const idx of indices) {
+    const { url, parse } = endpoints[idx];
+    try {
+      const resp = await fetch(url);
+      const data = await resp.json();
+      const elevation = parse(data);
+      if (typeof elevation === 'number' && !isNaN(elevation)) {
+        return elevation;
+      }
+    } catch (e) {
+    }
+  }
+  console.warn('All elevation APIs failed');
+  return null
+}
+
 export function wgs84_to_tile_coord(lat: number, lng: number, zoom: number) {
   const latRad = (lat * Math.PI) / 180.0;
   const scale = 1 << zoom;

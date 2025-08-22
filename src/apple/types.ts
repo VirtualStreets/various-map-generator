@@ -6,7 +6,7 @@ export class AppleLookAroundPano {
   heading: number;
   lat: number;
   lng: number;
-  altitude?: number;
+  tile:[number,number];
 
   constructor(
     panoId: string,
@@ -16,7 +16,7 @@ export class AppleLookAroundPano {
     heading: number,
     lat: number,
     lng: number,
-    altitude? :number
+    tile:[number,number],
   ) {
     this.coverage_type=coverage_type;
     this.camera_type=camera_type;
@@ -25,6 +25,6 @@ export class AppleLookAroundPano {
     this.heading = heading;
     this.lat = lat;
     this.lng = lng;
-    this.altitude = altitude;
+    this.tile = tile;
   }
 }

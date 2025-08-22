@@ -297,7 +297,9 @@ function toggleMap(provider: string) {
     gsvLayer2.addTo(map)
   }
   else if (provider === 'apple') {
+    resetLayer()
     appleCoverageLayer.addTo(map)
+    roadmapLayer.addTo(map)
     AppleLayer.addTo(map)
   }
   else if (provider === 'bing') {

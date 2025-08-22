@@ -4,6 +4,7 @@ import {
     createPayload,
     wgs84_to_tile_coord,
     opk_to_hpr,
+    getElevation
 } from '@/composables/utils';
 import { cacheManager } from '@/cache';
 import { getPano } from '@/apple/tile';
@@ -265,7 +266,7 @@ async function getFromApple(
                 latLng: new google.maps.LatLng(apple.lat, apple.lng),
                 shortDescription: apple.coverage_type == 3 ? "backpack" : (apple.camera_type),
                 description: '© Apple Look Around',
-                altitude: apple.altitude
+                altitude: await getElevation( apple.lat,apple.lng),
             },
             links: [],
             tiles: {

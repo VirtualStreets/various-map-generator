@@ -22,6 +22,7 @@ function handleExport() {
       panoId: props.mode === 'disable' ? null :
         props.mode === 'prefix' ? `${item.source?.includes('qq') ? 'TENCENT' :
           item.source?.replace('_pano', '').toUpperCase()}:${item.panoId}` : item.panoId,
+      links:item.links?.slice(0, 4),
     }))
     data = data.concat(updated)
   })

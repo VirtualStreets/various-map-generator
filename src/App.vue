@@ -1351,14 +1351,13 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
     : pano.time
   const previousPano = time[time.length - 2]?.pano
   // New road
-  if (!previousPano && settings.provider.includes('google')) {
+  if (!previousPano) {
+    if (!settings.provider.includes('google')) return addLocation(location, polygon, icons.gen4)
     checkHasBlueLine(pano.location.latLng.toJSON()).then((hasBlueLine) => {
       location.extra.tags.push(hasBlueLine ? 'newroad' : 'noblueline')
-      addLocation(location, polygon,
-        !settings.provider.includes('google') ? icons.newLoc : (hasBlueLine ? icons.newLoc : icons.noBlueLine))
+      return addLocation(location, polygon, hasBlueLine ? icons.newLoc : icons.noBlueLine)
     })
   } else {
-    if (!previousPano) return addLocation(location, polygon, icons.gen4)
     StreetViewProviders.getPanorama(settings.provider, { pano: previousPano }, (previousPano) => {
       if (!settings.provider.includes('google')) return addLocation(location, polygon, icons.gen4)
       if (previousPano?.tiles?.worldSize.height === 1664) {

@@ -33,7 +33,7 @@ class BingTileLayer extends L.TileLayer {
       return `https://ecn.t${quadKey.length % 2}.tiles.virtualearth.net/tiles/sre${quadKey}.jpeg?g=14792`;
     }
     else {
-      return `https://t.ssl.ak.dynamic.tiles.virtualearth.net/comp/ch/${quadKey}?mkt=en-us&ur=cn&it=G,LC,L&jp=1&og=2618&sv=9.33&n=t&dre=1&o=webp,95&cstl=s23&st=bld|v:0`;
+      return `https://t.ssl.ak.dynamic.tiles.virtualearth.net/comp/ch/${quadKey}?mkt=en-us&ur=cn&it=G,LC,L&jp=1&og=2618&sv=9.33&n=t&dre=1&o=webp,100&cstl=s23&st=bld|v:0`;
     }
   }
 }

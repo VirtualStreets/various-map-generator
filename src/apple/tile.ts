@@ -118,7 +118,7 @@ async function getCoverageInMapTile(x: number, y: number): Promise<AppleLookArou
         headingFromUnknowns(pano.tilePosition.pitch, pano.tilePosition.roll),
         coords[0],
         coords[1],
-        pano.tilePosition.altitude
+        [pano.tilePosition.x, pano.tilePosition.y]
       );
 
       coverage.push(p);
