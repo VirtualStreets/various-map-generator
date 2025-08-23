@@ -1096,7 +1096,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
     }
 
     if (settings.filterByAltitude.enabled) {
-      if (['google', 'googleZoom', 'baidu', 'mapillary', 'bing', 'naver', 'mapycz','asig'].includes(settings.provider)) {
+      if (['google', 'googleZoom', 'baidu', 'mapillary', 'bing', 'naver', 'mapycz', 'asig'].includes(settings.provider)) {
         if (
           pano.location.altitude < settings.filterByAltitude.range[0] ||
           pano.location.altitude > settings.filterByAltitude.range[1]
@@ -1357,7 +1357,10 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
   const previousPano = time[time.length - 2]?.pano
   // New road
   if (!previousPano) {
-    if (!settings.provider.includes('google')) return addLocation(location, polygon, icons.gen4)
+    if (!settings.provider.includes('google')) {
+      if (['yandex', 'baidu', 'tencent', 'naver', 'kakao', ''].includes(settings.provider)) return addLocation(location, polygon, icons.newLoc)
+      return addLocation(location, polygon, icons.gen4)
+    }
     checkHasBlueLine(pano.location.latLng.toJSON()).then((hasBlueLine) => {
       location.extra.tags.push(hasBlueLine ? 'newroad' : 'noblueline')
       return addLocation(location, polygon, hasBlueLine ? icons.newLoc : icons.noBlueLine)
