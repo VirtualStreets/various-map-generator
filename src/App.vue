@@ -706,7 +706,8 @@ import {
   tencentToGcj02,
   headingToMapillaryX,
   pitchToMapillaryY,
-  wgs84_to_isn93
+  wgs84_to_isn93,
+  getMonthEndTimestamp
 } from '@/composables/utils.ts'
 import StreetViewProviders from '@/providers'
 import { degToRad, radToDeg } from 'web-merc-projection/util'
@@ -1011,7 +1012,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       const parsedDate = panoDate ? panoDate.getTime() : undefined
       if (
         parsedDate &&
-        (parsedDate < Date.parse(settings.fromDate) || parsedDate > Date.parse(settings.toDate))
+        (parsedDate < Date.parse(settings.fromDate) || parsedDate > getMonthEndTimestamp(settings.toDate))
       )
         return false
       getPano(randomPano.pano, polygon)
@@ -1025,7 +1026,11 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
     ) {
       if (!res.time?.length) return false
       const fromDate = Date.parse(settings.fromDate)
-      const toDate = Date.parse(settings.toDate)
+      // 将toDate调整到月末最后一天
+      const toDateObj = new Date(settings.toDate)
+      toDateObj.setMonth(toDateObj.getMonth() + 1, 0) // 设置为下个月的第0天，即当月最后一天
+      toDateObj.setHours(23, 59, 59, 999) // 设置为当天最后时刻
+      const toDate = toDateObj.getTime()
       let dateWithin = false
       for (const loc of res.time) {
         if (settings.rejectUnofficial && !isOfficial(loc.pano, settings.provider)) continue
@@ -1044,7 +1049,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       if (
         res.imageDate &&
         (Date.parse(res.imageDate) < Date.parse(settings.fromDate) ||
-          Date.parse(res.imageDate) > Date.parse(settings.toDate))
+          Date.parse(res.imageDate) > getMonthEndTimestamp(settings.toDate))
       ) {
         return false
       }
@@ -1075,7 +1080,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
         links.length < settings.filterByLinksLength.range[0] ||
         links.length > settings.filterByLinksLength.range[1]
       )
-        return
+        return false
     }
 
     // Find Generation
@@ -1126,7 +1131,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
   if (settings.rejectDateless && !pano.imageDate) return false
 
   const fromDate = Date.parse(settings.fromDate)
-  const toDate = Date.parse(settings.toDate)
+  const toDate = getMonthEndTimestamp(settings.toDate)
   const locDate = Date.parse(pano.imageDate)
   const fromMonth = settings.fromMonth
   const toMonth = settings.toMonth
@@ -1248,7 +1253,7 @@ function getPanoDeep(id: string, polygon: Polygon, depth: number) {
 
     if (settings.checkAllDates && !settings.selectMonths && pano.time) {
       const fromDate = Date.parse(settings.fromDate)
-      const toDate = Date.parse(settings.toDate)
+      const toDate = getMonthEndTimestamp(settings.toDate)
 
       for (const loc of pano.time) {
         if (settings.rejectUnofficial && !isOfficial(loc.pano, settings.provider)) continue

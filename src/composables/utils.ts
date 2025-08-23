@@ -1,6 +1,13 @@
 import proj4 from 'proj4';
 
 
+export function getMonthEndTimestamp(monthString: string): number {
+  const date = new Date(monthString);
+  date.setMonth(date.getMonth() + 1, 0);
+  date.setHours(23, 59, 59, 999);
+  return date.getTime();
+}
+
 export function sendNotification(title: string, body: string) {
   try {
     if (Notification.permission === 'granted') {
