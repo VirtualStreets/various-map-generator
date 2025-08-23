@@ -34,17 +34,6 @@
               <option :value=false>Off</option>
             </select>
           </div>
-          <div v-if="settings.provider === 'mapycz'" class="flex items-center justify-between ml-1 mr-1 gap-2">
-            <span>MapyCZ API Key :</span>
-            <div class="gap-1">
-              <input :type="showMapyCzApiKey ? 'text' : 'password'" v-model="settings.apiKeys.mapycz"
-                @input="updateMapyCzApiKey" class="w-48 h-6 px-2 py-1 border rounded" placeholder="Enter your API key">
-              <button @click="showMapyCzApiKey = !showMapyCzApiKey" class="ml-1 mr-1" type="button">
-                <component :is="showMapyCzApiKey ? EyeClosedIcon : EyeOpenIcon" class="w-4 h-4 stroke-current" />
-                </input>
-              </button>
-            </div>
-          </div>
           <div v-if="settings.notification.enabled" class="flex-1 min-h-0 overflow-y-auto ml-4 mb-1">
             <Checkbox v-model="settings.notification.anyLocation">
               Any location found
@@ -55,6 +44,17 @@
             <Checkbox v-model="settings.notification.allPolygonsComplete">
               All polygons completed
             </Checkbox>
+          </div>
+          <div v-if="settings.provider === 'mapycz'" class="flex items-center justify-between ml-1 mr-1 gap-2">
+            <span>MapyCZ API Key :</span>
+            <div class="gap-1">
+              <input :type="showMapyCzApiKey ? 'text' : 'password'" v-model="settings.apiKeys.mapycz"
+                @input="updateMapyCzApiKey" class="w-48 h-6 px-2 py-1 border rounded" placeholder="Enter your API key">
+              <button @click="showMapyCzApiKey = !showMapyCzApiKey" class="ml-1 mr-1" type="button">
+                <component :is="showMapyCzApiKey ? EyeClosedIcon : EyeOpenIcon" class="w-4 h-4 stroke-current" />
+                </input>
+              </button>
+            </div>
           </div>
         </Collapsible>
       </div>
