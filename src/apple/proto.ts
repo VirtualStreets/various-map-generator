@@ -1,3 +1,4 @@
+import Long from "long";
 import protobuf from "protobufjs";
 
 const mapTile = `
@@ -112,7 +113,7 @@ export class Proto {
     const root = protobuf.parse(mapTile).root;
     const type = root.lookupType("GroundMetadataTile");
     const message = type.decode(array);
-    return type.toObject(message, { defaults: true, longs: String});
+    return type.toObject(message);
   }
 
 }

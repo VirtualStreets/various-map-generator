@@ -356,9 +356,24 @@ const copyCoords = (e: L.ContextMenuItemClickEvent) => {
   navigator.clipboard.writeText(e.latlng.lat.toFixed(7) + ', ' + e.latlng.lng.toFixed(7))
 }
 const openNearestPano = (e: L.ContextMenuItemClickEvent) => {
-  open(
-    `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${e.latlng.lat},${e.latlng.lng}`,
-  )
+  switch (settings.provider) {
+    case 'google':
+      open(
+        `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${e.latlng.lat},${e.latlng.lng}`,
+      )
+      break
+    case 'apple':
+      open(`https://lookmap.eu.pythonanywhere.com/#c=18/${e.latlng.lat}/${e.latlng.lng}&p=${e.latlng.lat}/${e.latlng.lng}`)
+      break
+    case 'bing':
+      open(
+        `https://www.bing.com/maps/?style=x&lvl=18&cp=${e.latlng.lat}%7E${e.latlng.lng}&v=2&form=LMLTCC`)
+      break
+    default:
+      open(
+        `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${e.latlng.lat},${e.latlng.lng}`,
+      )
+  }
 }
 
 function initPolygon(polygon: Polygon) {
