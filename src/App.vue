@@ -1358,7 +1358,7 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
   // New road
   if (!previousPano) {
     if (!settings.provider.includes('google')) {
-      if (['yandex', 'baidu', 'tencent', 'naver', 'kakao', ''].includes(settings.provider)) return addLocation(location, polygon, icons.newLoc)
+      if (['yandex', 'baidu', 'tencent', 'naver', 'kakao'].includes(settings.provider)) return addLocation(location, polygon, icons.newLoc)
       return addLocation(location, polygon, icons.gen4)
     }
     checkHasBlueLine(pano.location.latLng.toJSON()).then((hasBlueLine) => {

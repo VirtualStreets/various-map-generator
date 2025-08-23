@@ -562,33 +562,32 @@ async function getFromKakao(
             return
         }
 
-        let uri: string
+        let panoId: string | undefined
 
         if (request.pano) {
-            uri = `https://rv.map.kakao.com/roadview-search/v2/node/${request.pano}?SERVICE=glpano`
+            panoId = request.pano
         } else if (request.location) {
             const { lat, lng } = request.location
 
             const rad = request.radius || 50
-            uri = `https://rv.map.kakao.com/roadview-search/v2/nodes?PX=${lng}&PY=${lat}&RAD=${rad}&PAGE_SIZE=1&INPUT=wgs&TYPE=w&SERVICE=glpano`
-        } else {
+            const uri = `https://rv.map.kakao.com/roadview-search/v2/nodes?PX=${lng}&PY=${lat}&RAD=${rad}&PAGE_SIZE=1&INPUT=wgs&TYPE=w&SERVICE=glpano`
+            const resp = await fetch(uri)
+            const json = await resp.json()
+            panoId = json?.street_view?.streetList?.[0]?.id?.toString()
+        }
+
+        if (!panoId) {
             onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
             return
         }
 
+        const uri = `https://rv.map.kakao.com/roadview-search/v2/node/${panoId}?SERVICE=glpano`
         const resp = await fetch(uri)
         const json = await resp.json()
-        const result = json.street_view?.street ?? json.street_view?.streetList?.[0]
-
-        if (!result) {
-            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
-            return
-        }
+        const result = json.street_view?.street
 
         const date = result.shot_date
-        const panoId = result.id.toString()
         const heading = (parseFloat(result.angle) + 180) % 360
-
         const panorama: google.maps.StreetViewPanoramaData = {
             location: {
                 pano: panoId,
@@ -619,7 +618,7 @@ async function getFromKakao(
                 },
             ].sort((a, b) => a.date.getTime() - b.date.getTime()),
         }
-        cacheManager.set('kakao', panoId, panorama)
+
         onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (err) {
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
@@ -635,16 +634,16 @@ async function getFromNaver(
     ) => void,
 ) {
     try {
+        if (request.pano && cacheManager.has('naver', request.pano)) {
+            onCompleted(cacheManager.get('naver', request.pano)!, google.maps.StreetViewStatus.OK)
+            return
+        }
 
         let panoId: string | undefined
         let heading: number | undefined
 
         if (request.pano) {
             panoId = request.pano
-            if (cacheManager.has('naver', panoId)) {
-                onCompleted(cacheManager.get('naver', panoId)!, google.maps.StreetViewStatus.OK)
-                return
-            }
         } else if (request.location) {
             const { lat, lng } = request.location
             const uri = `https://cors-proxy.ac4.stocc.dev/https://panorama.map.naver.com/api/v2/nearby/${lng}/${lat}?lang=en`
