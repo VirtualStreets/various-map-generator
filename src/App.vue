@@ -1091,7 +1091,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
       if (['google', 'googleZoom', 'apple', 'yandex', 'bing', 'naver', 'mapillary'].includes(settings.provider)) {
         const gen = getCameraGeneration(pano, settings.provider)
         if (gen === 0) return false
-        if (!settings.findByGeneration[settings.provider][gen]) return false
+        if (!settings.findByGeneration[settings.provider === 'googleZoom' ? 'google' : settings.provider][gen]) return false
       }
     }
 
@@ -1164,7 +1164,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
       if (['google', 'googleZoom', 'apple', 'yandex', 'bing', 'naver', 'mapillary'].includes(settings.provider)) {
         const gen = getCameraGeneration(pano, settings.provider)
         if (gen === 0) return false
-        if (!settings.findByGeneration[settings.provider][gen]) return false
+        if (!settings.findByGeneration[settings.provider === 'googleZoom' ? 'google' : settings.provider][gen]) return false
       }
     }
 

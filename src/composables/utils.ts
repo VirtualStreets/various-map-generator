@@ -189,7 +189,7 @@ export function getCameraGeneration(
   const lat = location?.latLng?.lat() ?? 0;
   const imageDate = pano.imageDate ?? '';
   const { width, height } = pano.tiles.worldSize;
-  if (provider === 'google') {
+  if (provider === 'google' || provider === 'googleZoom') {
 
     if (height === 8192) return 4;
     if (height === 1664) return 1;
