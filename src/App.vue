@@ -13,7 +13,7 @@
       </h1>
     </div>
     <div class="flex-1 min-h-0 flex flex-col gap-1">
-      <div v-if="!state.started" class="container flex flex-col">
+      <div class="container flex flex-col">
         <div class="relative cursor-pointer" @click="panels.general = !panels.general">
           <h2>General</h2>
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
