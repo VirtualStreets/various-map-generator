@@ -181,6 +181,7 @@
                 <option value="openmap">Openmap</option>
                 <option value="ja">Já360</option>
                 <option value="asig">ASIG</option>
+                <option value="vegbilder">Vegbilder</option>
               </select>
             </div>
             <div class="flex items-center justify-between">
@@ -209,7 +210,7 @@
               </span>
             </div>
 
-            <div v-if="!['apple', 'naver', 'yandex'].includes(settings.provider)"
+            <div v-if="!['apple', 'naver', 'yandex', 'googleZoom'].includes(settings.provider)"
               class="flex items-center justify-between">
               Radius :
               <span>
@@ -997,6 +998,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
         case 'kakao':
         case 'openmap':
         case 'mapillary':
+        case 'vegbilder':
         case 'asig':
           panoMinutes = Number(res.imageDate.slice(11, 13)) * 60 + Number(res.imageDate.slice(14, 16))
           break
@@ -1490,7 +1492,10 @@ function addLocation(
               const [x, y] = wgs84_to_isn93(location.lat, location.lng)
               url = `https://ja.is/kort/?x=${(x)}&y=${(y)}&nz=15&ja360=1&jh=${heading}`
               break
-            default:
+            case 'vegbilder':
+              url = `https://vegbilder.atlas.vegvesen.no/?lat=${location.lat}&lng=${location.lng}&zoom=15&view=image&imageId=${location.panoId}&year=${location.imageDate?.slice(0,4)}`
+              break
+              default:
               url = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}&heading=${heading}&pitch=${pitch}&fov=${180 / 2 ** zoom}`
           }
 

@@ -26,7 +26,9 @@ class GeoJsonTileLayer extends L.GridLayer {
 
     onRemove(map: L.Map): this {
         super.onRemove(map);
-        this._tileLayerGroups.forEach(group => group.remove());
+        this._tileLayerGroups.forEach(group => {
+            map.removeLayer(group);
+        });
         this._tileLayerGroups.clear();
         this._currentZoom = null;
         return this;
@@ -88,8 +90,8 @@ class GeoJsonTileLayer extends L.GridLayer {
             });
         tile.addEventListener('tileunload', () => {
             const group = this._tileLayerGroups.get(tileKey);
-            if (group) {
-                group.remove();
+            if (group && this._map) {
+                this._map.removeLayer(group);
                 this._tileLayerGroups.delete(tileKey);
             }
         });

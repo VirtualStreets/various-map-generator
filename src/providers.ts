@@ -12,6 +12,7 @@ import { MapyCzApi } from '@/mapycz/api';
 import { MapillaryAPI } from '@/mapillary/api';
 import { OpenMapAPI } from './openmap/api';
 import { ASIGTileGenerator } from './agis/tile';
+import { VegbilderTileGenerator } from './vegbilder/tile';
 import { settings } from '@/settings';
 import gcoord from 'gcoord';
 import { degToRad } from 'web-merc-projection/util';
@@ -37,6 +38,7 @@ const providerMap: Record<string, Function> = {
     openmap: getFromOpenMap,
     asig: getFromASIG,
     ja: getFromJa360,
+    vegbilder: getFromVegbilder,
 };
 
 
@@ -1169,6 +1171,88 @@ async function getFromJa360(
         cacheManager.set('ja', panoId, panorama)
         onCompleted(panorama, google.maps.StreetViewStatus.OK)
     } catch (err) {
+        onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
+    }
+}
+
+// Vegbilder (Norwegian road images)
+async function getFromVegbilder(
+    request: google.maps.StreetViewLocationRequest & { pano?: string },
+    onCompleted: (
+        res: google.maps.StreetViewPanoramaData | null,
+        status: google.maps.StreetViewStatus,
+    ) => void,
+) {
+    try {
+        if (request.pano && cacheManager.has('vegbilder', request.pano)) {
+            onCompleted(cacheManager.get('vegbilder', request.pano)!, google.maps.StreetViewStatus.OK)
+            return
+        }
+
+        let feature: any = null
+        let links: any[] = [];
+        let prev: any = null;
+        let next: any = null;
+
+        if (request.pano) {
+            feature = await VegbilderTileGenerator.getFeatureById(request.pano)
+        } else if (request.location) {
+            const { lat, lng }: any = request.location
+
+            const data = await VegbilderTileGenerator.getTileGeoJsonByLatLng(lat, lng, request.radius || 50)
+            
+            if (data && data.features && data.features.length > 0) {
+                const idx = Math.floor(Math.random() * data.features.length);
+                feature = data.features[idx];
+                if (idx > 0) {
+                    prev = data.features[idx - 1];
+                }
+                if (idx < data?.features.length - 1) {
+                    next = data.features[idx + 1];
+                }
+            }
+        }
+
+        if (!feature) {
+            onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
+            return
+        }
+    
+        const info = VegbilderTileGenerator.extractFeatureInfo(feature)
+
+        if (prev?.properties?.id) {
+            links.push({ pano: prev.properties.id, heading: (info.heading + 180) % 360 });
+        }
+
+        if (next?.properties?.id) {
+            links.push({ pano: next.properties.id, heading: info.heading });
+        }
+
+        const panorama: google.maps.StreetViewPanoramaData = {
+            location: {
+                pano: info.panoId,
+                latLng: new google.maps.LatLng(info.lat, info.lng),
+                description: info.description,
+                country: 'NO'
+            },
+            links,
+            tiles: {
+                centerHeading: info.heading,
+                tileSize: new google.maps.Size(512, 512),
+                worldSize: new google.maps.Size(8192, 4096),
+                getTileUrl: () => '',
+            },
+            imageDate: info.date,
+            copyright: '© Statens vegvesen',
+            time: [{
+                pano: info.panoId,
+                date: new Date(info.date)
+            } as any],
+        }
+
+        cacheManager.set('vegbilder', info.panoId, panorama)
+        onCompleted(panorama, google.maps.StreetViewStatus.OK)
+    } catch (error) {
         onCompleted(null, google.maps.StreetViewStatus.UNKNOWN_ERROR)
     }
 }

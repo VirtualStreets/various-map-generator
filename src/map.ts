@@ -29,6 +29,7 @@ import { OpenMapLayer } from './layers/openmapLayer'
 import { MapillaryLayer } from './layers/mapillaryLayer'
 import { ASIGLayer } from './layers/asigLayer'
 import { JaLayer } from './layers/jaLayer'
+import { VegbilderLayer } from './layers/vegbilderLayer'
 
 import { useStore } from '@/store'
 const { selected, select, state } = useStore()
@@ -130,6 +131,7 @@ const overlayMaps = {
   'Baidu Street View (Only Works at Zoom Level 5+)': baiduCoverageLayer,
   'Já 360 (Only Works at Zoom Level 5+)': JaLayer,
   'AlbaniaStreetView': ASIGLayer,
+  'Vegbilder Norway (Only Works at Zoom Level 10+)': VegbilderLayer,
 
 }
 

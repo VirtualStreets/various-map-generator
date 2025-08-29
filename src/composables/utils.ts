@@ -34,6 +34,7 @@ export function isOfficial(pano: string, provider: string) {
     case 'mapillary':
     case 'openmap':
     case 'tencent':
+    case 'vegbilder':
     case 'asig':
     case 'ja':
       return true
