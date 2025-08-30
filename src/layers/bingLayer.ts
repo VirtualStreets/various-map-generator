@@ -32,6 +32,9 @@ class BingTileLayer extends L.TileLayer {
     else if (this.layer === 'sre') {
       return `https://ecn.t${quadKey.length % 2}.tiles.virtualearth.net/tiles/sre${quadKey}.jpeg?g=14792`;
     }
+    else if(this.layer ==='dark'){
+      return `https://t.ssl.ak.dynamic.tiles.virtualearth.net/comp/ch/${quadKey}?mkt=en-us&ur=cn&it=G,LC,AP,L,LA&jp=0&mvt=1&tj=1&og=2724&sv=9.42&n=t&dre=1&o=webp,100&cstl=VBD&st=bld|v:0`
+    }
     else {
       return `https://t.ssl.ak.dynamic.tiles.virtualearth.net/comp/ch/${quadKey}?mkt=en-us&ur=cn&it=G,LC,L&jp=1&og=2618&sv=9.33&n=t&dre=1&o=webp,100&cstl=s23&st=bld|v:0`;
     }
@@ -41,3 +44,4 @@ class BingTileLayer extends L.TileLayer {
 export const bingBaseLayer = new BingTileLayer('r', 20)
 export const bingTerrainLayer = new BingTileLayer('sre', 15)
 export const bingStreetideLayer = new BingTileLayer('sv', 20)
+export const bingBaseDarkLayer = new BingTileLayer('dark', 20)

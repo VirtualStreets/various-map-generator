@@ -15,12 +15,12 @@ import markerViolet from '@/assets/markers/marker-violet.png'
 import markerGreen from '@/assets/markers/marker-green.png'
 import markerPink from '@/assets/markers/marker-pink.png'
 
-import { ref } from 'vue'
-import { useStorage } from '@vueuse/core'
+import { ref, watch } from 'vue'
+import { useStorage, useColorMode } from '@vueuse/core'
 import { settings } from '@/settings'
 import { isValidGeoJSON, getPolygonName, readFileAsText } from '@/composables/utils.ts'
 import { BaiduLayer } from './layers/baiduLayer'
-import { bingBaseLayer, bingTerrainLayer, bingStreetideLayer } from './layers/bingLayer'
+import { bingBaseLayer, bingTerrainLayer, bingStreetideLayer, bingBaseDarkLayer } from './layers/bingLayer'
 import { YandexLayer } from './layers/yandexLayer'
 import { AppleLayer } from './layers/appleLayer'
 import { TencentCoverageLayer } from './layers/tencentLayer'
@@ -36,16 +36,17 @@ const { selected, select, state } = useStore()
 
 let map: L.Map
 const currentZoom = ref(1)
+const themeMode = useColorMode()
 
-const roadmapBaseLayer = L.tileLayer(
+let roadmapBaseLayer = L.tileLayer(
   'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m2!1e0!2sm!3m7!2sen!3scn!5e1105!12m1!1e3!12m1!1e2!4e0!5m5!1e0!8m2!1e1!1e1!8i47083502!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
   { minZoom: 1, maxZoom: 20 },
 )
-const roadmapLabelsLayer = L.tileLayer(
+let roadmapLabelsLayer = L.tileLayer(
   'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m2!1e0!2sm!3m7!2sen!3scn!5e1105!12m1!1e2!12m1!1e15!4e0!5m5!1e0!8m2!1e1!1e1!8i47083502!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
   { minZoom: 1, maxZoom: 20, pane: 'labelPane' },
 )
-const roadmapLayer = L.layerGroup([roadmapBaseLayer, roadmapLabelsLayer])
+let roadmapLayer = L.layerGroup([roadmapBaseLayer, roadmapLabelsLayer])
 
 const terrainBaseLayer = L.tileLayer(
   'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m2!1e0!2sm!2m1!1e4!3m9!2sen!3scn!5e1105!12m1!1e67!12m1!1e3!12m1!1e2!4e0!5m5!1e0!8m2!1e1!1e1!8i47083502!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
@@ -70,12 +71,10 @@ const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 })
 
-const cartoLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png', {
-  minZoom: 1,
-  maxZoom: 20
-})
+const cartoLayer = L.tileLayer(themeMode.value == 'dark' ? 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png@2x' :
+  'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png', { minZoom: 1, maxZoom: 20 })
 
-const bingMapsLayer = L.layerGroup([bingBaseLayer, bingTerrainLayer])
+let bingMapsLayer = L.layerGroup([themeMode.value == 'light' ? bingBaseLayer : bingBaseDarkLayer, bingTerrainLayer])
 
 const petalMapsLayer = L.tileLayer("https://maprastertile-drcn.dbankcdn.cn/display-service/v1/online-render/getTile/24.12.10.10/{z}/{x}/{y}/?language=en&p=46&scale=2&mapType=ROADMAP&presetStyleId=standard&pattern=JPG&key=DAEDANitav6P7Q0lWzCzKkLErbrJG4kS1u%2FCpEe5ZyxW5u0nSkb40bJ%2BYAugRN03fhf0BszLS1rCrzAogRHDZkxaMrloaHPQGO6LNg==",
   { maxZoom: 18 }
@@ -210,6 +209,7 @@ async function initMap(el: string) {
   map.on('baselayerchange', (e) => {
     const name = baseLayerToName.get(e.layer)
     if (name) storedLayers.value.base = name as BaseMapName
+    toggleMapTheme(themeMode.value)
   })
   map.on('overlayadd', (e) => {
     const name = overlayLayerToName.get(e.layer) as OverlayMapName
@@ -352,6 +352,12 @@ function toggleMap(provider: string) {
     JaLayer.addTo(map)
     map.flyTo([64.9631, -19.0208], map.getZoom()) // Center on Iceland
   }
+  else if (provider === 'vegbilder') {
+    resetLayer()
+    roadmapLayer.addTo(map)
+    VegbilderLayer.addTo(map)
+    map.flyTo([60.4720, 8.4689], map.getZoom()) // Center on Norway
+  }
 }
 
 const copyCoords = (e: L.ContextMenuItemClickEvent) => {
@@ -492,6 +498,77 @@ async function toggleLayer(layer: LayerMeta) {
     if (loaded) map.removeLayer(loaded)
   }
 }
+
+function replaceBaseLayerContents(name: string, newChildren: L.Layer[]): boolean {
+  const layerObj = (baseMaps as any)[name] as L.Layer | undefined
+  if (!layerObj) return false
+
+  const layerGroupLike = layerObj as unknown as L.LayerGroup
+  if (typeof (layerGroupLike as any).clearLayers === 'function' && typeof (layerGroupLike as any).addLayer === 'function') {
+    try {
+      layerGroupLike.clearLayers()
+      newChildren.forEach((ch) => layerGroupLike.addLayer(ch))
+      return true
+    } catch (err) {
+      console.error('replaceBaseLayerContents error', err)
+      return false
+    }
+  }
+  return false
+}
+
+function toggleMapTheme(theme: any) {
+  if (!map || !storedLayers) return
+  const activeBaseLayer = storedLayers.value.base
+  const storedOverlays = storedLayers.value.overlays
+  if (theme == 'dark') {
+    if (activeBaseLayer == 'Bing') {
+      const children = storedOverlays.includes('Bing Streetside')
+        ? [bingBaseDarkLayer, bingTerrainLayer, bingStreetideLayer]
+        : [bingBaseDarkLayer, bingTerrainLayer]
+
+      replaceBaseLayerContents('Bing', children)
+    }
+    else if (activeBaseLayer == 'Carto') {
+      cartoLayer.setUrl('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}@2x.png')
+      cartoLayer.redraw()
+    }
+    else if (activeBaseLayer == 'OSM') {
+      osmLayer.setUrl('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}@2x.png')
+      osmLayer.redraw()
+    }
+
+  } else if (theme === 'light') {
+    if (activeBaseLayer == 'Bing') {
+      const children = storedOverlays.includes('Bing Streetside')
+        ? [bingBaseLayer, bingTerrainLayer, bingStreetideLayer]
+        : [bingBaseLayer, bingTerrainLayer]
+
+      replaceBaseLayerContents('Bing', children)
+    }
+    else if (activeBaseLayer == 'Carto') {
+      cartoLayer.setUrl('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png')
+      cartoLayer.redraw()
+    }
+    else if (activeBaseLayer == 'OSM') {
+      osmLayer.setUrl('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
+      osmLayer.redraw()
+    }
+
+  }
+}
+
+watch(
+  () => themeMode.value,
+  (newTheme) => {
+    try {
+      toggleMapTheme(newTheme)
+    } catch (err) {
+      console.error('Failed to apply map theme:', err)
+    }
+  },
+  { immediate: true }
+)
 
 function selectLayer(layerKey: string) {
   const layer = loadedLayers[layerKey]
