@@ -30,6 +30,7 @@ import { MapillaryLayer } from './layers/mapillaryLayer'
 import { ASIGLayer } from './layers/asigLayer'
 import { JaLayer } from './layers/jaLayer'
 import { VegbilderLayer } from './layers/vegbilderLayer'
+import { CARTO_MAPS_TEMPLATE, GOOGLE_MAPS_TEMPLATE, OSM_TEMPLATE, PETAL_MAPS_TEMPLATE } from './constants'
 
 import { useStore } from '@/store'
 const { selected, select, state } = useStore()
@@ -38,62 +39,30 @@ let map: L.Map
 const currentZoom = ref(1)
 const themeMode = useColorMode()
 
-let roadmapBaseLayer = L.tileLayer(
-  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m2!1e0!2sm!3m7!2sen!3scn!5e1105!12m1!1e3!12m1!1e2!4e0!5m5!1e0!8m2!1e1!1e1!8i47083502!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
-  { minZoom: 1, maxZoom: 20 },
-)
-let roadmapLabelsLayer = L.tileLayer(
-  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m2!1e0!2sm!3m7!2sen!3scn!5e1105!12m1!1e2!12m1!1e15!4e0!5m5!1e0!8m2!1e1!1e1!8i47083502!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
-  { minZoom: 1, maxZoom: 20, pane: 'labelPane' },
-)
+let roadmapBaseLayer = L.tileLayer(themeMode.value == 'dark' ? GOOGLE_MAPS_TEMPLATE.Roadmap_Dark : GOOGLE_MAPS_TEMPLATE.Roadmap)
+let roadmapLabelsLayer = L.tileLayer(themeMode.value == 'dark' ? GOOGLE_MAPS_TEMPLATE.Labels_Dark : GOOGLE_MAPS_TEMPLATE.Roadmap_Labels, { pane: 'labelPane' },)
 let roadmapLayer = L.layerGroup([roadmapBaseLayer, roadmapLabelsLayer])
 
-const terrainBaseLayer = L.tileLayer(
-  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m2!1e0!2sm!2m1!1e4!3m9!2sen!3scn!5e1105!12m1!1e67!12m1!1e3!12m1!1e2!4e0!5m5!1e0!8m2!1e1!1e1!8i47083502!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
-  { minZoom: 1, maxZoom: 20 },
-)
+const terrainBaseLayer = L.tileLayer(themeMode.value == 'dark' ? GOOGLE_MAPS_TEMPLATE.Terrain_Dark : GOOGLE_MAPS_TEMPLATE.Terrain)
 const terrainLayer = L.layerGroup([terrainBaseLayer, roadmapLabelsLayer])
 
-const satelliteBaseLayer = L.tileLayer(
-  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m2!1e1!2sm!3m3!2sen!3sus!5e1105!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
-  { minZoom: 1, maxZoom: 20 },
-)
-const satelliteLabelsLayer = L.tileLayer(
-  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m2!1e0!2sm!3m5!2sen!3sus!5e1105!12m1!1e4!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
-  { pane: 'labelPane' },
-)
+const satelliteBaseLayer = L.tileLayer(GOOGLE_MAPS_TEMPLATE.Satellite)
+const satelliteLabelsLayer = L.tileLayer(GOOGLE_MAPS_TEMPLATE.Satellite_Labels, { pane: 'labelPane' },)
 const satelliteLayer = L.layerGroup([satelliteBaseLayer, satelliteLabelsLayer])
 
-const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  minZoom: 1,
-  maxZoom: 20,
-  attribution:
-    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-})
+const osmLayer = L.tileLayer(OSM_TEMPLATE.Standard, { maxZoom: 18 })
 
-const cartoLayer = L.tileLayer(themeMode.value == 'dark' ? 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png@2x' :
-  'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png', { minZoom: 1, maxZoom: 20 })
+const cartoLayer = L.tileLayer(themeMode.value == 'dark' ? CARTO_MAPS_TEMPLATE.Dark : CARTO_MAPS_TEMPLATE.Light)
 
 let bingMapsLayer = L.layerGroup([themeMode.value == 'light' ? bingBaseLayer : bingBaseDarkLayer, bingTerrainLayer])
 
-const petalMapsLayer = L.tileLayer("https://maprastertile-drcn.dbankcdn.cn/display-service/v1/online-render/getTile/24.12.10.10/{z}/{x}/{y}/?language=en&p=46&scale=2&mapType=ROADMAP&presetStyleId=standard&pattern=JPG&key=DAEDANitav6P7Q0lWzCzKkLErbrJG4kS1u%2FCpEe5ZyxW5u0nSkb40bJ%2BYAugRN03fhf0BszLS1rCrzAogRHDZkxaMrloaHPQGO6LNg==",
-  { maxZoom: 18 }
-)
+const petalMapsLayer = L.tileLayer(themeMode.value == 'light' ? PETAL_MAPS_TEMPLATE.Light : PETAL_MAPS_TEMPLATE.Dark)
 
 const tencentBaseLayer = L.tileLayer("http://rt{s}.map.gtimg.com/realtimerender?z={z}&x={x}&y={-y}&type=vector", { subdomains: ["0", "1", "2", "3"], minNativeZoom: 3, minZoom: 1 })
 
-const gsvLayer = L.tileLayer(
-  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*211m3*211e3*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
-  { maxZoom: 20 }
-)
-const gsvLayer2 = L.tileLayer(
-  'https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i{z}!2i{x}!3i{y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e0',
-  { maxZoom: 20 }
-)
-const gsvLayer3 = L.tileLayer(
-  'https://maps.googleapis.com/maps/vt?pb=%211m5%211m4%211i{z}%212i{x}%213i{y}%214i256%212m8%211e2%212ssvv%214m2%211scc%212s*211m3*211e3*212b1*213e2*211m3*211e10*212b1*213e2*212b1*214b1%214m2%211ssvl%212s*212b1%213m16%212sen%213sUS%2112m4%211e68%212m2%211sset%212sRoadmap%2112m3%211e37%212m1%211ssmartmaps%2112m4%211e26%212m2%211sstyles%212sp.c%3A%23d6336c%2Cs.e%3Ag.f%7Cp.c%3A%23d6336c%7Cp.w%3A1%2Cs.e%3Ag.s%7Cp.c%3A%23fcc2d7%7Cp.w%3A3%215m1%215f1.3499999046325684',
-  { maxZoom: 20 }
-)
+const gsvLayer = L.tileLayer(GOOGLE_MAPS_TEMPLATE.StreetView)
+const gsvLayer2 = L.tileLayer(GOOGLE_MAPS_TEMPLATE.StreetView_Official)
+const gsvLayer3 = L.tileLayer(GOOGLE_MAPS_TEMPLATE.StreetView_Unofficial)
 
 const appleCoverageLayer = L.tileLayer('https://lookmap.eu.pythonanywhere.com/bluelines_raster_2x/{z}/{x}/{y}.png', { minZoom: 1, maxZoom: 7 })
 
@@ -176,6 +145,7 @@ async function initMap(el: string) {
     preferCanvas: true,
     zoom: 1,
     minZoom: 1,
+    maxZoom: 19,
     zoomControl: false,
     worldCopyJump: true,
   })
@@ -522,7 +492,15 @@ function toggleMapTheme(theme: any) {
   const activeBaseLayer = storedLayers.value.base
   const storedOverlays = storedLayers.value.overlays
   if (theme == 'dark') {
-    if (activeBaseLayer == 'Bing') {
+    if (activeBaseLayer == 'Google Roadmap') {
+      roadmapBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Roadmap_Dark)
+      roadmapLabelsLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Labels_Dark)
+    }
+    else if (activeBaseLayer == 'Google Terrain') {
+      terrainBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Terrain_Dark)
+      roadmapLabelsLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Labels_Dark)
+    }
+    else if (activeBaseLayer == 'Bing') {
       const children = storedOverlays.includes('Bing Streetside')
         ? [bingBaseDarkLayer, bingTerrainLayer, bingStreetideLayer]
         : [bingBaseDarkLayer, bingTerrainLayer]
@@ -530,16 +508,23 @@ function toggleMapTheme(theme: any) {
       replaceBaseLayerContents('Bing', children)
     }
     else if (activeBaseLayer == 'Carto') {
-      cartoLayer.setUrl('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}@2x.png')
-      cartoLayer.redraw()
+      cartoLayer.setUrl(CARTO_MAPS_TEMPLATE.Dark)
     }
     else if (activeBaseLayer == 'OSM') {
-      osmLayer.setUrl('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}@2x.png')
-      osmLayer.redraw()
+      osmLayer.setUrl(OSM_TEMPLATE.Dark)
+    }
+    else if (activeBaseLayer == 'Petal') {
+      petalMapsLayer.setUrl(PETAL_MAPS_TEMPLATE.Dark)
     }
 
   } else if (theme === 'light') {
-    if (activeBaseLayer == 'Bing') {
+    if (activeBaseLayer == 'Google Roadmap') {
+      resetGoogleMapsTheme()
+    }
+    else if (activeBaseLayer == 'Google Terrain') {
+      resetGoogleMapsTheme()
+    }
+    else if (activeBaseLayer == 'Bing') {
       const children = storedOverlays.includes('Bing Streetside')
         ? [bingBaseLayer, bingTerrainLayer, bingStreetideLayer]
         : [bingBaseLayer, bingTerrainLayer]
@@ -547,14 +532,14 @@ function toggleMapTheme(theme: any) {
       replaceBaseLayerContents('Bing', children)
     }
     else if (activeBaseLayer == 'Carto') {
-      cartoLayer.setUrl('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png')
-      cartoLayer.redraw()
+      cartoLayer.setUrl(CARTO_MAPS_TEMPLATE.Light)
     }
     else if (activeBaseLayer == 'OSM') {
-      osmLayer.setUrl('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
-      osmLayer.redraw()
+      osmLayer.setUrl(OSM_TEMPLATE.Standard)
     }
-
+    else if (activeBaseLayer == 'Petal') {
+      petalMapsLayer.setUrl(PETAL_MAPS_TEMPLATE.Light)
+    }
   }
 }
 
@@ -569,6 +554,12 @@ watch(
   },
   { immediate: true }
 )
+
+function resetGoogleMapsTheme() {
+  roadmapBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Roadmap)
+  roadmapLabelsLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Roadmap_Labels)
+  terrainBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Terrain)
+}
 
 function selectLayer(layerKey: string) {
   const layer = loadedLayers[layerKey]
