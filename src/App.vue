@@ -21,7 +21,7 @@
         <Collapsible :is-open="panels.general" class="flex flex-col gap-1 max-h-[180px] overflow-y-auto mt-2 p-1">
           <div class="flex items-center justify-between ml-1 mr-1">
             Theme :
-            <select v-model="themeMode" class="w-20 ml-10">
+            <select v-model="themeMode" class="w-22 ml-10">
               <option value="auto">System</option>
               <option value="light">Light</option>
               <option value="dark">Dark</option>
@@ -29,7 +29,7 @@
           </div>
           <div class="flex items-center justify-between ml-1 mr-1">
             Notifications :
-            <select v-model="settings.notification.enabled" class="w-20 ml-2">
+            <select v-model="settings.notification.enabled" class="w-22 ml-2">
               <option :value=true>On</option>
               <option :value=false>Off</option>
             </select>
@@ -47,32 +47,34 @@
           </div>
           <div class="flex items-center justify-between ml-1 mr-1">
             Maps Theme :
-                <select v-model="settings.mapTheme" class="w-20 ml-2"
-                  @change="toggleMapTheme(settings.mapTheme)">
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                </select>
+            <select v-model="settings.mapTheme" class="w-22 ml-2 text-xs" @change="toggleMapTheme(settings.mapTheme)">
+              <option value="default">Default</option>
+              <option value="classic">Classic</option>
+              <option value="retro">Retro</option>
+              <option value="dark">Dark</option>
+              <option value="night">Night</option>
+              <option value="aubergine">Aubergine</option>
+            </select>
           </div>
           <div class="flex items-center justify-between ml-1 mr-1">
             Google StreetView :
-            <select v-model="settings.coverage.enabled" class="w-20 ml-2">
+            <select v-model="settings.coverage.enabled" class="w-22 ml-2">
               <option :value=true>Custom</option>
               <option :value=false>Default</option>
             </select>
           </div>
           <div v-if="settings.coverage.enabled" class="gap-1 ml-4">
             <div class="flex items-center justify-between">
-              Blobby Layer : 
+              Blobby Layer :
               <Checkbox v-model="settings.coverage.blobby" class="mr-1" @change="toggleGSVBlobbyLayer">
-              {{ settings.coverage.blobby ? 'Enabled' : 'Disabled' }}
-            </Checkbox> 
+                {{ settings.coverage.blobby ? 'Enabled' : 'Disabled' }}
+              </Checkbox>
             </div>
             <div class="flex items-center justify-between">
               Color Scheme :
               <div class="flex items-center gap-2">
                 <span class="h-4 min-w-8 preview" :data-scheme="settings.coverage.colorScheme"></span>
-                <select v-model="settings.coverage.colorScheme" class="w-32 ml-2 mr-1"
-                  @change="toggleGSVLayerCorlor(settings.coverage.colorScheme)">
+                <select v-model="settings.coverage.colorScheme" class="w-32 ml-2 mr-1" @change="setGSVLayerStyle">
                   <option value="Default">Default</option>
                   <option value="Crimson">Crimson</option>
                   <option value="Deep_Pink">Deep_Pink</option>
@@ -88,10 +90,21 @@
                 </select>
               </div>
             </div>
+
+            <div class="flex items-center justify-between">
+              Line Width :
+              <Slider v-model="settings.coverage.line" class="w-41 mr-3" :min="0.5" :max="2" :step="0.1"
+                @update:modelValue="setGSVLayerStyle" :showTooltip="'focus'" :format="val => Number(val).toFixed(1)" />
+            </div>
+            <div class="flex items-center justify-between">
+              Stoke Width :
+              <Slider v-model="settings.coverage.stroke" class="w-41 mr-3" :min="1.0" :max="5.0" :step="0.2"
+                @update:modelValue="setGSVLayerStyle" :showTooltip="'focus'" :format="val => Number(val).toFixed(1)" />
+            </div>
             <div class="flex items-center justify-between">
               Opacity :
-              <Slider v-model="settings.coverage.opacity" type="range" @update:modelValue="setCoverageLayerOpacity"
-                :min="0" :max="1.0" :step="0.1" :tooltips="false" class="w-41 mr-4" />
+              <Slider v-model="settings.coverage.opacity" class="w-41 mr-3" @update:modelValue="setCoverageLayerOpacity"
+                :min="0" :max="1.0" :step="0.1" :showTooltip="'focus'" :format="val => Number(val).toFixed(1)" />
             </div>
 
           </div>
@@ -722,6 +735,8 @@ import {
   deselectLayer,
   toggleLayer,
   toggleGSVBlobbyLayer,
+  toggleMapTheme,
+  setGSVLayerStyle,
   setCoverageLayerOpacity,
   importLayer,
   exportLayer,
@@ -733,8 +748,6 @@ import {
   currentZoom,
   icons,
   type LayerMeta,
-  toggleGSVLayerCorlor,
-  toggleMapTheme,
 } from '@/map'
 
 import { blueLineDetector } from '@/composables/blueLineDetector'

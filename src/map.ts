@@ -15,7 +15,7 @@ import markerViolet from '@/assets/markers/marker-violet.png'
 import markerGreen from '@/assets/markers/marker-green.png'
 import markerPink from '@/assets/markers/marker-pink.png'
 
-import { ref, watch } from 'vue'
+import { capitalize, ref, watch } from 'vue'
 import { useStorage, useColorMode } from '@vueuse/core'
 import { settings } from '@/settings'
 import { isValidGeoJSON, getPolygonName, readFileAsText } from '@/composables/utils.ts'
@@ -46,15 +46,15 @@ const { selected, select, state } = useStore()
 let map: L.Map
 const currentZoom = ref(1)
 
-let roadmapBaseLayer = L.tileLayer(settings.mapTheme == 'dark' ? GOOGLE_MAPS_TEMPLATE.Roadmap_Dark : GOOGLE_MAPS_TEMPLATE.Roadmap, { maxZoom: 19 })
-let roadmapLabelsLayer = L.tileLayer(settings.mapTheme == 'dark' ? GOOGLE_MAPS_TEMPLATE.Labels_Dark : GOOGLE_MAPS_TEMPLATE.Roadmap_Labels, { pane: 'labelPane', maxZoom: 19 },)
+let roadmapBaseLayer = L.tileLayer(GOOGLE_MAPS_TEMPLATE[`Roadmap_${capitalize(settings.mapTheme)}`], { maxZoom: 19 })
+let roadmapLabelsLayer = L.tileLayer(GOOGLE_MAPS_TEMPLATE[`Labels_${capitalize(settings.mapTheme)}`], { pane: 'labelPane', maxZoom: 19 },)
 let roadmapLayer = L.layerGroup([roadmapBaseLayer, roadmapLabelsLayer])
 
-const terrainBaseLayer = L.tileLayer(settings.mapTheme == 'dark' ? GOOGLE_MAPS_TEMPLATE.Terrain_Dark : GOOGLE_MAPS_TEMPLATE.Terrain, { maxZoom: 19 })
+const terrainBaseLayer = L.tileLayer(GOOGLE_MAPS_TEMPLATE[`Terrain_${capitalize(settings.mapTheme)}`], { maxZoom: 19 })
 const terrainLayer = L.layerGroup([terrainBaseLayer, roadmapLabelsLayer])
 
 const satelliteBaseLayer = L.tileLayer(GOOGLE_MAPS_TEMPLATE.Satellite, { maxZoom: 19 })
-const satelliteLabelsLayer = L.tileLayer(GOOGLE_MAPS_TEMPLATE.Satellite_Labels, { pane: 'labelPane', maxZoom: 19 },)
+const satelliteLabelsLayer = L.tileLayer(GOOGLE_MAPS_TEMPLATE.Labels_Satellite, { pane: 'labelPane', maxZoom: 19 },)
 const satelliteLayer = L.layerGroup([satelliteBaseLayer, satelliteLabelsLayer])
 
 const osmLayer = L.tileLayer(OSM_TEMPLATE.Standard, { maxZoom: 18 })
@@ -550,27 +550,21 @@ function toggleMapTheme(theme: string) {
 }
 
 function toggleGoogleMapsTheme(theme: string) {
-  if (theme == 'light') {
-    roadmapBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Roadmap)
-    roadmapLabelsLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Roadmap_Labels)
-    terrainBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Terrain)
-  }
-  else {
-    roadmapBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Roadmap_Dark)
-    terrainBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Terrain_Dark)
-    roadmapLabelsLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Labels_Dark)
-  }
+  roadmapBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE[`Roadmap_${capitalize(theme)}`])
+  terrainBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE[`Terrain_${capitalize(theme)}`])
+  roadmapLabelsLayer.setUrl(GOOGLE_MAPS_TEMPLATE[`Labels_${capitalize(theme)}`])
 }
 
-function toggleGSVLayerCorlor(scheme: string) {
+function setGSVLayerStyle() {
   if (settings.coverage.blobby) {
     toggleGSVBlobbyLayer()
     return
   }
-  const [stroke, fill] = ColorScheme[scheme]
-  gsvLayer.setUrl(`https://maps.googleapis.com/maps/vt?pb=%211m5%211m4%211i{z}%212i{x}%213i{y}%214i256%212m8%211e2%212ssvv%214m2%211scc%212s*211m3*211e2*212b1*213e2*211m3*211e3*212b1*213e2*211m3*211e10*212b1*213e2*212b1*214b1%214m2%211ssvl%212s*212b1%213m16%212sen%213sUS%2112m4%211e68%212m2%211sset%212sRoadmap%2112m3%211e37%212m1%211ssmartmaps%2112m4%211e26%212m2%211sstyles%212sp.c%3A%23${stroke}%2Cs.e%3Ag.f%7Cp.c%3A%23${stroke}%7Cp.w%3A1.1%2Cs.e%3Ag.s%7Cp.c%3A%23${fill}%7Cp.w%3A${scheme == 'Default' ? 3 : 1.5}%215m1%215f1.35`)
-  gsvLayer2.setUrl(`https://maps.googleapis.com/maps/vt?pb=%211m5%211m4%211i{z}%212i{x}%213i{y}%214i256%212m8%211e2%212ssvv%214m2%211scc%212s*211m3*211e2*212b1*213e2*212b1*214b1%214m2%211ssvl%212s*212b1%213m16%212sen%213sUS%2112m4%211e68%212m2%211sset%212sRoadmap%2112m3%211e37%212m1%211ssmartmaps%2112m4%211e26%212m2%211sstyles%212sp.c%3A%23${stroke}%2Cs.e%3Ag.f%7Cp.c%3A%23${stroke}%7Cp.w%3A1.1%2Cs.e%3Ag.s%7Cp.c%3A%23${fill}%7Cp.w%3A${scheme == 'Default' ? 3 : 1.5}%215m1%215f1.35`)
-  gsvLayer3.setUrl(`https://maps.googleapis.com/maps/vt?pb=%211m5%211m4%211i{z}%212i{x}%213i{y}%214i256%212m8%211e2%212ssvv%214m2%211scc%212s*211m3*211e3*212b1*213e2*211m3*211e10*212b1*213e2*212b1*214b1%214m2%211ssvl%212s*212b1%213m16%212sen%213sUS%2112m4%211e68%212m2%211sset%212sRoadmap%2112m3%211e37%212m1%211ssmartmaps%2112m4%211e26%212m2%211sstyles%212sp.c%3A%23${stroke}%2Cs.e%3Ag.f%7Cp.c%3A%23${stroke}%7Cp.w%3A1%2Cs.e%3Ag.s%7Cp.c%3A%23${fill}%7Cp.w%3A${scheme == 'Default' ? 3 : 1.5}%215m1%215f1.35`)
+  const [stroke, fill] = ColorScheme[settings.coverage.colorScheme]
+  const [line_width, stroke_width] = [settings.coverage.line, settings.coverage.stroke]
+  gsvLayer.setUrl(`https://maps.googleapis.com/maps/vt?pb=%211m5%211m4%211i{z}%212i{x}%213i{y}%214i256%212m8%211e2%212ssvv%214m2%211scc%212s*211m3*211e2*212b1*213e2*211m3*211e3*212b1*213e2*211m3*211e10*212b1*213e2*212b1*214b1%214m2%211ssvl%212s*212b1%213m16%212sen%213sUS%2112m4%211e68%212m2%211sset%212sRoadmap%2112m3%211e37%212m1%211ssmartmaps%2112m4%211e26%212m2%211sstyles%212sp.c%3A%23${stroke}%2Cs.e%3Ag.f%7Cp.c%3A%23${stroke}%7Cp.w%3A${line_width}%2Cs.e%3Ag.s%7Cp.c%3A%23${fill}%7Cp.w%3A${stroke_width}%215m1%215f1.35`)
+  gsvLayer2.setUrl(`https://maps.googleapis.com/maps/vt?pb=%211m5%211m4%211i{z}%212i{x}%213i{y}%214i256%212m8%211e2%212ssvv%214m2%211scc%212s*211m3*211e2*212b1*213e2*212b1*214b1%214m2%211ssvl%212s*212b1%213m16%212sen%213sUS%2112m4%211e68%212m2%211sset%212sRoadmap%2112m3%211e37%212m1%211ssmartmaps%2112m4%211e26%212m2%211sstyles%212sp.c%3A%23${stroke}%2Cs.e%3Ag.f%7Cp.c%3A%23${stroke}%7Cp.w%3A${line_width}%2Cs.e%3Ag.s%7Cp.c%3A%23${fill}%7Cp.w%3A${stroke_width}%215m1%215f1.35`)
+  gsvLayer3.setUrl(`https://maps.googleapis.com/maps/vt?pb=%211m5%211m4%211i{z}%212i{x}%213i{y}%214i256%212m8%211e2%212ssvv%214m2%211scc%212s*211m3*211e3*212b1*213e2*211m3*211e10*212b1*213e2*212b1*214b1%214m2%211ssvl%212s*212b1%213m16%212sen%213sUS%2112m4%211e68%212m2%211sset%212sRoadmap%2112m3%211e37%212m1%211ssmartmaps%2112m4%211e26%212m2%211sstyles%212sp.c%3A%23${stroke}%2Cs.e%3Ag.f%7Cp.c%3A%23${stroke}%7Cp.w%3A${line_width}%2Cs.e%3Ag.s%7Cp.c%3A%23${fill}%7Cp.w%3A${stroke_width}%215m1%215f1.35`)
 }
 
 function toggleGSVBlobbyLayer() {
@@ -580,7 +574,7 @@ function toggleGSVBlobbyLayer() {
     gsvLayer2.setUrl(`https://maps.googleapis.com/maps/vt?pb=!1m5!1m4!1i{z}!2i{x}!3i{y}!4i256!2m8!1e2!2ssvv%214m2%211scc%212s*211m3*211e2*212b1*213e2*211m3*211e3*212b1*213e2*211m3*211e10*212b1*213e2*212b1*214b1%214m2%211ssvl%212s*21%213m16%212sen%213sUS%2112m4%211e68%212m2%211sset%212sRoadmap%2112m3%211e37%212m1%211ssmartmaps%2112m4%211e26%212m2%211sstyles%212sp.c%3A%23${stroke}%215m1%215f1.35`)
     gsvLayer3.setUrl(`https://maps.googleapis.com/maps/vt?pb=!1m5!1m4!1i{z}!2i{x}!3i{y}!4i256!2m8!1e2!2ssvv%214m2%211scc%212s*211m3*211e2*212b1*213e2*211m3*211e3*212b1*213e2*211m3*211e10*212b1*213e2*212b1*214b1%214m2%211ssvl%212s*21%213m16%212sen%213sUS%2112m4%211e68%212m2%211sset%212sRoadmap%2112m3%211e37%212m1%211ssmartmaps%2112m4%211e26%212m2%211sstyles%212sp.c%3A%23${stroke}%215m1%215f1.35`)
   }
-  else toggleGSVLayerCorlor(settings.coverage.colorScheme)
+  else setGSVLayerStyle()
 }
 
 function setCoverageLayerOpacity(opacity: number) {
@@ -781,7 +775,7 @@ export {
   toggleMapTheme,
   toggleGSVBlobbyLayer,
   setCoverageLayerOpacity,
-  toggleGSVLayerCorlor,
+  setGSVLayerStyle  ,
   importLayer,
   exportLayer,
   updateMarkerLayers,

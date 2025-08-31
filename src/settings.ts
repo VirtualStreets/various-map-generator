@@ -12,13 +12,15 @@ const defaultSettings = {
     allPolygonsComplete: false,
   },
 
-  mapTheme: 'light',
+  mapTheme: 'default',
 
   coverage: {
     enabled: false,
-    blobby:false,
+    blobby: false,
     opacity: 1,
     colorScheme: 'Default',
+    line: 1.1,
+    stroke:1.8,
   },
 
   apiKeys: {
@@ -366,7 +368,15 @@ const defaultSettings = {
   checkImports: false,
 }
 
-const storedSettings = useStorage('map_generator__settings_v6', defaultSettings)
+const CURRENT_KEYS = Object.keys(localStorage)
+const CURRENT_KEY = 'map_generator__settings_v7'
+
+CURRENT_KEYS.forEach((key: string) => {
+  if (key !== CURRENT_KEY && localStorage.getItem(key) !== null && key.startsWith('map_generator__settings_')) {
+    localStorage.removeItem(key)
+  }
+})
+const storedSettings = useStorage(CURRENT_KEY, defaultSettings)
 const settings = reactive(storedSettings.value)
 settings.toDate = currentDate
 settings.toYear = currentYear
