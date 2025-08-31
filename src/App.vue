@@ -248,7 +248,7 @@
                 <input type="number" v-model.number="settings.numOfGenerators" min="1" max="10"
                   class="w-10 h-5 px-2 py-1 border rounded text-right" />
                 <Slider v-model="settings.numOfGenerators" range="true" :min="1" :max="10" :step="1" :tooltips="false"
-                  class="w-32" />
+                  class="w-32 mr-2" />
               </div>
             </div>
 
@@ -264,7 +264,7 @@
               class="flex items-center justify-between">
               Radius :
               <span>
-                <input type="number" v-model.number="settings.radius" @input="handleRadiusInput" />
+                <input type="number" v-model.number="settings.radius" @change="handleRadiusInput" />
                 m
               </span>
             </div>
