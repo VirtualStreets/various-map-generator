@@ -30,7 +30,7 @@ import { MapillaryLayer } from './layers/mapillaryLayer'
 import { ASIGLayer } from './layers/asigLayer'
 import { JaLayer } from './layers/jaLayer'
 import { VegbilderLayer } from './layers/vegbilderLayer'
-import { ZoomCoverageLayer } from './layers/panoramasLayer'
+import { ZoomCoverageLayer } from './layers/panoramasLayer.js'
 import {
   ColorScheme,
   CARTO_MAPS_TEMPLATE,
