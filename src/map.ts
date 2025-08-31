@@ -564,7 +564,6 @@ watch(
 )
 
 function toggleGoogleMapsTheme(theme: string) {
-  if (settings.coverage.enabled) return
   if (theme == 'light') {
     roadmapBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Roadmap)
     roadmapLabelsLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Roadmap_Labels)
