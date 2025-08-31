@@ -45,13 +45,12 @@ const { selected, select, state } = useStore()
 
 let map: L.Map
 const currentZoom = ref(1)
-const themeMode = useColorMode()
 
-let roadmapBaseLayer = L.tileLayer(themeMode.value == 'dark' ? GOOGLE_MAPS_TEMPLATE.Roadmap_Dark : GOOGLE_MAPS_TEMPLATE.Roadmap, { maxZoom: 19 })
-let roadmapLabelsLayer = L.tileLayer(themeMode.value == 'dark' ? GOOGLE_MAPS_TEMPLATE.Labels_Dark : GOOGLE_MAPS_TEMPLATE.Roadmap_Labels, { pane: 'labelPane', maxZoom: 19 },)
+let roadmapBaseLayer = L.tileLayer(settings.mapTheme == 'dark' ? GOOGLE_MAPS_TEMPLATE.Roadmap_Dark : GOOGLE_MAPS_TEMPLATE.Roadmap, { maxZoom: 19 })
+let roadmapLabelsLayer = L.tileLayer(settings.mapTheme == 'dark' ? GOOGLE_MAPS_TEMPLATE.Labels_Dark : GOOGLE_MAPS_TEMPLATE.Roadmap_Labels, { pane: 'labelPane', maxZoom: 19 },)
 let roadmapLayer = L.layerGroup([roadmapBaseLayer, roadmapLabelsLayer])
 
-const terrainBaseLayer = L.tileLayer(themeMode.value == 'dark' ? GOOGLE_MAPS_TEMPLATE.Terrain_Dark : GOOGLE_MAPS_TEMPLATE.Terrain, { maxZoom: 19 })
+const terrainBaseLayer = L.tileLayer(settings.mapTheme == 'dark' ? GOOGLE_MAPS_TEMPLATE.Terrain_Dark : GOOGLE_MAPS_TEMPLATE.Terrain, { maxZoom: 19 })
 const terrainLayer = L.layerGroup([terrainBaseLayer, roadmapLabelsLayer])
 
 const satelliteBaseLayer = L.tileLayer(GOOGLE_MAPS_TEMPLATE.Satellite, { maxZoom: 19 })
@@ -60,18 +59,18 @@ const satelliteLayer = L.layerGroup([satelliteBaseLayer, satelliteLabelsLayer])
 
 const osmLayer = L.tileLayer(OSM_TEMPLATE.Standard, { maxZoom: 18 })
 
-const cartoLayer = L.tileLayer(themeMode.value == 'dark' ? CARTO_MAPS_TEMPLATE.Dark : CARTO_MAPS_TEMPLATE.Light)
+const cartoLayer = L.tileLayer(settings.mapTheme == 'dark' ? CARTO_MAPS_TEMPLATE.Dark : CARTO_MAPS_TEMPLATE.Light)
 
-let bingMapsLayer = L.layerGroup([themeMode.value == 'light' ? bingBaseLayer : bingBaseDarkLayer, bingTerrainLayer])
+let bingMapsLayer = L.layerGroup([settings.mapTheme == 'light' ? bingBaseLayer : bingBaseDarkLayer, bingTerrainLayer])
 
-const petalMapsLayer = L.tileLayer(themeMode.value == 'light' ? PETAL_MAPS_TEMPLATE.Light : PETAL_MAPS_TEMPLATE.Dark)
+const petalMapsLayer = L.tileLayer(settings.mapTheme == 'light' ? PETAL_MAPS_TEMPLATE.Light : PETAL_MAPS_TEMPLATE.Dark)
 
-const tencentBaseLayer = L.tileLayer(themeMode.value == 'light' ? TENCENT_MAPS_TEMPLATE.Light : TENCENT_MAPS_TEMPLATE.Dark, { subdomains: ["0", "1", "2", "3"], minNativeZoom: 3, minZoom: 1 })
+const tencentBaseLayer = L.tileLayer(settings.mapTheme == 'light' ? TENCENT_MAPS_TEMPLATE.Light : TENCENT_MAPS_TEMPLATE.Dark, { subdomains: ["0", "1", "2", "3"], minNativeZoom: 3, minZoom: 1 })
 
 const gsvLayer = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.StreetView_Blobby : GOOGLE_MAPS_TEMPLATE.StreetView, { maxZoom: 19 })
 const gsvLayer2 = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.StreetView_Blobby : GOOGLE_MAPS_TEMPLATE.StreetView_Official, { maxZoom: 19 })
 const gsvLayer3 = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.StreetView_Blobby : GOOGLE_MAPS_TEMPLATE.StreetView_Unofficial, { maxZoom: 19 })
-const gsvLayer4 = new PanoramasLayer({ minZoom:16, pane: "panoramasPane" });
+const gsvLayer4 = new PanoramasLayer({ minZoom: 16, pane: "panoramasPane" });
 
 const appleCoverageLayer = L.tileLayer('https://lookmap.eu.pythonanywhere.com/bluelines_raster_2x/{z}/{x}/{y}.png', { minZoom: 1, maxZoom: 7 })
 
