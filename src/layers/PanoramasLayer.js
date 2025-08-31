@@ -35,7 +35,7 @@ function B0({ x: t, y: e, z: s }) {
   ];
 }
 
-export class PanoramasLayer extends L.GridLayer {
+export class ZoomCoverageLayer extends L.GridLayer {
   constructor(e = {}) {
     super({
       ...e,

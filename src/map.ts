@@ -30,7 +30,7 @@ import { MapillaryLayer } from './layers/mapillaryLayer'
 import { ASIGLayer } from './layers/asigLayer'
 import { JaLayer } from './layers/jaLayer'
 import { VegbilderLayer } from './layers/vegbilderLayer'
-import { PanoramasLayer } from './layers/panoramasLayer'
+import { ZoomCoverageLayer } from './layers/panoramasLayer'
 import {
   ColorScheme,
   CARTO_MAPS_TEMPLATE,
@@ -71,7 +71,7 @@ const tencentBaseLayer = L.tileLayer(themeMode.value == 'light' ? TENCENT_MAPS_T
 const gsvLayer = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.StreetView_Blobby : GOOGLE_MAPS_TEMPLATE.StreetView, { maxZoom: 19 })
 const gsvLayer2 = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.StreetView_Blobby : GOOGLE_MAPS_TEMPLATE.StreetView_Official, { maxZoom: 19 })
 const gsvLayer3 = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.StreetView_Blobby : GOOGLE_MAPS_TEMPLATE.StreetView_Unofficial, { maxZoom: 19 })
-const panoramasLayer = new PanoramasLayer({ minZoom:16, pane: "panoramasPane" });
+const gsvLayer4 = new ZoomCoverageLayer({ minZoom:16, pane: "panoramasPane" });
 
 const appleCoverageLayer = L.tileLayer('https://lookmap.eu.pythonanywhere.com/bluelines_raster_2x/{z}/{x}/{y}.png', { minZoom: 1, maxZoom: 7 })
 
@@ -96,7 +96,7 @@ const overlayMaps = {
   'Google Street View': gsvLayer,
   'Google Street View Official Only': gsvLayer2,
   'Google Unofficial Coverage Only': gsvLayer3,
-  'Google Street View Panoramas((requires zoom level 16+)': panoramasLayer,
+  'Google Street View Panoramas((requires zoom level 16+)': gsvLayer4,
   'Apple Look Around': appleCoverageLayer,
   'Apple Look Around (requires zoom level 10+)': AppleLayer,
   'Bing Streetside': bingStreetideLayer,
