@@ -133,21 +133,21 @@ hr {
 /* GSV Coverage Layer Color Scheme Preview — use stroke (border) + fill (background) */
 .preview {
   box-sizing: border-box;
-  background-color: #99e9f2; /* Default fill (fallback) */
-  border: 2px solid #1098ad; /* Default stroke (fallback) */
+  background-color: #1098ad; /* Default fill (fallback) */
+  border: 2px solid #99e9f2; /* Default stroke (fallback) */
 }
 
 /* Use item[0] as stroke (border) and item[1] as fill (background) */
-.preview[data-scheme="Default"]    { background-color: #99e9f2; border-color: #1098ad; }
-.preview[data-scheme="Crimson"]    { background-color: #ffc9c9; border-color: #f03e3e; }
-.preview[data-scheme="Deep_Pink"]  { background-color: #fcc2d7; border-color: #d6336c; }
-.preview[data-scheme="Blue_Violet"]{ background-color: #eebefa; border-color: #ae3ec9; }
-.preview[data-scheme="Slate_Blue"] { background-color: #d0bfff; border-color: #7048e8; }
-.preview[data-scheme="Royal_Blue"] { background-color: #bac8ff; border-color: #4263eb; }
-.preview[data-scheme="Dodger_Blue"]{ background-color: #a5d8ff; border-color: #1c7ed6; }
-.preview[data-scheme="Sea_Green"]  { background-color: #96f2d7; border-color: #0ca678; }
-.preview[data-scheme="Lime_Green"] { background-color: #b2f2bb; border-color: #37b24d; }
-.preview[data-scheme="Olive_Drab"] { background-color: #d8f5a2; border-color: #74b816; }
-.preview[data-scheme="Orange"]     { background-color: #ffec99; border-color: #f59f00; }
-.preview[data-scheme="Dark_Orange"]{ background-color: #ffd8a8; border-color: #f76707; }
-.preview[data-scheme="Brown"]      { background-color: #f7ca9e; border-color: #bd5f1b; }
+.preview[data-scheme="Default"]    { border-color: #99e9f2; background-color: #1098ad; }
+.preview[data-scheme="Crimson"]    { border-color: #ffc9c9; background-color: #f03e3e; }
+.preview[data-scheme="Deep_Pink"]  { border-color: #fcc2d7; background-color: #d6336c; }
+.preview[data-scheme="Blue_Violet"]{ border-color: #eebefa; background-color: #ae3ec9; }
+.preview[data-scheme="Slate_Blue"] { border-color: #d0bfff; background-color: #7048e8; }
+.preview[data-scheme="Royal_Blue"] { border-color: #bac8ff; background-color: #4263eb; }
+.preview[data-scheme="Dodger_Blue"]{ border-color: #a5d8ff; background-color: #1c7ed6; }
+.preview[data-scheme="Sea_Green"]  { border-color: #96f2d7; background-color: #0ca678; }
+.preview[data-scheme="Lime_Green"] { border-color: #b2f2bb; background-color: #37b24d; }
+.preview[data-scheme="Olive_Drab"] { border-color: #d8f5a2; background-color: #74b816; }
+.preview[data-scheme="Orange"]     { border-color: #ffec99; background-color: #f59f00; }
+.preview[data-scheme="Dark_Orange"]{ border-color: #ffd8a8; background-color: #f76707; }
+.preview[data-scheme="Brown"]      { border-color: #f7ca9e; background-color: #bd5f1b; }
