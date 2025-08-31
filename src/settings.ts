@@ -12,6 +12,8 @@ const defaultSettings = {
     allPolygonsComplete: false,
   },
 
+  mapTheme: 'light',
+
   coverage: {
     enabled: false,
     blobby:false,

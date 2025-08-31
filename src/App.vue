@@ -46,7 +46,15 @@
             </Checkbox>
           </div>
           <div class="flex items-center justify-between ml-1 mr-1">
-            GSV Coverage :
+            Maps Theme :
+                <select v-model="settings.mapTheme" class="w-20 ml-2"
+                  @change="toggleMapTheme(settings.mapTheme)">
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                </select>
+          </div>
+          <div class="flex items-center justify-between ml-1 mr-1">
+            Google StreetView :
             <select v-model="settings.coverage.enabled" class="w-20 ml-2">
               <option :value=true>Custom</option>
               <option :value=false>Default</option>
@@ -726,6 +734,7 @@ import {
   icons,
   type LayerMeta,
   toggleGSVLayerCorlor,
+  toggleMapTheme,
 } from '@/map'
 
 import { blueLineDetector } from '@/composables/blueLineDetector'

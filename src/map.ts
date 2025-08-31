@@ -191,7 +191,6 @@ async function initMap(el: string) {
   map.on('baselayerchange', (e) => {
     const name = baseLayerToName.get(e.layer)
     if (name) storedLayers.value.base = name as BaseMapName
-    toggleMapTheme(themeMode.value)
   })
   map.on('overlayadd', (e) => {
     const name = overlayLayerToName.get(e.layer) as OverlayMapName
@@ -551,18 +550,6 @@ function toggleMapTheme(theme: string) {
   }
 }
 
-watch(
-  () => themeMode.value,
-  (newTheme) => {
-    try {
-      toggleMapTheme(newTheme)
-    } catch (err) {
-      console.error('Failed to apply map theme:', err)
-    }
-  },
-  { immediate: true }
-)
-
 function toggleGoogleMapsTheme(theme: string) {
   if (theme == 'light') {
     roadmapBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Roadmap)
@@ -792,6 +779,7 @@ export {
   selectLayer,
   deselectLayer,
   toggleLayer,
+  toggleMapTheme,
   toggleGSVBlobbyLayer,
   setCoverageLayerOpacity,
   toggleGSVLayerCorlor,
