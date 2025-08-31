@@ -30,7 +30,15 @@ import { MapillaryLayer } from './layers/mapillaryLayer'
 import { ASIGLayer } from './layers/asigLayer'
 import { JaLayer } from './layers/jaLayer'
 import { VegbilderLayer } from './layers/vegbilderLayer'
-import { CARTO_MAPS_TEMPLATE, GOOGLE_MAPS_TEMPLATE, OSM_TEMPLATE, PETAL_MAPS_TEMPLATE } from './constants'
+import { PanoramasLayer } from './layers/panoramasLayer'
+import {
+  ColorScheme,
+  CARTO_MAPS_TEMPLATE,
+  TENCENT_MAPS_TEMPLATE,
+  GOOGLE_MAPS_TEMPLATE,
+  OSM_TEMPLATE,
+  PETAL_MAPS_TEMPLATE
+} from './constants'
 
 import { useStore } from '@/store'
 const { selected, select, state } = useStore()
@@ -39,15 +47,15 @@ let map: L.Map
 const currentZoom = ref(1)
 const themeMode = useColorMode()
 
-let roadmapBaseLayer = L.tileLayer(themeMode.value == 'dark' ? GOOGLE_MAPS_TEMPLATE.Roadmap_Dark : GOOGLE_MAPS_TEMPLATE.Roadmap)
-let roadmapLabelsLayer = L.tileLayer(themeMode.value == 'dark' ? GOOGLE_MAPS_TEMPLATE.Labels_Dark : GOOGLE_MAPS_TEMPLATE.Roadmap_Labels, { pane: 'labelPane' },)
+let roadmapBaseLayer = L.tileLayer(themeMode.value == 'dark' ? GOOGLE_MAPS_TEMPLATE.Roadmap_Dark : GOOGLE_MAPS_TEMPLATE.Roadmap, { maxZoom: 19 })
+let roadmapLabelsLayer = L.tileLayer(themeMode.value == 'dark' ? GOOGLE_MAPS_TEMPLATE.Labels_Dark : GOOGLE_MAPS_TEMPLATE.Roadmap_Labels, { pane: 'labelPane', maxZoom: 19 },)
 let roadmapLayer = L.layerGroup([roadmapBaseLayer, roadmapLabelsLayer])
 
-const terrainBaseLayer = L.tileLayer(themeMode.value == 'dark' ? GOOGLE_MAPS_TEMPLATE.Terrain_Dark : GOOGLE_MAPS_TEMPLATE.Terrain)
+const terrainBaseLayer = L.tileLayer(themeMode.value == 'dark' ? GOOGLE_MAPS_TEMPLATE.Terrain_Dark : GOOGLE_MAPS_TEMPLATE.Terrain, { maxZoom: 19 })
 const terrainLayer = L.layerGroup([terrainBaseLayer, roadmapLabelsLayer])
 
-const satelliteBaseLayer = L.tileLayer(GOOGLE_MAPS_TEMPLATE.Satellite)
-const satelliteLabelsLayer = L.tileLayer(GOOGLE_MAPS_TEMPLATE.Satellite_Labels, { pane: 'labelPane' },)
+const satelliteBaseLayer = L.tileLayer(GOOGLE_MAPS_TEMPLATE.Satellite, { maxZoom: 19 })
+const satelliteLabelsLayer = L.tileLayer(GOOGLE_MAPS_TEMPLATE.Satellite_Labels, { pane: 'labelPane', maxZoom: 19 },)
 const satelliteLayer = L.layerGroup([satelliteBaseLayer, satelliteLabelsLayer])
 
 const osmLayer = L.tileLayer(OSM_TEMPLATE.Standard, { maxZoom: 18 })
@@ -58,11 +66,12 @@ let bingMapsLayer = L.layerGroup([themeMode.value == 'light' ? bingBaseLayer : b
 
 const petalMapsLayer = L.tileLayer(themeMode.value == 'light' ? PETAL_MAPS_TEMPLATE.Light : PETAL_MAPS_TEMPLATE.Dark)
 
-const tencentBaseLayer = L.tileLayer("http://rt{s}.map.gtimg.com/realtimerender?z={z}&x={x}&y={-y}&type=vector", { subdomains: ["0", "1", "2", "3"], minNativeZoom: 3, minZoom: 1 })
+const tencentBaseLayer = L.tileLayer(themeMode.value == 'light' ? TENCENT_MAPS_TEMPLATE.Light : TENCENT_MAPS_TEMPLATE.Dark, { subdomains: ["0", "1", "2", "3"], minNativeZoom: 3, minZoom: 1 })
 
-const gsvLayer = L.tileLayer(GOOGLE_MAPS_TEMPLATE.StreetView)
-const gsvLayer2 = L.tileLayer(GOOGLE_MAPS_TEMPLATE.StreetView_Official)
-const gsvLayer3 = L.tileLayer(GOOGLE_MAPS_TEMPLATE.StreetView_Unofficial)
+const gsvLayer = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.StreetView_Blobby : GOOGLE_MAPS_TEMPLATE.StreetView, { maxZoom: 19 })
+const gsvLayer2 = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.StreetView_Blobby : GOOGLE_MAPS_TEMPLATE.StreetView_Official, { maxZoom: 19 })
+const gsvLayer3 = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.StreetView_Blobby : GOOGLE_MAPS_TEMPLATE.StreetView_Unofficial, { maxZoom: 19 })
+const panoramasLayer = new PanoramasLayer({ minZoom:16, pane: "panoramasPane" });
 
 const appleCoverageLayer = L.tileLayer('https://lookmap.eu.pythonanywhere.com/bluelines_raster_2x/{z}/{x}/{y}.png', { minZoom: 1, maxZoom: 7 })
 
@@ -86,20 +95,21 @@ const baseMaps = {
 const overlayMaps = {
   'Google Street View': gsvLayer,
   'Google Street View Official Only': gsvLayer2,
-  'Google Unofficial coverage only': gsvLayer3,
+  'Google Unofficial Coverage Only': gsvLayer3,
+  'Google Street View Panoramas((requires zoom level 16+)': panoramasLayer,
   'Apple Look Around': appleCoverageLayer,
-  'Apple Look Around (Only Works at Zoom Level 10+)': AppleLayer,
+  'Apple Look Around (requires zoom level 10+)': AppleLayer,
   'Bing Streetside': bingStreetideLayer,
   'Yandex Panorama': yandexCoverageLayer,
-  'Naver Panorama (Only Works at Zoom Level 15+)': NaverLayer,
-  'Mapillary (Only Works at Zoom Level 15+)': MapillaryLayer,
-  'Streetview.vn (Only Works at Zoom Level 10+)': OpenMapLayer,
+  'Naver Panorama (requires zoom level 15+)': NaverLayer,
+  'Mapillary (requires zoom level 15+)': MapillaryLayer,
+  'Streetview.vn (requires zoom level 10+)': OpenMapLayer,
   //'Mapy.cz Panorama  (Only Works at Zoom Level 5+)': mapyczCoverageLayer,
-  'Tencent Street View (Only Works at Zoom Level 5+)': TencentCoverageLayer,
-  'Baidu Street View (Only Works at Zoom Level 5+)': baiduCoverageLayer,
-  'Já 360 (Only Works at Zoom Level 5+)': JaLayer,
+  'Tencent Street View (requires zoom level 5+)': TencentCoverageLayer,
+  'Baidu Street View (requires zoom level5+)': baiduCoverageLayer,
+  'Já 360 (requires zoom level 5+)': JaLayer,
   'AlbaniaStreetView': ASIGLayer,
-  'Vegbilder Norway (Only Works at Zoom Level 10+)': VegbilderLayer,
+  'Vegbilder Norway (requires zoom level 10+)': VegbilderLayer,
 
 }
 
@@ -151,7 +161,9 @@ async function initMap(el: string) {
   })
 
   map.createPane('labelPane')
-  map.getPane('labelPane')!.style.zIndex = '300'
+  map.createPane('panoramasPane')
+  map.getPane('labelPane')!.style.zIndex = '300';
+  map.getPane("panoramasPane")!.style.zIndex = '500';
 
   const selectedBase = baseMaps[storedLayers.value.base] || roadmapLayer
   selectedBase.addTo(map)
@@ -487,20 +499,16 @@ function replaceBaseLayerContents(name: string, newChildren: L.Layer[]): boolean
   return false
 }
 
-function toggleMapTheme(theme: any) {
+function toggleMapTheme(theme: string) {
   if (!map || !storedLayers) return
   const activeBaseLayer = storedLayers.value.base
   const storedOverlays = storedLayers.value.overlays
+
+  if (activeBaseLayer == 'Google Roadmap' || activeBaseLayer == 'Google Terrain') {
+    toggleGoogleMapsTheme(theme)
+  }
   if (theme == 'dark') {
-    if (activeBaseLayer == 'Google Roadmap') {
-      roadmapBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Roadmap_Dark)
-      roadmapLabelsLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Labels_Dark)
-    }
-    else if (activeBaseLayer == 'Google Terrain') {
-      terrainBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Terrain_Dark)
-      roadmapLabelsLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Labels_Dark)
-    }
-    else if (activeBaseLayer == 'Bing') {
+    if (activeBaseLayer == 'Bing') {
       const children = storedOverlays.includes('Bing Streetside')
         ? [bingBaseDarkLayer, bingTerrainLayer, bingStreetideLayer]
         : [bingBaseDarkLayer, bingTerrainLayer]
@@ -516,15 +524,12 @@ function toggleMapTheme(theme: any) {
     else if (activeBaseLayer == 'Petal') {
       petalMapsLayer.setUrl(PETAL_MAPS_TEMPLATE.Dark)
     }
+    else if (activeBaseLayer == 'Tencent') {
+      tencentBaseLayer.setUrl(TENCENT_MAPS_TEMPLATE.Dark)
+    }
 
   } else if (theme === 'light') {
-    if (activeBaseLayer == 'Google Roadmap') {
-      resetGoogleMapsTheme()
-    }
-    else if (activeBaseLayer == 'Google Terrain') {
-      resetGoogleMapsTheme()
-    }
-    else if (activeBaseLayer == 'Bing') {
+    if (activeBaseLayer == 'Bing') {
       const children = storedOverlays.includes('Bing Streetside')
         ? [bingBaseLayer, bingTerrainLayer, bingStreetideLayer]
         : [bingBaseLayer, bingTerrainLayer]
@@ -539,6 +544,9 @@ function toggleMapTheme(theme: any) {
     }
     else if (activeBaseLayer == 'Petal') {
       petalMapsLayer.setUrl(PETAL_MAPS_TEMPLATE.Light)
+    }
+    else if (activeBaseLayer == 'Tencent') {
+      tencentBaseLayer.setUrl(TENCENT_MAPS_TEMPLATE.Light)
     }
   }
 }
@@ -555,10 +563,47 @@ watch(
   { immediate: true }
 )
 
-function resetGoogleMapsTheme() {
-  roadmapBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Roadmap)
-  roadmapLabelsLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Roadmap_Labels)
-  terrainBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Terrain)
+function toggleGoogleMapsTheme(theme: string) {
+  if (settings.coverage.enabled) return
+  if (theme == 'light') {
+    roadmapBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Roadmap)
+    roadmapLabelsLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Roadmap_Labels)
+    terrainBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Terrain)
+  }
+  else {
+    roadmapBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Roadmap_Dark)
+    terrainBaseLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Terrain_Dark)
+    roadmapLabelsLayer.setUrl(GOOGLE_MAPS_TEMPLATE.Labels_Dark)
+  }
+}
+
+function toggleGSVLayerCorlor(scheme: string) {
+  if (settings.coverage.blobby) {
+    toggleGSVBlobbyLayer()
+    return
+  }
+  const [stroke, fill] = ColorScheme[scheme]
+  gsvLayer.setUrl(`https://maps.googleapis.com/maps/vt?pb=%211m5%211m4%211i{z}%212i{x}%213i{y}%214i256%212m8%211e2%212ssvv%214m2%211scc%212s*211m3*211e2*212b1*213e2*211m3*211e3*212b1*213e2*211m3*211e10*212b1*213e2*212b1*214b1%214m2%211ssvl%212s*212b1%213m16%212sen%213sUS%2112m4%211e68%212m2%211sset%212sRoadmap%2112m3%211e37%212m1%211ssmartmaps%2112m4%211e26%212m2%211sstyles%212sp.c%3A%23${stroke}%2Cs.e%3Ag.f%7Cp.c%3A%23${stroke}%7Cp.w%3A1.1%2Cs.e%3Ag.s%7Cp.c%3A%23${fill}%7Cp.w%3A${scheme == 'Default' ? 3 : 1.5}%215m1%215f1.35`)
+  gsvLayer2.setUrl(`https://maps.googleapis.com/maps/vt?pb=%211m5%211m4%211i{z}%212i{x}%213i{y}%214i256%212m8%211e2%212ssvv%214m2%211scc%212s*211m3*211e2*212b1*213e2*212b1*214b1%214m2%211ssvl%212s*212b1%213m16%212sen%213sUS%2112m4%211e68%212m2%211sset%212sRoadmap%2112m3%211e37%212m1%211ssmartmaps%2112m4%211e26%212m2%211sstyles%212sp.c%3A%23${stroke}%2Cs.e%3Ag.f%7Cp.c%3A%23${stroke}%7Cp.w%3A1.1%2Cs.e%3Ag.s%7Cp.c%3A%23${fill}%7Cp.w%3A${scheme == 'Default' ? 3 : 1.5}%215m1%215f1.35`)
+  gsvLayer3.setUrl(`https://maps.googleapis.com/maps/vt?pb=%211m5%211m4%211i{z}%212i{x}%213i{y}%214i256%212m8%211e2%212ssvv%214m2%211scc%212s*211m3*211e3*212b1*213e2*211m3*211e10*212b1*213e2*212b1*214b1%214m2%211ssvl%212s*212b1%213m16%212sen%213sUS%2112m4%211e68%212m2%211sset%212sRoadmap%2112m3%211e37%212m1%211ssmartmaps%2112m4%211e26%212m2%211sstyles%212sp.c%3A%23${stroke}%2Cs.e%3Ag.f%7Cp.c%3A%23${stroke}%7Cp.w%3A1%2Cs.e%3Ag.s%7Cp.c%3A%23${fill}%7Cp.w%3A${scheme == 'Default' ? 3 : 1.5}%215m1%215f1.35`)
+}
+
+function toggleGSVBlobbyLayer() {
+  if (settings.coverage.blobby) {
+    const [stroke, fill] = ColorScheme[settings.coverage.colorScheme]
+    gsvLayer.setUrl(`https://maps.googleapis.com/maps/vt?pb=!1m5!1m4!1i{z}!2i{x}!3i{y}!4i256!2m8!1e2!2ssvv%214m2%211scc%212s*211m3*211e2*212b1*213e2*211m3*211e3*212b1*213e2*211m3*211e10*212b1*213e2*212b1*214b1%214m2%211ssvl%212s*21%213m16%212sen%213sUS%2112m4%211e68%212m2%211sset%212sRoadmap%2112m3%211e37%212m1%211ssmartmaps%2112m4%211e26%212m2%211sstyles%212sp.c%3A%23${stroke}%215m1%215f1.35`)
+    gsvLayer2.setUrl(`https://maps.googleapis.com/maps/vt?pb=!1m5!1m4!1i{z}!2i{x}!3i{y}!4i256!2m8!1e2!2ssvv%214m2%211scc%212s*211m3*211e2*212b1*213e2*211m3*211e3*212b1*213e2*211m3*211e10*212b1*213e2*212b1*214b1%214m2%211ssvl%212s*21%213m16%212sen%213sUS%2112m4%211e68%212m2%211sset%212sRoadmap%2112m3%211e37%212m1%211ssmartmaps%2112m4%211e26%212m2%211sstyles%212sp.c%3A%23${stroke}%215m1%215f1.35`)
+    gsvLayer3.setUrl(`https://maps.googleapis.com/maps/vt?pb=!1m5!1m4!1i{z}!2i{x}!3i{y}!4i256!2m8!1e2!2ssvv%214m2%211scc%212s*211m3*211e2*212b1*213e2*211m3*211e3*212b1*213e2*211m3*211e10*212b1*213e2*212b1*214b1%214m2%211ssvl%212s*21%213m16%212sen%213sUS%2112m4%211e68%212m2%211sset%212sRoadmap%2112m3%211e37%212m1%211ssmartmaps%2112m4%211e26%212m2%211sstyles%212sp.c%3A%23${stroke}%215m1%215f1.35`)
+  }
+  else toggleGSVLayerCorlor(settings.coverage.colorScheme)
+}
+
+function setCoverageLayerOpacity(opacity: number) {
+  Object.values(overlayMaps).forEach((layer) => {
+    if (map.hasLayer(layer)) {
+      layer.setOpacity(opacity)
+    }
+  })
 }
 
 function selectLayer(layerKey: string) {
@@ -748,6 +793,9 @@ export {
   selectLayer,
   deselectLayer,
   toggleLayer,
+  toggleGSVBlobbyLayer,
+  setCoverageLayerOpacity,
+  toggleGSVLayerCorlor,
   importLayer,
   exportLayer,
   updateMarkerLayers,

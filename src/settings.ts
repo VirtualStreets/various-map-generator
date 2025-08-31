@@ -12,6 +12,13 @@ const defaultSettings = {
     allPolygonsComplete: false,
   },
 
+  coverage: {
+    enabled: false,
+    blobby:false,
+    opacity: 1,
+    colorScheme: 'Default',
+  },
+
   apiKeys: {
     mapycz: ''
   },

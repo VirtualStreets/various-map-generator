@@ -18,7 +18,7 @@
           <h2>General</h2>
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
         </div>
-        <Collapsible :is-open="panels.general" class="flex flex-col gap-1 max-h-[160px] overflow-y-auto mt-2 p-1">
+        <Collapsible :is-open="panels.general" class="flex flex-col gap-1 max-h-[180px] overflow-y-auto mt-2 p-1">
           <div class="flex items-center justify-between ml-1 mr-1">
             Theme :
             <select v-model="themeMode" class="w-20 ml-10">
@@ -34,7 +34,7 @@
               <option :value=false>Off</option>
             </select>
           </div>
-          <div v-if="settings.notification.enabled" class="flex-1 min-h-0 overflow-y-auto ml-4 mb-1">
+          <div v-if="settings.notification.enabled" class="flex-1 ml-4 mb-1">
             <Checkbox v-model="settings.notification.anyLocation">
               Any location found
             </Checkbox>
@@ -44,6 +44,48 @@
             <Checkbox v-model="settings.notification.allPolygonsComplete">
               All polygons completed
             </Checkbox>
+          </div>
+          <div class="flex items-center justify-between ml-1 mr-1">
+            GSV Coverage :
+            <select v-model="settings.coverage.enabled" class="w-20 ml-2">
+              <option :value=true>Custom</option>
+              <option :value=false>Default</option>
+            </select>
+          </div>
+          <div v-if="settings.coverage.enabled" class="gap-1 ml-4">
+            <div class="flex items-center justify-between">
+              Blobby Layer : 
+              <Checkbox v-model="settings.coverage.blobby" class="mr-1" @change="toggleGSVBlobbyLayer">
+              {{ settings.coverage.blobby ? 'Enabled' : 'Disabled' }}
+            </Checkbox> 
+            </div>
+            <div class="flex items-center justify-between">
+              Color Scheme :
+              <div class="flex items-center gap-2">
+                <span class="h-4 min-w-8 preview" :data-scheme="settings.coverage.colorScheme"></span>
+                <select v-model="settings.coverage.colorScheme" class="w-32 ml-2 mr-1"
+                  @change="toggleGSVLayerCorlor(settings.coverage.colorScheme)">
+                  <option value="Default">Default</option>
+                  <option value="Crimson">Crimson</option>
+                  <option value="Deep_Pink">Deep_Pink</option>
+                  <option value="Blue_Violet">Blue_Violet</option>
+                  <option value="Slate_Blue">Slate_Blue</option>
+                  <option value="Royal_Blue">Royal_Blue</option>
+                  <option value="Dodger_Blue">Dodger_Blue</option>
+                  <option value="Lime_Green">Lime_Green</option>
+                  <option value="Olive_Drab">Olive_Drab</option>
+                  <option value="Orange">Orange</option>
+                  <option value="Dark_Orange">Dark_Orange</option>
+                  <option value="Brown">Brown</option>
+                </select>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              Opacity :
+              <Slider v-model="settings.coverage.opacity" type="range" @update:modelValue="setCoverageLayerOpacity"
+                :min="0" :max="1.0" :step="0.1" :tooltips="false" class="w-41 mr-4" />
+            </div>
+
           </div>
           <div v-if="settings.provider === 'mapycz'" class="flex items-center justify-between ml-1 mr-1 gap-2">
             <span>MapyCZ API Key :</span>
@@ -197,15 +239,15 @@
               <div class="flex items-center gap-4">
                 <input type="number" v-model.number="settings.numOfGenerators" min="1" max="10"
                   class="w-10 h-5 px-2 py-1 border rounded text-right" />
-                <Slider v-model="settings.numOfGenerators" :min="1" :max="10" :step="1" :tooltips="false"
+                <Slider v-model="settings.numOfGenerators" range="true" :min="1" :max="10" :step="1" :tooltips="false"
                   class="w-32" />
               </div>
             </div>
 
             <div class="flex justify-between">
-              Speed:
+              Speed :
               <span>
-                <input type="number" v-model.number="settings.speed" min="1" max="1000" @change="handleSpeedInput" />
+                <input type="number" v-model.number="settings.speed" min="1" max="1000" @input="handleSpeedInput" />
                 attemps
               </span>
             </div>
@@ -214,7 +256,7 @@
               class="flex items-center justify-between">
               Radius :
               <span>
-                <input type="number" v-model.number="settings.radius" @change="handleRadiusInput" />
+                <input type="number" v-model.number="settings.radius" @input="handleRadiusInput" />
                 m
               </span>
             </div>
@@ -671,6 +713,8 @@ import {
   selectLayer,
   deselectLayer,
   toggleLayer,
+  toggleGSVBlobbyLayer,
+  setCoverageLayerOpacity,
   importLayer,
   exportLayer,
   updateMarkerLayers,
@@ -681,6 +725,7 @@ import {
   currentZoom,
   icons,
   type LayerMeta,
+  toggleGSVLayerCorlor,
 } from '@/map'
 
 import { blueLineDetector } from '@/composables/blueLineDetector'
@@ -813,7 +858,7 @@ async function start() {
 
   const generator = []
   for (const polygon of selected.value) {
-    for (let i = 0; i < settings.numOfGenerators; i++) {
+    for (let i = 0; i < Math.min(settings.numOfGenerators, 10); i++) {
       generator.push(generate(polygon as Polygon))
     }
   }
@@ -1493,9 +1538,9 @@ function addLocation(
               url = `https://ja.is/kort/?x=${(x)}&y=${(y)}&nz=15&ja360=1&jh=${heading}`
               break
             case 'vegbilder':
-              url = `https://vegbilder.atlas.vegvesen.no/?lat=${location.lat}&lng=${location.lng}&zoom=15&view=image&imageId=${location.panoId}&year=${location.imageDate?.slice(0,4)}`
+              url = `https://vegbilder.atlas.vegvesen.no/?lat=${location.lat}&lng=${location.lng}&zoom=15&view=image&imageId=${location.panoId}&year=${location.imageDate?.slice(0, 4)}`
               break
-              default:
+            default:
               url = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}&heading=${heading}&pitch=${pitch}&fov=${180 / 2 ** zoom}`
           }
 
