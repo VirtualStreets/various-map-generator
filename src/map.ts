@@ -190,6 +190,7 @@ async function initMap(el: string) {
   map.on('baselayerchange', (e) => {
     const name = baseLayerToName.get(e.layer)
     if (name) storedLayers.value.base = name as BaseMapName
+    toggleMapTheme()
   })
   map.on('overlayadd', (e) => {
     const name = overlayLayerToName.get(e.layer) as OverlayMapName
