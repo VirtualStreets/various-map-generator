@@ -57,15 +57,15 @@ const satelliteBaseLayer = L.tileLayer(GOOGLE_MAPS_TEMPLATE.Satellite, { maxZoom
 const satelliteLabelsLayer = L.tileLayer(GOOGLE_MAPS_TEMPLATE.Labels_Satellite, { pane: 'labelPane', maxZoom: 19 },)
 const satelliteLayer = L.layerGroup([satelliteBaseLayer, satelliteLabelsLayer])
 
-const osmLayer = L.tileLayer(settings.mapTheme != 'dark' ? OSM_TEMPLATE.Standard : OSM_TEMPLATE.Dark, { maxZoom: 18 })
+const osmLayer = L.tileLayer(!['dark', 'night'].includes(settings.mapTheme) ? OSM_TEMPLATE.Standard : OSM_TEMPLATE.Dark, { maxZoom: 18 })
 
-const cartoLayer = L.tileLayer(settings.mapTheme == 'dark' ? CARTO_MAPS_TEMPLATE.Dark : CARTO_MAPS_TEMPLATE.Light)
+const cartoLayer = L.tileLayer(['dark', 'night'].includes(settings.mapTheme) ? CARTO_MAPS_TEMPLATE.Dark : CARTO_MAPS_TEMPLATE.Light)
 
-let bingMapsLayer = L.layerGroup([settings.mapTheme != 'dark' ? bingBaseLayer : bingBaseDarkLayer, bingTerrainLayer])
+let bingMapsLayer = L.layerGroup([!['dark', 'night'].includes(settings.mapTheme) ? bingBaseLayer : bingBaseDarkLayer, bingTerrainLayer])
 
-const petalMapsLayer = L.tileLayer(settings.mapTheme != 'dark' ? PETAL_MAPS_TEMPLATE.Light : PETAL_MAPS_TEMPLATE.Dark)
+const petalMapsLayer = L.tileLayer(!['dark', 'night'].includes(settings.mapTheme) ? PETAL_MAPS_TEMPLATE.Light : PETAL_MAPS_TEMPLATE.Dark)
 
-const tencentBaseLayer = L.tileLayer(settings.mapTheme != 'dark' ? TENCENT_MAPS_TEMPLATE.Light : TENCENT_MAPS_TEMPLATE.Dark, { subdomains: ["0", "1", "2", "3"], minNativeZoom: 3, minZoom: 1 })
+const tencentBaseLayer = L.tileLayer(!['dark', 'night'].includes(settings.mapTheme) ? TENCENT_MAPS_TEMPLATE.Light : TENCENT_MAPS_TEMPLATE.Dark, { subdomains: ["0", "1", "2", "3"], minNativeZoom: 3, minZoom: 1 })
 
 const gsvLayer = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.StreetView_Blobby : GOOGLE_MAPS_TEMPLATE.StreetView, { maxZoom: 19 })
 const gsvLayer2 = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.StreetView_Blobby : GOOGLE_MAPS_TEMPLATE.StreetView_Official, { maxZoom: 19 })
@@ -505,7 +505,7 @@ function toggleMapTheme(theme: string) {
   if (activeBaseLayer == 'Google Roadmap' || activeBaseLayer == 'Google Terrain') {
     toggleGoogleMapsTheme(theme)
   }
-  if (theme == 'dark') {
+  if (theme == 'dark' || theme == 'night') {
     if (activeBaseLayer == 'Bing') {
       const children = storedOverlays.includes('Bing Streetside')
         ? [bingBaseDarkLayer, bingTerrainLayer, bingStreetideLayer]
