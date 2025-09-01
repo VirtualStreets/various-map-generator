@@ -14,11 +14,11 @@
         </div>
         <Collapsible :is-open="panels.credit" class="gap-1 max-h-[140px] overflow-y-auto mt-1 p-1">
           本项目主体基于
-          <a href="https://github.com/tzhf/map-generator" target="_blank" rel="noopener">@rollin</a>
+          <a href="https://github.com/tzhf" target="_blank" rel="noopener">@rollin</a>
           的 <a href="https://github.com/tzhf/map-generator" target="_blank" rel="noopener">map-generator</a> 项目开发。<br>
           腾讯街景覆盖图层基于
-          <a href="https://github.com/ReAnnannanna/qq-map" target="_blank" rel="noopener">@ReAnna</a>
-          的 <a href="https://github.com/ReAnnannanna/qq-map" target="_blank" rel="noopener">qq-map</a> 项目。<br>
+          <a href="https://github.com/ReAnnannanna" target="_blank" rel="noopener">@ReAnna</a>
+          的 <a href="https://qq-map.netlify.app/" target="_blank" rel="noopener">qq-map</a> 项目。<br>
           苹果街景覆盖图层和生成逻辑基于
           <a href="https://github.com/sk-zk" target="_blank" rel="noopener">@sk-zk</a>
           的 <a href="https://lookmap.eu.pythonanywhere.com/" target="_blank" rel="noopener">Apple Lookaround Viewer</a>
