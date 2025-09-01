@@ -97,7 +97,7 @@
                 @update:modelValue="setGSVLayerStyle" :showTooltip="'focus'" :format="val => Number(val).toFixed(1)" />
             </div>
             <div class="flex items-center justify-between">
-              Stoke Width :
+              Stroke Width :
               <Slider v-model="settings.coverage.stroke" class="w-41 mr-3" :min="1.0" :max="5.0" :step="0.2"
                 @update:modelValue="setGSVLayerStyle" :showTooltip="'focus'" :format="val => Number(val).toFixed(1)" />
             </div>
