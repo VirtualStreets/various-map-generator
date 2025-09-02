@@ -19,16 +19,6 @@ export function getMonthEndTimestamp(monthString: string): number {
   return date.getTime();
 }
 
-export function sendNotification(title: string, body: string) {
-  try {
-    if (Notification.permission === 'granted') {
-      new Notification(title, { body, icon: '/favicon.ico' })
-    }
-  } catch (error) {
-    console.warn('Notification failed:', error)
-  }
-}
-
 async function createDiscordMessage(title: string, pano: {
   panoId: string;
   lat: number;
@@ -48,7 +38,7 @@ async function createDiscordMessage(title: string, pano: {
   else if (pano.road) position_word = 'on'
   const link = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${pano.panoId}`;
   const countryName = getCountryName(pano.country);
-  return `${title}\n\n:flag_${pano.country.toLowerCase()}: :${pano.update_type}: ${MONTHS_NAME[parseInt(pano.imageDate.slice(5, 7)) - 1]} ${pano.imageDate.slice(0, 4)} ${position_word} ${pano.locality || pano.road || ''}${(pano.locality || pano.road) ? ', ' : ''}${pano.region}, ${countryName}\n<${link}>`;
+  return `:white_check_mark: ${title}\n\n:flag_${pano.country.toLowerCase()}:${pano.update_type ? ` :${pano.update_type}: ` : ' '}${MONTHS_NAME[parseInt(pano.imageDate.slice(5, 7)) - 1]} ${pano.imageDate.slice(0, 4)} ${position_word} ${pano.locality || pano.road || ''}${(pano.locality || pano.road) ? ', ' : ''}${pano.region}, ${countryName}\n<${link}>`;
 }
 
 export async function sendToDiscord(url: string,
@@ -83,7 +73,31 @@ export async function sendToDiscord(url: string,
       console.error("Error sending message to Discord.");
     }
   } catch (error) {
-    console.error("Error sending message to Discord: " + error);
+    //console.error("Error sending message to Discord: " + error);
+  }
+}
+
+export function sendNotifications(
+  title: string,
+  body: string,
+  isDiscord: boolean = false,
+  webhook?: string,
+  location?: any,) {
+  try {
+    if (Notification.permission === 'granted') {
+      new Notification(title, { body, icon: '/favicon.ico' })
+    }
+  } catch (error) {
+    console.warn('Notification failed:', error)
+  }
+
+  if (isDiscord && webhook) {
+    try {
+      sendToDiscord(webhook, `**${body}**`, location);
+    }
+    catch (error) {
+      //console.error("Error sending message to Discord: " + error);
+    }
   }
 }
 

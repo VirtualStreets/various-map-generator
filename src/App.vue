@@ -44,7 +44,10 @@
             <Checkbox v-model="settings.notification.allPolygonsComplete">
               All polygons completed
             </Checkbox>
-            <Checkbox v-model="settings.notification.sendToDiscord">
+            <Checkbox
+              v-if="settings.provider.includes('google') &&
+                (settings.notification.anyLocation || settings.notification.onePolygonComplete || settings.notification.allPolygonsComplete)"
+              v-model="settings.notification.sendToDiscord">
               Send notifications to Discord
             </Checkbox>
           </div>
@@ -767,7 +770,7 @@ import {
 import { blueLineDetector } from '@/composables/blueLineDetector'
 import { getTileUrl, getTileColorPresence } from '@/composables/tileColorDetector'
 import {
-  sendNotification,
+  sendNotifications,
   randomPointInPoly,
   isOfficial,
   isPhotosphere,
@@ -1471,7 +1474,6 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
       } else {
         // Gen 4
         location.extra.tags.push('gen4update')
-        location.update_type = 'gen4update'
         return addLocation(location, polygon, icons.gen4)
       }
     })
@@ -1510,42 +1512,39 @@ function addLocation(
 
   if (polygon.found.length < polygon.nbNeeded) {
     polygon.found.push(location)
+
+    const elapsedTime = ((Date.now() - generationStartTime.value) / 1000).toFixed(1)
     if (settings.notification.anyLocation && polygon.found.length === 1) {
-      const elapsedTime = ((Date.now() - generationStartTime.value) / 1000).toFixed(1)
-      sendNotification('Location Found',
-        `Found first location in ${getPolygonName(polygon.feature.properties)} (${elapsedTime}s)`
+      sendNotifications(
+        'Location Found',
+        `Found first location in ${getPolygonName(polygon.feature.properties)} (${elapsedTime}s)`,
+        settings.notification.sendToDiscord && settings.provider.includes('google'),
+        settings.notification.discordWebhook,
+        location
       )
-      if (settings.notification.sendToDiscord && settings.notification.discordWebhook) {
-        sendToDiscord(settings.notification.discordWebhook,
-          `**Found first location in ${getPolygonName(polygon.feature.properties)} (${elapsedTime}s)**`,
-          location)
-      }
     }
 
     if (settings.notification.onePolygonComplete && polygon.found.length >= polygon.nbNeeded) {
-      const elapsedTime = ((Date.now() - generationStartTime.value) / 1000).toFixed(1)
-      sendNotification('Polygon Completed',
-        `${getPolygonName(polygon.feature.properties)} has reached target count (${elapsedTime}s)`
+      sendNotifications(
+        'Polygon Completed',
+        `${getPolygonName(polygon.feature.properties)} has reached its goal (${elapsedTime}s)`,
+        settings.notification.sendToDiscord && settings.provider.includes('google'),
+        settings.notification.discordWebhook
       )
-      if (settings.notification.sendToDiscord && settings.notification.discordWebhook) {
-        sendToDiscord(settings.notification.discordWebhook,
-          `**${getPolygonName(polygon.feature.properties)} has reached target counts (${elapsedTime}s)**`)
-      }
     }
 
     if (settings.notification.allPolygonsComplete) {
       const allComplete = selected.value.every(p => p.found.length >= p.nbNeeded)
       if (allComplete) {
-        const elapsedTime = ((Date.now() - generationStartTime.value) / 1000).toFixed(1)
-        sendNotification('Generation Completed',
-          `All polygons have reached their target counts (${elapsedTime}s)`
+        sendNotifications(
+          'Generation Completed',
+          `All polygons have reached their goals (${elapsedTime}s)`,
+          settings.notification.sendToDiscord && settings.provider.includes('google'),
+          settings.notification.discordWebhook
         )
-        if (settings.notification.sendToDiscord && settings.notification.discordWebhook) {
-          sendToDiscord(settings.notification.discordWebhook,
-            `**All polygons have reached their target counts (${elapsedTime}s)**`)
-        }
       }
     }
+
     if (addMarker) {
       const marker = L.marker([location.lat, location.lng], { icon: iconType, forceZIndex: zIndex })
         .on('click', () => {

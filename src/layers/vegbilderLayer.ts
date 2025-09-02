@@ -71,13 +71,13 @@ class VegbilderWMSLayer extends L.GridLayer {
             };
             
             img.onerror = () => {
-                console.warn('Failed to load Vegbilder WMS tile:', coords);
+                //console.warn('Failed to load Vegbilder WMS tile:', coords);
                 done(undefined, img);
             };
             
             img.src = url;
         } catch (error) {
-            console.error('Error creating Vegbilder tile:', error);
+            //console.error('Error creating Vegbilder tile:', error);
             done(undefined, img);
         }
 
