@@ -13,7 +13,7 @@
       </h1>
     </div>
     <div class="flex-1 min-h-0 flex flex-col gap-1">
-      <div class="container flex flex-col">
+      <div v-if="!state.started" class="container flex flex-col">
         <div class="relative cursor-pointer" @click="panels.general = !panels.general">
           <h2>General</h2>
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
@@ -44,6 +44,20 @@
             <Checkbox v-model="settings.notification.allPolygonsComplete">
               All polygons completed
             </Checkbox>
+            <Checkbox v-model="settings.notification.sendToDiscord">
+              Send notifications to Discord
+            </Checkbox>
+          </div>
+          <div v-if="settings.notification.sendToDiscord" class="flex items-center justify-between ml-1 mr-1 gap-2">
+            <span class="text-md">Discord Webhook URL:</span>
+            <div class="gap-1">
+              <input :type="showDiscordWebhook ? 'text' : 'password'" v-model="settings.notification.discordWebhook"
+                class="w-48 h-6 px-2 py-1 border rounded text-xs" placeholder="Enter your Discord Webhook URL">
+              <button @click="showDiscordWebhook = !showDiscordWebhook" class="ml-1 mr-1" type="button">
+                <component :is="showDiscordWebhook ? EyeClosedIcon : EyeOpenIcon" class="w-4 h-4 stroke-current" />
+                </input>
+              </button>
+            </div>
           </div>
           <div class="flex items-center justify-between ml-1 mr-1">
             Maps Theme :
@@ -775,7 +789,8 @@ import {
   headingToMapillaryX,
   pitchToMapillaryY,
   wgs84_to_isn93,
-  getMonthEndTimestamp
+  getMonthEndTimestamp,
+  sendToDiscord
 } from '@/composables/utils.ts'
 import StreetViewProviders from '@/providers'
 import { degToRad, radToDeg } from 'web-merc-projection/util'
@@ -823,6 +838,7 @@ const { selected, select, state } = useStore()
 const allFoundPanoIds = new Set<string>()
 const generationStartTime = ref<number>(0)
 const showMapyCzApiKey = ref<boolean>(false)
+const showDiscordWebhook = ref<boolean>(false)
 
 const canBeStarted = computed(() =>
   selected.value.some((country) => country.found.length < country.nbNeeded),
@@ -1406,6 +1422,10 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
     heading,
     pitch,
     zoom,
+    country: pano.location.country,
+    region: pano.location.region,
+    locality: pano.location.locality,
+    road: pano.location.road,
     imageDate: pano.imageDate,
     source: `${settings.provider === 'tencent' ? 'qq' : settings.provider}_pano` || '',
     links: [
@@ -1432,6 +1452,7 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
     }
     checkHasBlueLine(pano.location.latLng.toJSON()).then((hasBlueLine) => {
       location.extra.tags.push(hasBlueLine ? 'newroad' : 'noblueline')
+      location.update_type = hasBlueLine ? 'newroad' : 'noblueline'
       return addLocation(location, polygon, hasBlueLine ? icons.newLoc : icons.noBlueLine)
     })
   } else {
@@ -1440,14 +1461,17 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
       if (previousPano?.tiles?.worldSize.height === 1664) {
         // Gen 1
         location.extra.tags.push('gen1update')
+        location.update_type = 'gen1update'
         return addLocation(location, polygon, icons.gen1)
       } else if (previousPano?.tiles?.worldSize.height === 6656) {
         // Gen 2 or 3
         location.extra.tags.push('gen2or3update')
+        location.update_type = 'gen2or3update'
         return addLocation(location, polygon, icons.gen2Or3)
       } else {
         // Gen 4
         location.extra.tags.push('gen4update')
+        location.update_type = 'gen4update'
         return addLocation(location, polygon, icons.gen4)
       }
     })
@@ -1491,6 +1515,11 @@ function addLocation(
       sendNotification('Location Found',
         `Found first location in ${getPolygonName(polygon.feature.properties)} (${elapsedTime}s)`
       )
+      if (settings.notification.sendToDiscord && settings.notification.discordWebhook) {
+        sendToDiscord(settings.notification.discordWebhook,
+          `**Found first location in ${getPolygonName(polygon.feature.properties)} (${elapsedTime}s)**`,
+          location)
+      }
     }
 
     if (settings.notification.onePolygonComplete && polygon.found.length >= polygon.nbNeeded) {
@@ -1498,6 +1527,10 @@ function addLocation(
       sendNotification('Polygon Completed',
         `${getPolygonName(polygon.feature.properties)} has reached target count (${elapsedTime}s)`
       )
+      if (settings.notification.sendToDiscord && settings.notification.discordWebhook) {
+        sendToDiscord(settings.notification.discordWebhook,
+          `**${getPolygonName(polygon.feature.properties)} has reached target counts (${elapsedTime}s)**`)
+      }
     }
 
     if (settings.notification.allPolygonsComplete) {
@@ -1507,6 +1540,10 @@ function addLocation(
         sendNotification('Generation Completed',
           `All polygons have reached their target counts (${elapsedTime}s)`
         )
+        if (settings.notification.sendToDiscord && settings.notification.discordWebhook) {
+          sendToDiscord(settings.notification.discordWebhook,
+            `**All polygons have reached their target counts (${elapsedTime}s)**`)
+        }
       }
     }
     if (addMarker) {

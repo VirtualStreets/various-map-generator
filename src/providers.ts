@@ -99,8 +99,10 @@ function getStreetViewService() {
 
 function parseGoogle(data: any): google.maps.StreetViewPanoramaData {
     try {
-        let roadName = null;
         let country = null;
+        let region = null;
+        let locality = null;
+        let road = null;
         let desc_raw = null;
         let shortDesc_raw = null;
         let service = null;
@@ -128,7 +130,30 @@ function parseGoogle(data: any): google.maps.StreetViewPanoramaData {
             }
         } catch (e) { }
         try {
-            roadName = data[1][0][5][0][12][0][0][0][2][0];
+            const address = data[1][0][3][2][1][0];
+            const parts = address.split(',')
+            if(parts.length > 1){
+                region = parts[parts.length-1].trim();
+                locality=parts[0].trim()
+            } else {
+                region = address;
+            }
+        } catch (e) {
+            try{
+                const address=data[1][0][3][2][0][0]
+                const parts = address.split(',')
+                if(parts.length > 1){
+                    region = parts[parts.length-1].trim();
+                    locality=parts[0].trim()
+                }
+                else region = address;
+            }
+            catch(e){
+                region=null;
+            }
+        }
+        try {
+            road = data[1][0][5][0][12][0][0][0][2][0];
         } catch (e) { }
         try {
             service = data[1][0][6][5][2];
@@ -155,6 +180,9 @@ function parseGoogle(data: any): google.maps.StreetViewPanoramaData {
                 shortDescription: shortDesc_raw,
                 altitude,
                 country,
+                region,
+                locality,
+                road,
                 service
             },
             links: linksRaw ? linksRaw.map((link: any) => ({
@@ -1200,7 +1228,7 @@ async function getFromVegbilder(
             const { lat, lng }: any = request.location
 
             const data = await VegbilderTileGenerator.getTileGeoJsonByLatLng(lat, lng, request.radius || 50)
-            
+
             if (data && data.features && data.features.length > 0) {
                 const idx = Math.floor(Math.random() * data.features.length);
                 feature = data.features[idx];
@@ -1217,7 +1245,7 @@ async function getFromVegbilder(
             onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
             return
         }
-    
+
         const info = VegbilderTileGenerator.extractFeatureInfo(feature)
 
         if (prev?.properties?.id) {

@@ -10,6 +10,8 @@ const defaultSettings = {
     anyLocation: false,
     onePolygonComplete: false,
     allPolygonsComplete: false,
+    sendToDiscord: false,
+    discordWebhook: null,
   },
 
   mapTheme: 'default',

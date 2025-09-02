@@ -36,8 +36,14 @@ interface Panorama {
   heading: number
   pitch: number
   zoom: number
+  country?: string
+  region?: string
+  locality?: string
+  road?: string
   imageDate?: string
   source?: string
+  update_type?: string
+  link?: string
   links?: string[]
   extra?: {
     tags: string[]

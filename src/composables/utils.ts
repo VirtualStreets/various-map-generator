@@ -1,5 +1,16 @@
 import proj4 from 'proj4';
 
+export const MONTHS_NAME = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+export function getCountryName(countryCode: string, locale: string = 'en'): string {
+  try {
+    const displayNames = new Intl.DisplayNames([locale], { type: 'region' });
+    return displayNames.of(countryCode.toUpperCase()) || countryCode;
+  } catch (error) {
+    console.warn('Failed to get country name:', error);
+    return countryCode;
+  }
+}
 
 export function getMonthEndTimestamp(monthString: string): number {
   const date = new Date(monthString);
@@ -15,6 +26,64 @@ export function sendNotification(title: string, body: string) {
     }
   } catch (error) {
     console.warn('Notification failed:', error)
+  }
+}
+
+async function createDiscordMessage(title: string, pano: {
+  panoId: string;
+  lat: number;
+  lng: number;
+  heading: number;
+  imageDate: string;
+  country: string;
+  region: string;
+  locality: string;
+  road: string;
+  update_type: string;
+}): Promise<string> {
+  let position_word = 'in'
+  if (pano.locality) {
+    if (pano.road && pano.road == pano.locality) position_word = 'on'
+  }
+  else if (pano.road) position_word = 'on'
+  const link = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${pano.panoId}`;
+  const countryName = getCountryName(pano.country);
+  return `${title}\n\n:flag_${pano.country.toLowerCase()}: :${pano.update_type}: ${MONTHS_NAME[parseInt(pano.imageDate.slice(5, 7)) - 1]} ${pano.imageDate.slice(0, 4)} ${position_word} ${pano.locality || pano.road || ''}${(pano.locality || pano.road) ? ', ' : ''}${pano.region}, ${countryName}\n<${link}>`;
+}
+
+export async function sendToDiscord(url: string,
+  title: string,
+  data: {
+    panoId: string;
+    lat: number;
+    lng: number;
+    heading: number;
+    imageDate: string;
+    country: string;
+    region: string;
+    road: string;
+    locality: string;
+    update_type: string;
+  }): Promise<void> {
+  const content = data ? await createDiscordMessage(title, data) : title;
+  const payload = JSON.stringify({
+    content,
+    username: "Various Map Generator",
+    avatar_url: "https://various-map-generator.vercel.app/favicon.png"
+  });
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: payload
+    });
+    if (response.status != 204) {
+      console.error("Error sending message to Discord.");
+    }
+  } catch (error) {
+    console.error("Error sending message to Discord: " + error);
   }
 }
 
