@@ -4,7 +4,7 @@
   <div class="absolute bottom-1 left-1/2 -translate-x-1/2 font-bold text-xs text-black">
     Zoom : {{ currentZoom }}
   </div>
-  <div class="absolute top-1 left-1 min-w-90 max-w-[calc(80vw)] 
+  <div class="absolute top-1 left-1 min-w-95 max-w-[calc(80vw)] 
   max-h-[calc(100vh-50px)] flex flex-col gap-1">
     <div class="container">
       <h1 class="logo px-2 py-0.5 flex gap-0.5 items-center justify-center text-xl tracking-tighter">
@@ -52,11 +52,11 @@
             </Checkbox>
           </div>
           <div v-if="settings.notification.sendToDiscord" class="flex items-center justify-between ml-1 mr-1 gap-2">
-            <span class="text-md">Discord Webhook URL:</span>
+            <span>Discord Webhook :</span>
             <div class="gap-1">
               <input :type="showDiscordWebhook ? 'text' : 'password'" v-model="settings.notification.discordWebhook"
-                class="w-48 h-6 px-2 py-1 border rounded text-xs" placeholder="Enter your Discord Webhook URL">
-              <button @click="showDiscordWebhook = !showDiscordWebhook" class="ml-1 mr-1" type="button">
+                class="w-40 h-6 px-2 py-1 border rounded text-xs" placeholder="Enter your Discord Webhook URL">
+              <button @click="showDiscordWebhook = !showDiscordWebhook" class="ml-1" type="button">
                 <component :is="showDiscordWebhook ? EyeClosedIcon : EyeOpenIcon" class="w-4 h-4 stroke-current" />
                 </input>
               </button>
@@ -115,7 +115,7 @@
             </div>
             <div class="flex items-center justify-between">
               Stroke Width :
-              <Slider v-model="settings.coverage.stroke" class="w-41 mr-3" :min="1.0" :max="5.0" :step="0.2"
+              <Slider v-model="settings.coverage.stroke" class="w-41 mr-3" :min="1.0" :max="5.0" :step="0.1"
                 @update:modelValue="setGSVLayerStyle" :showTooltip="'focus'" :format="val => Number(val).toFixed(1)" />
             </div>
             <div class="flex items-center justify-between">
@@ -276,9 +276,9 @@
               Generators :
               <div class="flex items-center gap-4">
                 <input type="number" v-model.number="settings.numOfGenerators" min="1" max="10"
-                  class="w-10 h-5 px-2 py-1 border rounded text-right" />
+                  class="w-8 h-5 px-2 py-1 border rounded text-right" />
                 <Slider v-model="settings.numOfGenerators" range="true" :min="1" :max="10" :step="1" :tooltips="false"
-                  class="w-32 mr-2" />
+                  class="w-30 mr-2" />
               </div>
             </div>
 
