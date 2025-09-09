@@ -19,6 +19,12 @@ export function getMonthEndTimestamp(monthString: string): number {
   return date.getTime();
 }
 
+export function getDayEndTimestamp(dayString: string): number {
+  const date = new Date(dayString);
+  date.setHours(23, 59, 59, 999);
+  return date.getTime();
+}
+
 async function createDiscordMessage(title: string, pano: {
   panoId: string;
   lat: number;
@@ -307,8 +313,8 @@ export function getCameraGeneration(
 
   else if (provider === 'yandex') {
     if (!width) return 0;
-    if (width === 17664) return 2;
-    if (width === 5632) return 1;
+    if (width >= 17664) return 2;
+    else if (width >= 5632) return 1;
     return 'trekker';
   }
 

@@ -72,9 +72,9 @@ async function getFromGoogleZoom(
                 }
                 const data = JSON.parse(text);
                 panoIds = Array.isArray(data?.[1]?.[1]) ? data[1][1].map((item: any) => item?.[0]?.[0]?.[1]) : [];
-                cacheManager.set('google', cacheKey, panoIds);
+                if (panoIds.length > 0) cacheManager.set('google', cacheKey, panoIds);
             }
-            if (Array.isArray(panoIds) && panoIds.length) {
+            if (Array.isArray(panoIds) && panoIds.length > 0) {
                 const result = panoIds[Math.floor(Math.random() * panoIds.length)];
                 if (result) return await getFromGoogle({ pano: result }, onCompleted);
                 else onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS);
@@ -132,24 +132,24 @@ function parseGoogle(data: any): google.maps.StreetViewPanoramaData {
         try {
             const address = data[1][0][3][2][1][0];
             const parts = address.split(',')
-            if(parts.length > 1){
-                region = parts[parts.length-1].trim();
-                locality=parts[0].trim()
+            if (parts.length > 1) {
+                region = parts[parts.length - 1].trim();
+                locality = parts[0].trim()
             } else {
                 region = address;
             }
         } catch (e) {
-            try{
-                const address=data[1][0][3][2][0][0]
+            try {
+                const address = data[1][0][3][2][0][0]
                 const parts = address.split(',')
-                if(parts.length > 1){
-                    region = parts[parts.length-1].trim();
-                    locality=parts[0].trim()
+                if (parts.length > 1) {
+                    region = parts[parts.length - 1].trim();
+                    locality = parts[0].trim()
                 }
                 else region = address;
             }
-            catch(e){
-                region=null;
+            catch (e) {
+                region = null;
             }
         }
         try {

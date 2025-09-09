@@ -47,7 +47,7 @@ export class CacheManager {
   getCache(provider: string): LRUCache<string, any> {
     if (!this.caches.has(provider)) {
       this.checkTotalCacheSize();
-      this.caches.set(provider, new LRUCache(500));
+      this.caches.set(provider, new LRUCache(100));
     }
     this.lastUsedProvider = provider;
     return this.caches.get(provider)!;
