@@ -510,6 +510,7 @@ export function getPolygonName(properties: Polygon['feature']['properties']) {
   return (
     properties.name ||
     properties.NAME ||
+    properties.NAME_1 ||
     properties.NAMELSAD ||
     properties.NAMELSAD10 ||
     properties.city ||
