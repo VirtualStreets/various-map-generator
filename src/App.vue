@@ -13,7 +13,7 @@
       </h1>
     </div>
     <div class="flex-1 min-h-0 flex flex-col gap-1">
-      <div v-if="!state.started" class="container flex flex-col">
+      <div class="container flex flex-col">
         <div class="relative cursor-pointer" @click="panels.general = !panels.general">
           <h2>General</h2>
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
@@ -51,7 +51,8 @@
               Send notifications to Discord
             </Checkbox>
           </div>
-          <div v-if="settings.provider.includes('google') && settings.notification.sendToDiscord"
+          <div
+            v-if="settings.provider.includes('google') && settings.notification.enabled && settings.notification.sendToDiscord"
             class="flex items-center justify-between ml-1 mr-1 gap-2">
             <span>Discord Webhook :</span>
             <div class="relative">
@@ -62,6 +63,36 @@
                 class="absolute w-5 h-5 right-0.5 px-0.5 rounded" type="button">
                 <component :is="showDiscordWebhook ? EyeClosedIcon : EyeOpenIcon" class="w-4 h-4 stroke-current" />
               </button>
+            </div>
+          </div>
+          <div class="flex items-center justify-between ml-1 mr-1">
+            Scheduled Task :
+            <select v-model="settings.scheduled.enabled" class="w-22 ml-2" @change="handleScheduledChange">
+              <option :value=true>On</option>
+              <option :value=false>Off</option>
+            </select>
+          </div>
+          <div v-if="settings.scheduled.enabled" class="flex flex-col ml-4 gap-1 mr-1">
+            <div class="flex items-center justify-between">
+              Start After :
+              <span>
+                <input type="number" v-model.number="settings.scheduled.after" min="0.1"
+                  class="w-16 h-5 px-2 py-1 border rounded text-right" @change="validateScheduleTime" /> min
+              </span>
+            </div>
+            <div class="flex items-center justify-between">
+              Task Lasting :
+              <span>
+                <input type="number" v-model.number="settings.scheduled.last" min="0.1"
+                  class="w-16 h-5 px-2 py-1 border rounded text-right" @change="validateScheduleTime" /> min
+              </span>
+            </div>
+            <div class="flex items-center justify-between">
+              Repeat Interval :
+              <span>
+                <input type="number" v-model.number="settings.scheduled.interval" min="0"
+                  class="w-16 h-5 px-2 py-1 border rounded text-right" @change="validateScheduleTime" /> min
+              </span>
             </div>
           </div>
           <div class="flex items-center justify-between ml-1 mr-1">
@@ -408,11 +439,13 @@
             <div v-if="!settings.selectMonths" class="flex flex-col gap-0.5">
               <div class="flex justify-between">
                 From :
-                <input type="month" v-model="settings.fromDate" min="2007-01" :max="currentDate" />
+                <input :type="settings.provider.includes('google') ? 'month' : 'day'" v-model="settings.fromDate"
+                  min="2007-01-01" :max="currentDate" />
               </div>
               <div class="flex justify-between">
                 To :
-                <input type="month" v-model="settings.toDate" min="2007-01" :max="currentDate" />
+                <input :type="settings.provider.includes('google') ? 'month' : 'day'" v-model="settings.toDate"
+                  min="2007-01-01" :max="currentDate" />
               </div>
             </div>
 
@@ -713,7 +746,7 @@
       </div>
 
       <Button v-if="canBeStarted" @click="handleClickStart" :variant="state.started ? 'danger' : 'primary'"
-        title="Space bar/Enter">{{ state.started ? 'Pause' : 'Start' }}
+        title="Space bar/Enter">{{ startButtonText }}
       </Button>
     </div>
   </div>
@@ -721,7 +754,7 @@
 
 <script setup lang="ts">
 // @ts-nocheck
-import { onMounted, watch, computed, ref } from 'vue'
+import { onMounted, watch, computed, ref, onBeforeUnmount } from 'vue'
 import { formatDate, useStorage, useColorMode } from '@vueuse/core'
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon'
 import { llToPX } from 'web-merc-projection'
@@ -796,10 +829,12 @@ import {
   pitchToMapillaryY,
   wgs84_to_isn93,
   getMonthEndTimestamp,
-  sendToDiscord
+  sendToDiscord,
+  getDayEndTimestamp
 } from '@/composables/utils.ts'
 import StreetViewProviders from '@/providers'
 import { degToRad, radToDeg } from 'web-merc-projection/util'
+import { clear } from 'console'
 
 const { currentDate } = getCurrentDate()
 const themeMode = useColorMode()
@@ -845,6 +880,13 @@ const allFoundPanoIds = new Set<string>()
 const generationStartTime = ref<number>(0)
 const showMapyCzApiKey = ref<boolean>(false)
 const showDiscordWebhook = ref<boolean>(false)
+const scheduledTaskTimer = ref<number | null>(null)
+const countdownTimer = ref<number | null>(null)
+const pauseCountdownTimer = ref<number | null>(null)
+const resumeCountdownTimer = ref<number | null>(null)
+const countdown = ref<number>(0)
+const pauseCountdown = ref<number>(0)
+const resumeCountdown = ref<number>(0)
 
 const canBeStarted = computed(() =>
   selected.value.some((country) => country.found.length < country.nbNeeded),
@@ -852,6 +894,146 @@ const canBeStarted = computed(() =>
 const totalLocs = computed(() =>
   selected.value.reduce((sum, country) => sum + country.found.length, 0),
 )
+
+const startButtonText = computed(() => {
+  if (state.started) {
+    if (settings.scheduled.enabled && pauseCountdown.value > 0) {
+      return `Pause in ${Math.ceil(pauseCountdown.value / 1000)}s`;
+    }
+    return 'Pause';
+  }
+  if (countdown.value > 0) return `Starting in ${Math.ceil(countdown.value / 1000)}s`;
+  if (scheduledTaskTimer.value && settings.scheduled.interval) return `Restarting in ${Math.ceil(resumeCountdown.value / 1000)}s`;
+  return 'Start';
+})
+
+// Handle scheduled task functionality
+function handleScheduledChange(enabled: boolean) {
+  if (!enabled && scheduledTaskTimer.value !== null) {
+    state.started = false;
+    clearTimeout(scheduledTaskTimer.value);
+    scheduledTaskTimer.value = null;
+    clearInterval(countdownTimer.value);
+    countdownTimer.value = null;
+    clearInterval(pauseCountdownTimer.value);
+    pauseCountdownTimer.value = null;
+    clearInterval(resumeCountdownTimer.value);
+    resumeCountdownTimer.value = null;
+    countdown.value = 0;
+    pauseCountdown.value = 0;
+    resumeCountdown.value = 0;
+  }
+}
+
+function validateScheduleTime() {
+  // Ensure after is at least 1 minute
+  if (settings.scheduled.after < 0.1) {
+    settings.scheduled.after = 0.1;
+  }
+  if (settings.scheduled.last < 0.1) {
+    settings.scheduled.last = 0.1;
+  }
+  // Ensure interval is non-negative
+  if (settings.scheduled.interval < 0) {
+    settings.scheduled.interval = 0;
+  }
+}
+
+function startScheduledTask() {
+  // Clear any existing timers
+  if (scheduledTaskTimer.value !== null) {
+    clearTimeout(scheduledTaskTimer.value);
+    clearInterval(scheduledTaskTimer.value);
+    scheduledTaskTimer.value = null;
+  }
+  if (countdownTimer.value !== null) {
+    clearInterval(countdownTimer.value);
+    countdownTimer.value = null;
+  }
+  if (pauseCountdownTimer.value !== null) {
+    clearInterval(pauseCountdownTimer.value);
+    pauseCountdownTimer.value = null;
+  }
+  if (resumeCountdownTimer.value !== null) {
+    clearInterval(resumeCountdownTimer.value);
+    resumeCountdownTimer.value = null;
+  }
+  countdown.value = 0;
+  pauseCountdown.value = 0;
+  resumeCountdown.value = 0;
+
+  // Convert minutes to milliseconds
+  const afterDelay = settings.scheduled.after * 60 * 1000;
+  const lastDuration = settings.scheduled.last * 60 * 1000;
+  const intervalDelay = settings.scheduled.interval * 60 * 1000;
+
+  // Set start countdown
+  countdown.value = afterDelay;
+  countdownTimer.value = window.setInterval(() => {
+    countdown.value = Math.max(0, countdown.value - 1000);
+    if (countdown.value === 0) {
+      clearInterval(countdownTimer.value);
+      countdownTimer.value = null;
+    }
+  }, 1000);
+
+  // Delay the first task
+  scheduledTaskTimer.value = window.setTimeout(() => {
+    runAndSchedule(lastDuration, intervalDelay);
+  }, afterDelay);
+}
+
+function runAndSchedule(lastDuration: number, intervalDelay: number) {
+  if (!settings.scheduled.enabled || !canBeStarted.value) {
+    state.started = false;
+    return;
+  }
+
+  // Start the task
+  state.started = true;
+  generationStartTime.value = Date.now();
+  startGeneration();
+
+  // Set pause countdown
+  pauseCountdown.value = lastDuration;
+  pauseCountdownTimer.value = window.setInterval(() => {
+    pauseCountdown.value = Math.max(0, pauseCountdown.value - 1000);
+  }, 1000);
+
+  // Schedule the stop and the next run
+  scheduledTaskTimer.value = window.setTimeout(() => {
+    state.started = false;
+    clearInterval(pauseCountdownTimer.value);
+    pauseCountdownTimer.value = null;
+    pauseCountdown.value = 0;
+
+    if (settings.scheduled.interval > 0) {
+      // Set resume countdown
+      resumeCountdown.value = intervalDelay;
+      resumeCountdownTimer.value = window.setInterval(() => {
+        resumeCountdown.value = Math.max(0, resumeCountdown.value - 1000);
+        if (resumeCountdown.value === 0) {
+          clearInterval(resumeCountdownTimer.value);
+          resumeCountdownTimer.value = null;
+        }
+      }, 1000);
+
+      // Schedule the next run
+      scheduledTaskTimer.value = window.setTimeout(() => {
+        runAndSchedule(lastDuration, intervalDelay);
+      }, intervalDelay);
+    } else {
+      scheduledTaskTimer.value = null;
+    }
+  }, lastDuration);
+}
+
+// Watch for changes in scheduled settings
+watch(() => settings.scheduled.enabled, (newVal) => {
+  if (!newVal) {
+    handleScheduledChange(false);
+  }
+});
 
 function clearPolygon(polygon: Polygon) {
   Object.values(markerLayers).forEach((markerLayer) => {
@@ -877,6 +1059,19 @@ onMounted(async () => {
   await initMap('map')
 })
 
+onBeforeUnmount(() => {
+  if (scheduledTaskTimer.value !== null) {
+    clearTimeout(scheduledTaskTimer.value);
+    clearInterval(scheduledTaskTimer.value);
+    scheduledTaskTimer.value = null;
+  }
+  if (countdownTimer.value !== null) {
+    clearInterval(countdownTimer.value);
+    countdownTimer.value = null;
+  }
+  countdown.value = 0;
+})
+
 // Process
 document.onkeydown = (event) => {
   const target = event.target as HTMLInputElement
@@ -888,12 +1083,47 @@ document.onkeydown = (event) => {
   }
 }
 
-const handleClickStart = () => {
-  state.started = !state.started
-  if (state.started) {
-    generationStartTime.value = Date.now()
+async function startGeneration() {
+  if (!canBeStarted.value) return;
+
+  state.started = true;
+  generationStartTime.value = Date.now();
+  await start();
+}
+
+const handleClickStart = async () => {
+  if (!state.started) {
+    if (settings.scheduled.enabled) {
+      // If there's a scheduled task, we either start it or resume it
+      if (scheduledTaskTimer.value === null) {
+        startScheduledTask();
+      }
+    } else {
+      await startGeneration();
+    }
+  } else {
+    // Manually stopping the task
+    state.started = false;
+    if (scheduledTaskTimer.value !== null) {
+      clearTimeout(scheduledTaskTimer.value);
+      scheduledTaskTimer.value = null;
+    }
+    if (countdownTimer.value !== null) {
+      clearInterval(countdownTimer.value);
+      countdownTimer.value = null;
+    }
+    if (pauseCountdownTimer.value !== null) {
+      clearInterval(pauseCountdownTimer.value);
+      pauseCountdownTimer.value = null;
+    }
+    if (resumeCountdownTimer.value !== null) {
+      clearInterval(resumeCountdownTimer.value);
+      resumeCountdownTimer.value = null;
+    }
+    countdown.value = 0;
+    pauseCountdown.value = 0;
+    resumeCountdown.value = 0;
   }
-  start()
 }
 
 async function start() {
@@ -1222,6 +1452,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
   if (settings.rejectDateless && !pano.imageDate) return false
 
   const fromDate = Date.parse(settings.fromDate)
+  //const toDate = settings.provider.includes('google') ? getMonthEndTimestamp(settings.toDate) : getDayEndTimestamp(settings.toDate)
   const toDate = getMonthEndTimestamp(settings.toDate)
   const locDate = Date.parse(pano.imageDate)
   const fromMonth = settings.fromMonth

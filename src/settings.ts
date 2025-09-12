@@ -16,6 +16,13 @@ const defaultSettings = {
 
   mapTheme: 'default',
 
+  scheduled:{
+    enabled: false,
+    last:1,
+    after:1,
+    interval: 1
+  },
+
   coverage: {
     enabled: false,
     blobby: false,
@@ -371,7 +378,7 @@ const defaultSettings = {
 }
 
 const CURRENT_KEYS = Object.keys(localStorage)
-const CURRENT_KEY = 'map_generator__settings_v7'
+const CURRENT_KEY = 'map_generator__settings_v8'
 
 CURRENT_KEYS.forEach((key: string) => {
   if (key !== CURRENT_KEY && localStorage.getItem(key) !== null && key.startsWith('map_generator__settings_')) {
