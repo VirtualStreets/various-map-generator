@@ -927,8 +927,8 @@ function handleScheduledChange(enabled: boolean) {
 
 function validateScheduleTime() {
   // Ensure after is at least 1 minute
-  if (settings.scheduled.after < 0.1) {
-    settings.scheduled.after = 0.1;
+  if (settings.scheduled.after < 0) {
+    settings.scheduled.after = 0;
   }
   if (settings.scheduled.last < 0.1) {
     settings.scheduled.last = 0.1;

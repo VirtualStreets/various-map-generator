@@ -67,9 +67,9 @@ const petalMapsLayer = L.tileLayer(!['dark', 'night'].includes(settings.mapTheme
 
 const tencentBaseLayer = L.tileLayer(!['dark', 'night'].includes(settings.mapTheme) ? TENCENT_MAPS_TEMPLATE.Light : TENCENT_MAPS_TEMPLATE.Dark, { subdomains: ["0", "1", "2", "3"], minNativeZoom: 3, minZoom: 1 })
 
-const gsvLayer = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.StreetView_Blobby : GOOGLE_MAPS_TEMPLATE.StreetView, { maxZoom: 19,opacity:settings.coverage.opacity  })
-const gsvLayer2 = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.StreetView_Blobby : GOOGLE_MAPS_TEMPLATE.StreetView_Official, { maxZoom: 19,opacity:settings.coverage.opacity  })
-const gsvLayer3 = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.StreetView_Blobby : GOOGLE_MAPS_TEMPLATE.StreetView_Unofficial, { maxZoom: 19,opacity:settings.coverage.opacity })
+const gsvLayer = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.StreetView_Blobby : GOOGLE_MAPS_TEMPLATE.StreetView, { maxZoom: 19, opacity: settings.coverage.opacity })
+const gsvLayer2 = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.StreetView_Blobby : GOOGLE_MAPS_TEMPLATE.StreetView_Official, { maxZoom: 19, opacity: settings.coverage.opacity })
+const gsvLayer3 = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.StreetView_Blobby : GOOGLE_MAPS_TEMPLATE.StreetView_Unofficial, { maxZoom: 19, opacity: settings.coverage.opacity })
 const gsvLayer4 = new PanoramasLayer({ minZoom: 16, pane: "panoramasPane" });
 
 const appleCoverageLayer = L.tileLayer('https://lookmap.eu.pythonanywhere.com/bluelines_raster_2x/{z}/{x}/{y}.png', { minZoom: 1, maxZoom: 7 })
@@ -117,6 +117,41 @@ const allLayers = [
   ...Object.values(overlayMaps)
 ]
 
+L.Draw.PolygonHole = L.Draw.Polygon.extend({
+  initialize: function (map: L.DrawMap, options: L.Draw.PolygonOptions = {}) {
+    L.Draw.Feature.prototype.initialize.call(this, map, options);
+    this.type = 'polygonHole';
+  }
+});
+
+L.Control.Draw.mergeOptions({
+  draw: {
+    polygonHole: {
+      iconClass: 'leaflet-draw-draw-polygonHole',
+    },
+  }
+});
+L.DrawToolbar.include({
+  getModeHandlers: function (map: L.DrawMap) {
+    return [
+      {
+        enabled: this.options.polygon !== false,
+        handler: new L.Draw.Polygon(map, this.options.polygon),
+        title: 'Draw a polygon'
+      },
+      {
+        enabled: this.options.rectangle !== false,
+        handler: new L.Draw.Rectangle(map, this.options.rectangle),
+        title: 'Draw a rectangle'
+      },
+      {
+        enabled: this.options.polygonHole !== false,
+        handler: new (L as any).Draw.PolygonHole(map, this.options.polygonHole),
+        title: 'Draw a polygon hole',
+      }
+    ];
+  }
+});
 const drawnPolygonsLayer = new L.GeoJSON()
 
 const drawControl = new L.Control.Draw({
@@ -136,6 +171,7 @@ const drawControl = new L.Control.Draw({
       shapeOptions: { color: '#5d8ce3' },
     },
     rectangle: { shapeOptions: { color: '#5d8ce3' } },
+    polygonHole: { shapeOptions: { color: '#15a824ff', dashArray: "5,5" } },
   },
   edit: { featureGroup: drawnPolygonsLayer },
 })
@@ -207,6 +243,33 @@ async function initMap(el: string) {
 
   map.on('draw:created', (e) => {
     const event = e as L.DrawEvents.Created
+    if (event.layerType === "polygonHole") {
+      const holeLayer = event.layer as L.Polygon;
+      const holeLatLngs = holeLayer.getLatLngs()[0];
+
+      const target = selected.value[selected.value.length - 1];
+
+      if (target) {
+        const currentLatLngs = target.getLatLngs() as L.LatLng[][];
+
+        if (Array.isArray(holeLatLngs)) {
+          currentLatLngs.push(holeLatLngs as L.LatLng[]);
+          target.setLatLngs(currentLatLngs);
+          map.removeLayer(holeLayer);
+
+          const updatedGeoJSON = target.toGeoJSON();
+          target.feature = updatedGeoJSON;
+
+          const index = selected.value.findIndex((x) => x._leaflet_id === target._leaflet_id);
+          if (index !== -1) {
+            selected.value[index] = target;
+          }
+          drawnPolygonsLayer.removeLayer(target as any);
+          drawnPolygonsLayer.addLayer(target as any);
+        }
+      }
+      return;
+    }
     const polygon = event.layer as Polygon
     polygon.feature = event.layer.toGeoJSON()
     polygon.feature.properties.name = `Custom polygon ${drawnPolygonsLayer.getLayers().length + 1}`
@@ -527,7 +590,7 @@ function toggleMapTheme(theme: string) {
       tencentBaseLayer.setUrl(TENCENT_MAPS_TEMPLATE.Dark)
     }
 
-  } else{
+  } else {
     if (activeBaseLayer == 'Bing') {
       const children = storedOverlays.includes('Bing Streetside')
         ? [bingBaseLayer, bingTerrainLayer, bingStreetideLayer]
@@ -776,7 +839,7 @@ export {
   toggleMapTheme,
   toggleGSVBlobbyLayer,
   setCoverageLayerOpacity,
-  setGSVLayerStyle  ,
+  setGSVLayerStyle,
   importLayer,
   exportLayer,
   updateMarkerLayers,
