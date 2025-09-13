@@ -171,7 +171,6 @@ const drawControl = new L.Control.Draw({
       shapeOptions: { color: '#5d8ce3' },
     },
     rectangle: { shapeOptions: { color: '#5d8ce3' } },
-    polygonHole: { shapeOptions: { color: '#15a824ff', dashArray: "5,5" } },
   },
   edit: { featureGroup: drawnPolygonsLayer },
 })
