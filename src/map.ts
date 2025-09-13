@@ -15,8 +15,8 @@ import markerViolet from '@/assets/markers/marker-violet.png'
 import markerGreen from '@/assets/markers/marker-green.png'
 import markerPink from '@/assets/markers/marker-pink.png'
 
-import { capitalize, ref, watch } from 'vue'
-import { useStorage, useColorMode } from '@vueuse/core'
+import { capitalize, ref } from 'vue'
+import { useStorage } from '@vueuse/core'
 import { settings } from '@/settings'
 import { isValidGeoJSON, getPolygonName, readFileAsText } from '@/composables/utils.ts'
 import { BaiduLayer } from './layers/baiduLayer'
@@ -117,41 +117,46 @@ const allLayers = [
   ...Object.values(overlayMaps)
 ]
 
-L.Draw.PolygonHole = L.Draw.Polygon.extend({
-  initialize: function (map: L.DrawMap, options: L.Draw.PolygonOptions = {}) {
-    L.Draw.Feature.prototype.initialize.call(this, map, options);
-    this.type = 'polygonHole';
+class PolygonHole extends L.Draw.Polygon {
+  type: string = 'polygonHole';
+
+  constructor(map: L.DrawMap, options: L.DrawOptions.PolygonOptions = {}) {
+    super(map, options);
   }
-});
+}
+
+(L.Draw as any).PolygonHole = PolygonHole;
 
 L.Control.Draw.mergeOptions({
   draw: {
     polygonHole: {
-      iconClass: 'leaflet-draw-draw-polygonHole',
+      iconClass: 'leaflet-draw-draw-polygon-hole',
     },
-  }
+  },
 });
+
 L.DrawToolbar.include({
   getModeHandlers: function (map: L.DrawMap) {
     return [
       {
         enabled: this.options.polygon !== false,
         handler: new L.Draw.Polygon(map, this.options.polygon),
-        title: 'Draw a polygon'
+        title: 'Draw a polygon',
       },
       {
         enabled: this.options.rectangle !== false,
         handler: new L.Draw.Rectangle(map, this.options.rectangle),
-        title: 'Draw a rectangle'
+        title: 'Draw a rectangle',
       },
       {
         enabled: this.options.polygonHole !== false,
-        handler: new (L as any).Draw.PolygonHole(map, this.options.polygonHole),
+        handler: new (L.Draw as any).PolygonHole(map, this.options.polygonHole),
         title: 'Draw a polygon hole',
-      }
+      },
     ];
-  }
+  },
 });
+
 const drawnPolygonsLayer = new L.GeoJSON()
 
 const drawControl = new L.Control.Draw({
