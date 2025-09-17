@@ -65,7 +65,7 @@ async function getFromGoogleZoom(
             let panoIds = cacheManager.get('google', cacheKey);
             if (!panoIds) {
                 const url = `https://www.google.com/maps/photometa/ac/v1?pb=!1m1!1smaps_sv.tactile!6m3!1i${x}!2i${y}!3i17!8b1`;
-                const resp = await fetch(url);
+                const resp = await fetch(url, {cache: 'no-store'});
                 let text = await resp.text();
                 if (text.startsWith(")]}'")) {
                     text = text.slice(5);
