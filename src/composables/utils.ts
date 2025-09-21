@@ -314,7 +314,7 @@ export function getCameraGeneration(
   else if (provider === 'yandex') {
     if (!width) return 0;
     if (width >= 17664) return 2;
-    else if (width >= 5632) return 1;
+    else if (width == 5632) return 1;
     return 'trekker';
   }
 
