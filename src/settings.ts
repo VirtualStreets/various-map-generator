@@ -51,6 +51,7 @@ const defaultSettings = {
 
   rejectUnofficial: true,
   rejectOfficial: false,
+  rejectRoadName: false,
   ignoreBadcam: false,
   findByGeneration: {
     enabled: true,

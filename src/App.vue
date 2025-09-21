@@ -381,6 +381,9 @@
               <Checkbox v-if="!settings.rejectDescription" v-model="settings.rejectNoDescription">
                 Reject locations without description
               </Checkbox>
+              <Checkbox v-if="!settings.rejectOfficial" v-model="settings.rejectRoadName">
+                Reject locations with road name
+              </Checkbox>
               <Checkbox v-if="settings.provider.includes('google')" v-model="settings.rejectDescription">Find trekker
                 coverage
               </Checkbox>
@@ -1391,13 +1394,9 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
 async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
   if (settings.rejectUnofficial && !settings.rejectOfficial) {
     if (!pano.location || !isOfficial(pano.location.pano, settings.provider)) return false
-    // Reject trekkers
-    if (
-      settings.rejectNoDescription &&
-      !settings.rejectDescription &&
-      !hasAnyDescription(pano.location)
-    )
-      return false
+
+    // Reject road names
+    if (settings.rejectRoadName && pano.location.road) return false
 
     // Find trekkers
     if (settings.rejectDescription && hasAnyDescription(pano.location)) return false
