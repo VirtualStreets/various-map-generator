@@ -337,7 +337,7 @@
             </div>
 
             <Checkbox v-model="settings.oneCountryAtATime">
-              Only check one country/polygon at a time.
+              Only check one country/polygon at a time
             </Checkbox>
 
             <Checkbox v-model="settings.onlyCheckBlueLines"
@@ -353,7 +353,7 @@
             </div>
 
             <Checkbox v-model="settings.tag">
-              Enable auto tagging for locations.
+              Enable auto tagging for locations
             </Checkbox>
           </Collapsible>
         </div>
