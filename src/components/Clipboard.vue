@@ -16,6 +16,7 @@ const props = defineProps<{
   data: Polygon[]
   disabled?: boolean
   mode?: string
+  tag?: boolean
 }>()
 
 function handleCopy() {
@@ -27,7 +28,10 @@ function handleCopy() {
       panoId: props.mode === 'disable' ? null :
         props.mode === 'prefix' ? `${item.source?.includes('qq') ? 'TENCENT' :
           item.source?.replace('_pano', '').toUpperCase()}:${item.panoId}` : item.panoId,
-      links: item.links?.slice(0, 4)
+      links: item.links?.slice(0, 4),
+      extra:{
+        tags: props.tag ? item.extra?.tags! : [],
+      }
     }))
     data = data.concat(withSource)
   })

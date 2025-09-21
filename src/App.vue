@@ -236,8 +236,10 @@
             </div>
 
             <div class="flex gap-1">
-              <Clipboard :data="[polygon as Polygon]" :disabled="!polygon.found.length" :mode="settings.panoId" />
-              <ExportToJSON :data="[polygon as Polygon]" :disabled="!polygon.found.length" :mode="settings.panoId" />
+              <Clipboard :data="[polygon as Polygon]" :disabled="!polygon.found.length" :mode="settings.panoId"
+                :tag="settings.tag" />
+              <ExportToJSON :data="[polygon as Polygon]" :disabled="!polygon.found.length" :mode="settings.panoId"
+                :tag="settings.tag" />
               <ExportToCSV :data="[polygon as Polygon]" :disabled="!polygon.found.length" />
               <Button size="sm" squared variant="danger" :disabled="!polygon.found.length"
                 title="Delete locations for polygon" @click="clearPolygon(polygon as Polygon)">
@@ -256,8 +258,9 @@
           Edit cap for all
         </Button>
         <div class="flex gap-1">
-          <Clipboard :data="selected as Polygon[]" :disabled="!totalLocs" :mode="settings.panoId" />
-          <ExportToJSON :data="selected as Polygon[]" :disabled="!totalLocs" :mode="settings.panoId" />
+          <Clipboard :data="selected as Polygon[]" :disabled="!totalLocs" :mode="settings.panoId" :tag="settings.tag" />
+          <ExportToJSON :data="selected as Polygon[]" :disabled="!totalLocs" :mode="settings.panoId"
+            :tag="settings.tag" />
           <ExportToCSV :data="selected as Polygon[]" :disabled="!totalLocs" />
           <Button size="sm" squared variant="danger" :disabled="!totalLocs" title="Delete all locations"
             @click="clearAllLocations">
@@ -348,6 +351,10 @@
                 <input type="number" v-model.number="settings.regionRadius" /> <span> km </span>
               </div>
             </div>
+
+            <Checkbox v-model="settings.tag">
+              Enable auto tagging for locations.
+            </Checkbox>
           </Collapsible>
         </div>
       </div>
@@ -1689,7 +1696,6 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
     }
     checkHasBlueLine(pano.location.latLng.toJSON()).then((hasBlueLine) => {
       location.extra.tags.push(hasBlueLine ? 'newroad' : 'noblueline')
-      location.update_type = hasBlueLine ? 'newroad' : 'noblueline'
       return addLocation(location, polygon, hasBlueLine ? icons.newLoc : icons.noBlueLine)
     })
   } else {
@@ -1698,12 +1704,10 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
       if (previousPano?.tiles?.worldSize.height === 1664) {
         // Gen 1
         location.extra.tags.push('gen1update')
-        location.update_type = 'gen1update'
         return addLocation(location, polygon, icons.gen1)
       } else if (previousPano?.tiles?.worldSize.height === 6656) {
         // Gen 2 or 3
         location.extra.tags.push('gen2or3update')
-        location.update_type = 'gen2or3update'
         return addLocation(location, polygon, icons.gen2Or3)
       } else {
         // Gen 4

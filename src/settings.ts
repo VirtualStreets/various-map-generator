@@ -37,6 +37,7 @@ const defaultSettings = {
   },
 
   panoId: 'enable',
+  tag: true,
 
   numOfGenerators: 1,
   speed: 100,
