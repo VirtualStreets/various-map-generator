@@ -434,7 +434,7 @@ const openNearestPano = (e: L.ContextMenuItemClickEvent) => {
 
 function initPolygon(polygon: Polygon) {
   if (!polygon.found) polygon.found = []
-  if (!polygon.nbNeeded) polygon.nbNeeded = 100
+  if (!polygon.nbNeeded) polygon.nbNeeded = 10000
   if (!polygon.checkedPanos) polygon.checkedPanos = new Set()
 }
 

@@ -1694,7 +1694,8 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
       return addLocation(location, polygon, icons.gen4)
     }
     checkHasBlueLine(pano.location.latLng.toJSON()).then((hasBlueLine) => {
-      location.extra.tags.push(hasBlueLine ? 'newroad' : 'noblueline')
+      location.update_type=hasBlueLine ? 'newroad' : 'noblueline'
+      location.extra.tags.push(location.update_type)
       return addLocation(location, polygon, hasBlueLine ? icons.newLoc : icons.noBlueLine)
     })
   } else {
@@ -1702,15 +1703,18 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
       if (!settings.provider.includes('google')) return addLocation(location, polygon, icons.gen4)
       if (previousPano?.tiles?.worldSize.height === 1664) {
         // Gen 1
-        location.extra.tags.push('gen1update')
+        location.update_type='gen1update'
+        location.extra.tags.push(location.update_type)
         return addLocation(location, polygon, icons.gen1)
       } else if (previousPano?.tiles?.worldSize.height === 6656) {
         // Gen 2 or 3
-        location.extra.tags.push('gen2or3update')
+        location.update_type='gen2or3update'
+        location.extra.tags.push(location.update_type)
         return addLocation(location, polygon, icons.gen2Or3)
       } else {
         // Gen 4
-        location.extra.tags.push('gen4update')
+        location.update_type='gen4update'
+        location.extra.tags.push(location.update_type)
         return addLocation(location, polygon, icons.gen4)
       }
     })
