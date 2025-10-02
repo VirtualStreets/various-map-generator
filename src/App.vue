@@ -1884,7 +1884,7 @@ function addLocation(
         .setZIndexOffset(zIndex)
         .addTo(markerLayer)
       marker.polygonID = polygon._leaflet_id
-      marker.imported = true
+      marker.imported = imported
     }
   }
 }
