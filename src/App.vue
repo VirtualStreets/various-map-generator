@@ -208,8 +208,8 @@
             Add markers to imported locations
           </Checkbox>
           <div v-if="settings.markersOnImport" class="ml-4">
-            <label class="text-s">Markers opacity: {{ Math.round(settings.importedMarkersOpacity * 100) }}%</label>
-            <Slider v-model="settings.importedMarkersOpacity" @input="updateImportedMarkersOpacity" :max="1.0" :step="0.01" :tooltips="false" :lazy="false" class="mt-1 w-80"/>
+            <label class="text-s">Markers opacity: {{ Math.round((settings.importedMarkersOpacity ?? 1.0) * 100) }}%</label>
+            <Slider v-model="settings.importedMarkersOpacity" @input="updateImportedMarkersOpacity" :value="settings.importedMarkersOpacity ?? 1.0" :max="1.0" :step="0.01" :tooltips="false" :lazy="false" class="mt-1 w-80"/>
             <Checkbox v-model="settings.useUpdateTypeIconsOnImport" title="Use appropriate icons based on the update type" class="mt-2">
               Use icons based on update type
             </Checkbox>
@@ -1946,7 +1946,7 @@ async function importLocations(e: Event, polygon: Polygon) {
           location.update_type ?
           getIconForUpdateType(location.update_type) :
           icons.gen4
-        addLocation(location, polygon, icon, settings.markersOnImport, settings.importedMarkersOpacity, true)
+        addLocation(location, polygon, icon, settings.markersOnImport, settings.importedMarkersOpacity ?? 1.0, true)
       }
     } else {
       alert('Unknown file type: ' + file.type + '. Only JSON may be imported.')
