@@ -207,6 +207,13 @@
           <Checkbox v-model="settings.markersOnImport" title="This may affect performance.">
             Add markers to imported locations
           </Checkbox>
+          <div v-if="settings.markersOnImport" class="ml-4">
+            <label class="text-s">Markers opacity: {{ Math.round(settings.importedMarkersOpacity * 100) }}%</label>
+            <Slider v-model="settings.importedMarkersOpacity" @input="updateImportedMarkersOpacity" :max="1.0" :step="0.01" :tooltips="false" :lazy="false" class="mt-1 w-80"/>
+            <Checkbox v-model="settings.useUpdateTypeIconsOnImport" title="Use appropriate icons based on the update type" class="mt-2">
+              Use icons based on update type
+            </Checkbox>
+          </div>
           <Checkbox v-model="settings.checkImports" title="Useful for comprehensive datasets.">
             Check imported locations
           </Checkbox>
@@ -1721,11 +1728,40 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
   }
 }
 
+function getIconForUpdateType(updateType: string): L.Icon {
+  switch (updateType) {
+    case 'gen1update':
+      return icons.gen1
+    case 'gen2or3update':
+      return icons.gen2Or3
+    case 'gen4update':
+      return icons.gen4
+    case 'newroad':
+      return icons.newLoc
+    case 'noblueline':
+      return icons.noBlueLine
+    default:
+      return icons.gen4
+  }
+}
+
+function updateImportedMarkersOpacity(value) {
+  Object.values(markerLayers).forEach((group) => {
+      group.eachLayer(marker => {
+        if (marker.imported) {
+          marker.setOpacity(value)
+        }
+      })
+  })
+}
+
 function addLocation(
   location: Panorama,
   polygon: Polygon,
   iconType: L.Icon,
   addMarker: boolean = true,
+  opacity: number = 1.0,
+  imported: boolean = false,
 ) {
   if (allFoundPanoIds.has(location.panoId)) return
   allFoundPanoIds.add(location.panoId)
@@ -1787,7 +1823,7 @@ function addLocation(
     }
 
     if (addMarker) {
-      const marker = L.marker([location.lat, location.lng], { icon: iconType, forceZIndex: zIndex })
+      const marker = L.marker([location.lat, location.lng], { icon: iconType, forceZIndex: zIndex, opacity: opacity })
         .on('click', () => {
           const heading = location.heading ?? 0
           const pitch = location.pitch ?? 0
@@ -1848,6 +1884,7 @@ function addLocation(
         .setZIndexOffset(zIndex)
         .addTo(markerLayer)
       marker.polygonID = polygon._leaflet_id
+      marker.imported = imported
     }
   }
 }
@@ -1905,7 +1942,11 @@ async function importLocations(e: Event, polygon: Polygon) {
               getPano(link, polygon)
           }
         }
-        addLocation(location, polygon, icons.gen4, settings.markersOnImport)
+        const icon = settings.useUpdateTypeIconsOnImport &&
+          location.update_type ?
+          getIconForUpdateType(location.update_type) :
+          icons.gen4
+        addLocation(location, polygon, icon, settings.markersOnImport, settings.importedMarkersOpacity, true)
       }
     } else {
       alert('Unknown file type: ' + file.type + '. Only JSON may be imported.')
