@@ -377,6 +377,8 @@ const defaultSettings = {
   },
   markersOnImport: true,
   checkImports: false,
+  useUpdateTypeIconsOnImport: false,
+  importedMarkersOpacity: 1.0,
 }
 
 const CURRENT_KEYS = Object.keys(localStorage)
