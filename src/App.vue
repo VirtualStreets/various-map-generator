@@ -1701,7 +1701,7 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
       return addLocation(location, polygon, icons.gen4)
     }
     checkHasBlueLine(pano.location.latLng.toJSON()).then((hasBlueLine) => {
-      location.update_type=hasBlueLine ? 'newroad' : 'noblueline'
+      location.update_type='newroad'
       location.extra.tags.push(location.update_type)
       return addLocation(location, polygon, hasBlueLine ? icons.newLoc : icons.noBlueLine)
     })
