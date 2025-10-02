@@ -209,7 +209,7 @@
           </Checkbox>
           <div v-if="settings.markersOnImport" class="ml-4">
             <label class="text-s">Markers opacity: {{ Math.round(settings.importedMarkersOpacity * 100) }}%</label>
-            <Slider v-model="settings.importedMarkersOpacity" @input="updateImportedMarkersOpacity" :max="1.0" :step="0.05" :tooltips="false" :lazy="false" class="mt-1 w-80"/>
+            <Slider v-model="settings.importedMarkersOpacity" @input="updateImportedMarkersOpacity" :max="1.0" :step="0.01" :tooltips="false" :lazy="false" class="mt-1 w-80"/>
             <Checkbox v-model="settings.useUpdateTypeIconsOnImport" title="Use appropriate icons based on the update type" class="mt-2">
               Use icons based on update type
             </Checkbox>
