@@ -42,6 +42,7 @@ const defaultSettings = {
   numOfGenerators: 1,
   speed: 100,
   radius: 500,
+  disableCheckBlueLine: false,
   oneCountryAtATime: false,
   onlyCheckBlueLines: false,
   findRegions: false,

@@ -201,7 +201,7 @@
 
       <div v-if="!state.started" class="container font-bold text-center">{{ select }}</div>
 
-      <div v-if="selected.length" class="container flex-1 min-h-0 flex flex-col gap-1">
+      <div v-if="selected.length" class="container max-h-[300px] flex-1 min-h-0 flex flex-col gap-1">
         <h2>Countries/Territories ({{ selected.length }})</h2>
         <div class="px-1">
           <Checkbox v-model="settings.markersOnImport" title="This may affect performance.">
@@ -350,6 +350,10 @@
             <Checkbox v-model="settings.onlyCheckBlueLines"
               title="Significatly speeds up generation in areas with sparse coverage density. May negatively affect speeds if generating locations exclusively in areas with very dense coverage. (Official coverage only)">
               Only check in areas with blue lines
+            </Checkbox>
+
+            <Checkbox v-model="settings.disableCheckBlueLine" title="Check if location is a noblueline update.">
+              Disable noblueline check
             </Checkbox>
 
             <div v-if="!settings.rejectOfficial">
@@ -1700,6 +1704,7 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
       if (['yandex', 'baidu', 'tencent', 'naver', 'kakao'].includes(settings.provider)) return addLocation(location, polygon, icons.newLoc)
       return addLocation(location, polygon, icons.gen4)
     }
+    if (settings.disableCheckBlueLine) return addLocation(location, polygon, icons.newLoc)
     checkHasBlueLine(pano.location.latLng.toJSON()).then((hasBlueLine) => {
       location.update_type='newroad'
       location.extra.tags.push(location.update_type)
