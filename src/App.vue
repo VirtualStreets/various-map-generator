@@ -36,7 +36,7 @@
           </div>
           <div v-if="settings.notification.enabled" class="flex-1 ml-4 mb-1">
             <Checkbox v-model="settings.notification.anyLocation">
-              Any location found
+              First location found in polygon
             </Checkbox>
             <Checkbox v-model="settings.notification.onePolygonComplete">
               One polygon completed
