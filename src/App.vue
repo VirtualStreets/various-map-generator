@@ -215,7 +215,7 @@
               Use icons based on update type
             </Checkbox>
           </div>
-          <Checkbox v-model="settings.checkImports" title="Useful for comprehensive datasets.">
+          <Checkbox v-model="settings.checkImports" title="Search for more panos around imported locations.">
             Check imported locations
           </Checkbox>
           <hr />
