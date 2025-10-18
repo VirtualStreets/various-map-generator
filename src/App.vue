@@ -58,7 +58,8 @@
             <div class="relative">
               <input :type="showDiscordWebhook ? 'text' : 'password'" v-model="settings.notification.discordWebhook"
                 class="w-48 h-6 px-2 pr-6 py-1 border-1 border-gray-500 rounded text-xs"
-                placeholder="Enter your Webhook URL">
+                placeholder="Enter your Webhook URL"
+                data-1p-ignore>
               <button @click="showDiscordWebhook = !showDiscordWebhook"
                 class="absolute w-5 h-5 right-0.5 px-0.5 rounded" type="button">
                 <component :is="showDiscordWebhook ? EyeClosedIcon : EyeOpenIcon" class="w-4 h-4 stroke-current" />
