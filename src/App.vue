@@ -1795,39 +1795,39 @@ function addLocation(
 
   if (polygon.found.length < polygon.nbNeeded) {
     polygon.found.push(location)
-
-    const elapsedTime = ((Date.now() - generationStartTime.value) / 1000).toFixed(1)
-    if (settings.notification.anyLocation && polygon.found.length === 1) {
-      sendNotifications(
-        'Location Found',
-        `Found first location in ${getPolygonName(polygon.feature.properties)} (${elapsedTime}s)`,
-        settings.notification.sendToDiscord && settings.provider.includes('google'),
-        settings.notification.discordWebhook,
-        location
-      )
-    }
-
-    if (settings.notification.onePolygonComplete && polygon.found.length >= polygon.nbNeeded) {
-      sendNotifications(
-        'Polygon Completed',
-        `${getPolygonName(polygon.feature.properties)} has reached its goal (${elapsedTime}s)`,
-        settings.notification.sendToDiscord && settings.provider.includes('google'),
-        settings.notification.discordWebhook
-      )
-    }
-
-    if (settings.notification.allPolygonsComplete) {
-      const allComplete = selected.value.every(p => p.found.length >= p.nbNeeded)
-      if (allComplete) {
+    if (!imported) {
+      const elapsedTime = ((Date.now() - generationStartTime.value) / 1000).toFixed(1)
+      if (settings.notification.anyLocation && polygon.found.length === 1) {
         sendNotifications(
-          'Generation Completed',
-          `All polygons have reached their goals (${elapsedTime}s)`,
+          'Location Found',
+          `Found first location in ${getPolygonName(polygon.feature.properties)} (${elapsedTime}s)`,
+          settings.notification.sendToDiscord && settings.provider.includes('google'),
+          settings.notification.discordWebhook,
+          location
+        )
+      }
+
+      if (settings.notification.onePolygonComplete && polygon.found.length >= polygon.nbNeeded) {
+        sendNotifications(
+          'Polygon Completed',
+          `${getPolygonName(polygon.feature.properties)} has reached its goal (${elapsedTime}s)`,
           settings.notification.sendToDiscord && settings.provider.includes('google'),
           settings.notification.discordWebhook
         )
       }
-    }
 
+      if (settings.notification.allPolygonsComplete) {
+        const allComplete = selected.value.every(p => p.found.length >= p.nbNeeded)
+        if (allComplete) {
+          sendNotifications(
+            'Generation Completed',
+            `All polygons have reached their goals (${elapsedTime}s)`,
+            settings.notification.sendToDiscord && settings.provider.includes('google'),
+            settings.notification.discordWebhook
+          )
+        }
+      }
+    }
     if (addMarker) {
       const marker = L.marker([location.lat, location.lng], { icon: iconType, forceZIndex: zIndex, opacity: opacity })
         .on('click', () => {
