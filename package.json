@@ -10,7 +10,8 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix",
-    "format": "prettier --write src/"
+    "deploy": "wrangler deploy",
+    "dev-wrangler": "wrangler dev"
   },
   "dependencies": {
     "@turf/boolean-point-in-polygon": "^7.2.0",
@@ -31,6 +32,7 @@
     "xmlbuilder2": "^3.1.1"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.13.13",
     "@tailwindcss/vite": "^4.1.7",
     "@tsconfig/node22": "^22.0.1",
     "@types/google.maps": "^3.58.1",
@@ -54,6 +56,7 @@
     "vite": "^6.2.4",
     "vite-plugin-vue-devtools": "^7.7.2",
     "vite-svg-loader": "^5.1.0",
-    "vue-tsc": "^2.2.8"
+    "vue-tsc": "^2.2.8",
+    "wrangler": "^4.43.0"
   }
 }
