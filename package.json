@@ -55,5 +55,6 @@
     "vite-plugin-vue-devtools": "^7.7.2",
     "vite-svg-loader": "^5.1.0",
     "vue-tsc": "^2.2.8"
-  }
+  },
+  "license": "BSD-3-Clause"
 }
