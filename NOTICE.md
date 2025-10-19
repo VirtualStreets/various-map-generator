@@ -4,12 +4,9 @@ This project includes portions derived from or adapted from the following third-
 
 ## sk-zk/streetlevel (MIT License)
 
-Developer: [sk-zk](https://github.com/sk-zk)
-
-Repository: [sk-zk/streetlevel](https://github.com/sk-zk/stretlevel)
-
-```text
-MIT License
+**Developer:** [sk-zk](https://github.com/sk-zk)  
+**Repository:** [sk-zk/streetlevel](https://github.com/sk-zk/streetlevel)  
+**License:** MIT License
 
 Copyright (c) 2022 skzk
 
@@ -30,12 +27,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-```
 
 ## sv-maps and qq-maps
 
-Developer: [ReAnna](https://github.com/ReAnnannanna)
-
+**Developer:** [ReAnna](https://github.com/ReAnnannanna)  
+**Projects:**
 - qq-maps: [https://qq-map.netlify.app/](https://qq-map.netlify.app/)
-
 - sv-maps: [https://sv-map.netlify.app/](https://sv-map.netlify.app/)
