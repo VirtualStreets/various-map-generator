@@ -910,7 +910,7 @@ const countdown = ref<number>(0)
 const pauseCountdown = ref<number>(0)
 const resumeCountdown = ref<number>(0)
 
-const cachedDates = ref({ fromDate: 0, toDate: 0, lastFromDate: '', lastToDate: '' })
+const cachedDates = ref({ fromDate: null, toDate: null, lastFromDate: null, lastToDate: null })
 
 const canBeStarted = computed(() =>
   selected.value.some((country) => country.found.length < country.nbNeeded),
@@ -1357,7 +1357,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       const parsedDate = panoDate ? panoDate.getTime() : undefined
       if (
         parsedDate &&
-        (parsedDate < cachedDates.value.fromDate || parsedDate > cachedDates.value.toDate)
+        (parsedDate < (cachedDates.value.fromDate || Date.parse(settings.fromDate)) || parsedDate > (cachedDates.value.toDate || getMonthEndTimestamp(settings.toDate)))
       )
         return false
       getPano(randomPano.pano, polygon)
@@ -1370,7 +1370,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       !settings.randomInTimeline
     ) {
       if (!res.time?.length) return false
-      if (cachedDates.value.lastFromDate !== settings.fromDate || cachedDates.value.lastToDate !== settings.toDate) {
+      if (cachedDates.value.fromDate === null || cachedDates.value.lastFromDate !== settings.fromDate || cachedDates.value.lastToDate !== settings.toDate) {
         cachedDates.value.fromDate = Date.parse(settings.fromDate)
         cachedDates.value.toDate = getMonthEndTimestamp(settings.toDate)
         cachedDates.value.lastFromDate = settings.fromDate
@@ -1383,8 +1383,17 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       for (const loc of res.time) {
         if (settings.rejectUnofficial && !isOfficial(loc.pano, settings.provider)) continue
 
-        if (!loc.date) continue
-        const iDate = parseDate(loc.date)
+        let dateValue = null
+        for (const key in loc) {
+          const value = loc[key]
+          if (value instanceof Date) {
+            dateValue = value
+            break
+          }
+        }
+        
+        if (!dateValue) continue
+        const iDate = parseDate(dateValue)
         if (iDate >= fromDate && iDate <= toDate) {
           // if date ranges from fromDate to toDate, set dateWithin to true and stop the loop
           dateWithin = true
@@ -1396,8 +1405,8 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       if (settings.rejectDateless && !res.imageDate) return false
       if (
         res.imageDate &&
-        (Date.parse(res.imageDate) < cachedDates.value.fromDate ||
-          Date.parse(res.imageDate) > cachedDates.value.toDate)
+        (Date.parse(res.imageDate) < (cachedDates.value.fromDate || Date.parse(settings.fromDate)) ||
+          Date.parse(res.imageDate) > (cachedDates.value.toDate || getMonthEndTimestamp(settings.toDate)))
       ) {
         return false
       }
@@ -1474,9 +1483,9 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
 
   if (settings.rejectDateless && !pano.imageDate) return false
 
-  const fromDate = cachedDates.value.fromDate
+  const fromDate = cachedDates.value.fromDate || Date.parse(settings.fromDate)
   //const toDate = settings.provider.includes('google') ? getMonthEndTimestamp(settings.toDate) : getDayEndTimestamp(settings.toDate)
-  const toDate = cachedDates.value.toDate
+  const toDate = cachedDates.value.toDate || getMonthEndTimestamp(settings.toDate)
   const locDate = Date.parse(pano.imageDate)
   const fromMonth = settings.fromMonth
   const toMonth = settings.toMonth
@@ -1517,8 +1526,17 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
       for (let i = 0; i < pano.time.length; i++) {
         if (settings.rejectUnofficial && !isOfficial(pano.time[i].pano, settings.provider)) continue
 
-        if (!pano.time[i].date) continue
-        const iDate = parseDate(pano.time[i].date)
+        let dateValue = null
+        for (const key in pano.time[i]) {
+          const value = pano.time[i][key]
+          if (value instanceof Date) {
+            dateValue = value
+            break
+          }
+        }
+        
+        if (!dateValue) continue
+        const iDate = parseDate(dateValue)
 
       if (iDate >= fromDate && iDate <= toDate) {
         dateWithin = true
@@ -1536,8 +1554,16 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
       for (let i = 0; i < pano.time.length; i++) {
         if (settings.rejectUnofficial && !isOfficial(pano.time[i].pano, settings.provider)) continue
 
-        if (!pano.time[i].date) continue
-        const timeframeDate = pano.time[i].date
+        let timeframeDate = null
+        for (const key in pano.time[i]) {
+          const value = pano.time[i][key]
+          if (value instanceof Date) {
+            timeframeDate = value
+            break
+          }
+        }
+        
+        if (!timeframeDate) continue
         const iDateMonth = timeframeDate.getMonth() + 1
         const iDateYear = timeframeDate.getFullYear()
 
@@ -1598,7 +1624,7 @@ function getPanoDeep(id: string, polygon: Polygon, depth: number) {
     const isPanoGoodAndInCountry = (await isPanoGood(pano)) && inCountry
 
     if (settings.checkAllDates && !settings.selectMonths && pano.time) {
-      if (cachedDates.value.lastFromDate !== settings.fromDate || cachedDates.value.lastToDate !== settings.toDate) {
+      if (cachedDates.value.fromDate === null || cachedDates.value.lastFromDate !== settings.fromDate || cachedDates.value.lastToDate !== settings.toDate) {
         cachedDates.value.fromDate = Date.parse(settings.fromDate)
         cachedDates.value.toDate = getMonthEndTimestamp(settings.toDate)
         cachedDates.value.lastFromDate = settings.fromDate
@@ -1611,8 +1637,17 @@ function getPanoDeep(id: string, polygon: Polygon, depth: number) {
       for (const loc of pano.time) {
         if (settings.rejectUnofficial && !isOfficial(loc.pano, settings.provider)) continue
 
-        if (!loc.date) continue
-        const iDate = parseDate(loc.date)
+        let dateValue = null
+        for (const key in loc) {
+          const value = loc[key]
+          if (value instanceof Date) {
+            dateValue = value
+            break
+          }
+        }
+        
+        if (!dateValue) continue
+        const iDate = parseDate(dateValue)
         if (iDate >= fromDate && iDate <= toDate) {
           // if date ranges from fromDate to toDate, set dateWithin to true and stop the loop
           getPanoDeep(loc.pano, polygon, isPanoGoodAndInCountry ? 1 : depth + 1)
