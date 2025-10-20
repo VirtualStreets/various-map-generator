@@ -58,8 +58,7 @@
             <div class="relative">
               <input :type="showDiscordWebhook ? 'text' : 'password'" v-model="settings.notification.discordWebhook"
                 class="w-48 h-6 px-2 pr-6 py-1 border-1 border-gray-500 rounded text-xs"
-                placeholder="Enter your Webhook URL"
-                data-1p-ignore>
+                placeholder="Enter your Webhook URL" data-1p-ignore>
               <button @click="showDiscordWebhook = !showDiscordWebhook"
                 class="absolute w-5 h-5 right-0.5 px-0.5 rounded" type="button">
                 <component :is="showDiscordWebhook ? EyeClosedIcon : EyeOpenIcon" class="w-4 h-4 stroke-current" />
@@ -209,9 +208,13 @@
             Add markers to imported locations
           </Checkbox>
           <div v-if="settings.markersOnImport" class="ml-4">
-            <label class="text-s">Markers opacity: {{ Math.round((settings.importedMarkersOpacity ?? 1.0) * 100) }}%</label>
-            <Slider v-model="settings.importedMarkersOpacity" @input="updateImportedMarkersOpacity" :value="settings.importedMarkersOpacity ?? 1.0" :max="1.0" :step="0.01" :tooltips="false" :lazy="false" class="mt-1 w-80"/>
-            <Checkbox v-model="settings.useUpdateTypeIconsOnImport" title="Use appropriate icons based on the update type." class="mt-2">
+            <label class="text-s">Markers opacity: {{ Math.round((settings.importedMarkersOpacity ?? 1.0) * 100)
+            }}%</label>
+            <Slider v-model="settings.importedMarkersOpacity" @input="updateImportedMarkersOpacity"
+              :value="settings.importedMarkersOpacity ?? 1.0" :max="1.0" :step="0.01" :tooltips="false" :lazy="false"
+              class="mt-1 w-80" />
+            <Checkbox v-model="settings.useUpdateTypeIconsOnImport"
+              title="Use appropriate icons based on the update type." class="mt-2">
               Use icons based on update type
             </Checkbox>
           </div>
@@ -231,8 +234,7 @@
             </Button>
             <span v-if="polygon.feature.properties.code"
               :class="`flag-icon flag-` + polygon.feature.properties.code.toLowerCase()"></span>
-            <label class="polygon-name"
-              @click="changePolygonName(polygon.feature.properties)">
+            <label class="polygon-name" @click="changePolygonName(polygon.feature.properties)">
               {{ getPolygonName(polygon.feature.properties) }}
             </label>
             <Spinner v-if="state.started && polygon.isProcessing" :icon="settings.provider" />
@@ -461,13 +463,11 @@
             <div v-if="!settings.selectMonths" class="flex flex-col gap-0.5">
               <div class="flex justify-between">
                 From :
-                <input :type="'month'" v-model="settings.fromDate"
-                  min="2007-01-01" :max="currentDate" />
+                <input :type="'month'" v-model="settings.fromDate" min="2007-01-01" :max="currentDate" />
               </div>
               <div class="flex justify-between">
                 To :
-                <input :type="'month'" v-model="settings.toDate"
-                  min="2007-01-01" :max="currentDate" />
+                <input :type="'month'" v-model="settings.toDate" min="2007-01-01" :max="currentDate" />
               </div>
             </div>
 
@@ -1363,7 +1363,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
     if (settings.randomInTimeline && res.time) {
       const randomIndex = Math.floor(Math.random() * res.time.length)
       const randomPano = res.time[randomIndex]
-      const panoDate = randomPano.date
+      const panoDate = findDateInObject(randomPano)
       const parsedDate = panoDate ? panoDate.getTime() : undefined
       if (
         parsedDate &&
@@ -1386,16 +1386,15 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
         cachedDates.value.lastFromDate = settings.fromDate
         cachedDates.value.lastToDate = settings.toDate
       }
-      
+
       const fromDate = cachedDates.value.fromDate
       const toDate = cachedDates.value.toDate
       let dateWithin = false
       for (const loc of res.time) {
         if (settings.rejectUnofficial && !isOfficial(loc.pano, settings.provider)) continue
 
-        const dateValue = findDateInObject(loc)
-        if (!dateValue) continue
-        const iDate = parseDate(dateValue)
+        const date = findDateInObject(loc)
+        const iDate = parseDate(date)
         if (iDate >= fromDate && iDate <= toDate) {
           // if date ranges from fromDate to toDate, set dateWithin to true and stop the loop
           dateWithin = true
@@ -1505,8 +1504,8 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
     for (const loc of pano.time) {
       if (settings.rejectUnofficial && !isOfficial(loc.pano, settings.provider)) continue
       if (loc.pano == pano.location?.pano) continue
-      if (!loc.date) continue
-      const iDate = parseDate(loc.date)
+      const date = findDateInObject(loc)
+      const iDate = parseDate(date)
       if (iDate >= fromDate && iDate <= toDate) return false
     }
   }
@@ -1525,12 +1524,11 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
     }
 
     let dateWithin = false
-      for (let i = 0; i < pano.time.length; i++) {
-        if (settings.rejectUnofficial && !isOfficial(pano.time[i].pano, settings.provider)) continue
+    for (let i = 0; i < pano.time.length; i++) {
+      if (settings.rejectUnofficial && !isOfficial(pano.time[i].pano, settings.provider)) continue
 
-        const dateValue = findDateInObject(pano.time[i])
-        if (!dateValue) continue
-        const iDate = parseDate(dateValue)
+      const timeframeDate = findDateInObject(pano.time[i])
+      const iDate = parseDate(timeframeDate)
 
       if (iDate >= fromDate && iDate <= toDate) {
         dateWithin = true
@@ -1616,16 +1614,15 @@ function getPanoDeep(id: string, polygon: Polygon, depth: number) {
         cachedDates.value.lastFromDate = settings.fromDate
         cachedDates.value.lastToDate = settings.toDate
       }
-      
+
       const fromDate = cachedDates.value.fromDate
       const toDate = cachedDates.value.toDate
 
       for (const loc of pano.time) {
         if (settings.rejectUnofficial && !isOfficial(loc.pano, settings.provider)) continue
 
-        const dateValue = findDateInObject(loc)
-        if (!dateValue) continue
-        const iDate = parseDate(dateValue)
+        const date = findDateInObject(loc)
+        const iDate = parseDate(date)
         if (iDate >= fromDate && iDate <= toDate) {
           // if date ranges from fromDate to toDate, set dateWithin to true and stop the loop
           getPanoDeep(loc.pano, polygon, isPanoGoodAndInCountry ? 1 : depth + 1)
@@ -1733,7 +1730,7 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
     }
     if (settings.disableCheckBlueLine) return addLocation(location, polygon, icons.newLoc)
     checkHasBlueLine(pano.location.latLng.toJSON()).then((hasBlueLine) => {
-      location.update_type='newroad'
+      location.update_type = 'newroad'
       location.extra.tags.push(location.update_type)
       return addLocation(location, polygon, hasBlueLine ? icons.newLoc : icons.noBlueLine)
     })
@@ -1742,17 +1739,17 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
       if (!settings.provider.includes('google')) return addLocation(location, polygon, icons.gen4)
       if (previousPano?.tiles?.worldSize.height === 1664) {
         // Gen 1
-        location.update_type='gen1update'
+        location.update_type = 'gen1update'
         location.extra.tags.push(location.update_type)
         return addLocation(location, polygon, icons.gen1)
       } else if (previousPano?.tiles?.worldSize.height === 6656) {
         // Gen 2 or 3
-        location.update_type='gen2or3update'
+        location.update_type = 'gen2or3update'
         location.extra.tags.push(location.update_type)
         return addLocation(location, polygon, icons.gen2Or3)
       } else {
         // Gen 4
-        location.update_type='gen4update'
+        location.update_type = 'gen4update'
         location.extra.tags.push(location.update_type)
         return addLocation(location, polygon, icons.gen4)
       }
@@ -1779,11 +1776,11 @@ function getIconForUpdateType(updateType: string): L.Icon {
 
 function updateImportedMarkersOpacity(value) {
   Object.values(markerLayers).forEach((group) => {
-      group.eachLayer(marker => {
-        if (marker.imported) {
-          marker.setOpacity(value)
-        }
-      })
+    group.eachLayer(marker => {
+      if (marker.imported) {
+        marker.setOpacity(value)
+      }
+    })
   })
 }
 
