@@ -922,6 +922,18 @@ function findDateInObject(obj: any): Date | null {
   return null
 }
 
+function getCachedDates() {
+  if (cachedDates.value.fromDate === null || 
+      cachedDates.value.lastFromDate !== settings.fromDate || 
+      cachedDates.value.lastToDate !== settings.toDate) {
+    cachedDates.value.fromDate = Date.parse(settings.fromDate)
+    cachedDates.value.toDate = getMonthEndTimestamp(settings.toDate)
+    cachedDates.value.lastFromDate = settings.fromDate
+    cachedDates.value.lastToDate = settings.toDate
+  }
+  return { fromDate: cachedDates.value.fromDate, toDate: cachedDates.value.toDate }
+}
+
 const canBeStarted = computed(() =>
   selected.value.some((country) => country.found.length < country.nbNeeded),
 )
@@ -1367,7 +1379,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       const parsedDate = panoDate ? panoDate.getTime() : undefined
       if (
         parsedDate &&
-        (parsedDate < (cachedDates.value.fromDate || Date.parse(settings.fromDate)) || parsedDate > (cachedDates.value.toDate || getMonthEndTimestamp(settings.toDate)))
+        (parsedDate < cachedDates.value.fromDate || parsedDate > cachedDates.value.toDate)
       )
         return false
       getPano(randomPano.pano, polygon)
@@ -1380,15 +1392,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       !settings.randomInTimeline
     ) {
       if (!res.time?.length) return false
-      if (cachedDates.value.fromDate === null || cachedDates.value.lastFromDate !== settings.fromDate || cachedDates.value.lastToDate !== settings.toDate) {
-        cachedDates.value.fromDate = Date.parse(settings.fromDate)
-        cachedDates.value.toDate = getMonthEndTimestamp(settings.toDate)
-        cachedDates.value.lastFromDate = settings.fromDate
-        cachedDates.value.lastToDate = settings.toDate
-      }
-
-      const fromDate = cachedDates.value.fromDate
-      const toDate = cachedDates.value.toDate
+      const { fromDate, toDate } = getCachedDates()
       let dateWithin = false
       for (const loc of res.time) {
         if (settings.rejectUnofficial && !isOfficial(loc.pano, settings.provider)) continue
@@ -1406,8 +1410,8 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       if (settings.rejectDateless && !res.imageDate) return false
       if (
         res.imageDate &&
-        (Date.parse(res.imageDate) < (cachedDates.value.fromDate || Date.parse(settings.fromDate)) ||
-          Date.parse(res.imageDate) > (cachedDates.value.toDate || getMonthEndTimestamp(settings.toDate)))
+        (Date.parse(res.imageDate) < cachedDates.value.fromDate ||
+          Date.parse(res.imageDate) > cachedDates.value.toDate)
       ) {
         return false
       }
@@ -1484,9 +1488,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
 
   if (settings.rejectDateless && !pano.imageDate) return false
 
-  const fromDate = cachedDates.value.fromDate || Date.parse(settings.fromDate)
-  //const toDate = settings.provider.includes('google') ? getMonthEndTimestamp(settings.toDate) : getDayEndTimestamp(settings.toDate)
-  const toDate = cachedDates.value.toDate || getMonthEndTimestamp(settings.toDate)
+  const { fromDate, toDate } = getCachedDates()
   const locDate = Date.parse(pano.imageDate)
   const fromMonth = settings.fromMonth
   const toMonth = settings.toMonth
@@ -1607,15 +1609,7 @@ function getPanoDeep(id: string, polygon: Polygon, depth: number) {
     const isPanoGoodAndInCountry = (await isPanoGood(pano)) && inCountry
 
     if (settings.checkAllDates && !settings.selectMonths && pano.time) {
-      if (cachedDates.value.fromDate === null || cachedDates.value.lastFromDate !== settings.fromDate || cachedDates.value.lastToDate !== settings.toDate) {
-        cachedDates.value.fromDate = Date.parse(settings.fromDate)
-        cachedDates.value.toDate = getMonthEndTimestamp(settings.toDate)
-        cachedDates.value.lastFromDate = settings.fromDate
-        cachedDates.value.lastToDate = settings.toDate
-      }
-
-      const fromDate = cachedDates.value.fromDate
-      const toDate = cachedDates.value.toDate
+      const { fromDate, toDate } = getCachedDates()
 
       for (const loc of pano.time) {
         if (settings.rejectUnofficial && !isOfficial(loc.pano, settings.provider)) continue
