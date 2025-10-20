@@ -56,7 +56,7 @@ export async function getTileColorPresence(loc: LatLng, config: TileColorConfig)
       }
     }
 
-    // One pass over pixels - add performance optimization without changing logic
+    // One pass over pixels
     for (let i = 0; i < data.length; i += 4) {
       const r = data[i]
       const g = data[i + 1]
