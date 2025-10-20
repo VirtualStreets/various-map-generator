@@ -221,8 +221,8 @@
           <hr />
         </div>
 
-        <div class="flex flex-col gap-1 overflow-y-auto px-1 pb-1">
-          <div v-for="polygon of selected" :key="polygon._leaflet_id" class="flex items-center gap-2">
+        <div class="polygon-list">
+          <div v-for="polygon of selected" :key="polygon._leaflet_id" class="polygon-item">
             <Button size="sm" squared title="Import locations">
               <label class="cursor-pointer">
                 <input type="file" accept=".json" hidden @change="importLocations($event, polygon as Polygon)" />
@@ -231,19 +231,19 @@
             </Button>
             <span v-if="polygon.feature.properties.code"
               :class="`flag-icon flag-` + polygon.feature.properties.code.toLowerCase()"></span>
-            <label class="flex-grow truncate min-h-5 cursor-text"
+            <label class="polygon-name"
               @click="changePolygonName(polygon.feature.properties)">
               {{ getPolygonName(polygon.feature.properties) }}
             </label>
             <Spinner v-if="state.started && polygon.isProcessing" :icon="settings.provider" />
 
-            <div class="ml-auto flex items-center gap-1">
+            <div class="polygon-counter">
               {{ polygon.found.length }}
               <span>/</span>
               <input type="number" :min="polygon.found ? polygon.found.length : 0" v-model="polygon.nbNeeded" />
             </div>
 
-            <div class="flex gap-1">
+            <div class="polygon-actions">
               <Clipboard :data="[polygon as Polygon]" :disabled="!polygon.found.length" :mode="settings.panoId"
                 :tag="settings.tag" />
               <ExportToJSON :data="[polygon as Polygon]" :disabled="!polygon.found.length" :mode="settings.panoId"
@@ -910,6 +910,8 @@ const countdown = ref<number>(0)
 const pauseCountdown = ref<number>(0)
 const resumeCountdown = ref<number>(0)
 
+const cachedDates = ref({ fromDate: 0, toDate: 0, lastFromDate: '', lastToDate: '' })
+
 const canBeStarted = computed(() =>
   selected.value.some((country) => country.found.length < country.nbNeeded),
 )
@@ -1351,11 +1353,11 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
     if (settings.randomInTimeline && res.time) {
       const randomIndex = Math.floor(Math.random() * res.time.length)
       const randomPano = res.time[randomIndex]
-      const panoDate = Object.values(randomPano).find((val) => val instanceof Date)
+      const panoDate = randomPano.date
       const parsedDate = panoDate ? panoDate.getTime() : undefined
       if (
         parsedDate &&
-        (parsedDate < Date.parse(settings.fromDate) || parsedDate > getMonthEndTimestamp(settings.toDate))
+        (parsedDate < cachedDates.value.fromDate || parsedDate > cachedDates.value.toDate)
       )
         return false
       getPano(randomPano.pano, polygon)
@@ -1368,18 +1370,20 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       !settings.randomInTimeline
     ) {
       if (!res.time?.length) return false
-      const fromDate = Date.parse(settings.fromDate)
-      // 将toDate调整到月末最后一天
-      const toDateObj = new Date(settings.toDate)
-      toDateObj.setMonth(toDateObj.getMonth() + 1, 0) // 设置为下个月的第0天，即当月最后一天
-      toDateObj.setHours(23, 59, 59, 999) // 设置为当天最后时刻
-      const toDate = toDateObj.getTime()
+      if (cachedDates.value.lastFromDate !== settings.fromDate || cachedDates.value.lastToDate !== settings.toDate) {
+        cachedDates.value.fromDate = Date.parse(settings.fromDate)
+        cachedDates.value.toDate = getMonthEndTimestamp(settings.toDate)
+        cachedDates.value.lastFromDate = settings.fromDate
+        cachedDates.value.lastToDate = settings.toDate
+      }
+      
+      const fromDate = cachedDates.value.fromDate
+      const toDate = cachedDates.value.toDate
       let dateWithin = false
       for (const loc of res.time) {
         if (settings.rejectUnofficial && !isOfficial(loc.pano, settings.provider)) continue
 
-        const date = Object.values(loc).find((val) => val instanceof Date)
-        const iDate = parseDate(date)
+        const iDate = parseDate(loc.date)
         if (iDate >= fromDate && iDate <= toDate) {
           // if date ranges from fromDate to toDate, set dateWithin to true and stop the loop
           dateWithin = true
@@ -1391,8 +1395,8 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       if (settings.rejectDateless && !res.imageDate) return false
       if (
         res.imageDate &&
-        (Date.parse(res.imageDate) < Date.parse(settings.fromDate) ||
-          Date.parse(res.imageDate) > getMonthEndTimestamp(settings.toDate))
+        (Date.parse(res.imageDate) < cachedDates.value.fromDate ||
+          Date.parse(res.imageDate) > cachedDates.value.toDate)
       ) {
         return false
       }
@@ -1469,9 +1473,9 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
 
   if (settings.rejectDateless && !pano.imageDate) return false
 
-  const fromDate = Date.parse(settings.fromDate)
+  const fromDate = cachedDates.value.fromDate
   //const toDate = settings.provider.includes('google') ? getMonthEndTimestamp(settings.toDate) : getDayEndTimestamp(settings.toDate)
-  const toDate = getMonthEndTimestamp(settings.toDate)
+  const toDate = cachedDates.value.toDate
   const locDate = Date.parse(pano.imageDate)
   const fromMonth = settings.fromMonth
   const toMonth = settings.toMonth
@@ -1489,7 +1493,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
     for (const loc of pano.time) {
       if (settings.rejectUnofficial && !isOfficial(loc.pano, settings.provider)) continue
       if (loc.pano == pano.location?.pano) continue
-      const date = Object.values(loc).find((val) => val instanceof Date)
+      const date = loc.date
       const iDate = parseDate(date)
       if (iDate >= fromDate && iDate <= toDate) return false
     }
@@ -1512,8 +1516,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
     for (let i = 0; i < pano.time.length; i++) {
       if (settings.rejectUnofficial && !isOfficial(pano.time[i].pano, settings.provider)) continue
 
-      const timeframeDate = Object.values(pano.time[i]).find((val) => isDate(val))
-      const iDate = parseDate(timeframeDate)
+      const iDate = parseDate(pano.time[i].date)
 
       if (iDate >= fromDate && iDate <= toDate) {
         dateWithin = true
@@ -1531,7 +1534,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
       for (let i = 0; i < pano.time.length; i++) {
         if (settings.rejectUnofficial && !isOfficial(pano.time[i].pano, settings.provider)) continue
 
-        const timeframeDate = Object.values(pano.time[i]).find((val) => isDate(val))
+        const timeframeDate = pano.time[i].date
         const iDateMonth = timeframeDate.getMonth() + 1
         const iDateYear = timeframeDate.getFullYear()
 
@@ -1592,14 +1595,20 @@ function getPanoDeep(id: string, polygon: Polygon, depth: number) {
     const isPanoGoodAndInCountry = (await isPanoGood(pano)) && inCountry
 
     if (settings.checkAllDates && !settings.selectMonths && pano.time) {
-      const fromDate = Date.parse(settings.fromDate)
-      const toDate = getMonthEndTimestamp(settings.toDate)
+      if (cachedDates.value.lastFromDate !== settings.fromDate || cachedDates.value.lastToDate !== settings.toDate) {
+        cachedDates.value.fromDate = Date.parse(settings.fromDate)
+        cachedDates.value.toDate = getMonthEndTimestamp(settings.toDate)
+        cachedDates.value.lastFromDate = settings.fromDate
+        cachedDates.value.lastToDate = settings.toDate
+      }
+      
+      const fromDate = cachedDates.value.fromDate
+      const toDate = cachedDates.value.toDate
 
       for (const loc of pano.time) {
         if (settings.rejectUnofficial && !isOfficial(loc.pano, settings.provider)) continue
 
-        const date = Object.values(loc).find((val) => val instanceof Date)
-        const iDate = parseDate(date)
+        const iDate = parseDate(loc.date)
         if (iDate >= fromDate && iDate <= toDate) {
           // if date ranges from fromDate to toDate, set dateWithin to true and stop the loop
           getPanoDeep(loc.pano, polygon, isPanoGoodAndInCountry ? 1 : depth + 1)

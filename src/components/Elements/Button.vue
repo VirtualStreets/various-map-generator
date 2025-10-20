@@ -14,7 +14,7 @@ const {
 }>()
 
 const baseClass =
-  'text-nowrap hover:brightness-105 border border-black/20 transition-filter duration-200 cursor-pointer rounded-sm shadow-[0_0_3px_rgba(0,0,0,0.3)]'
+  'text-nowrap border border-black/20 cursor-pointer rounded-sm transition-colors duration-150'
 
 const sizeClass = computed(() => {
   const squaredSizes = {
@@ -33,11 +33,11 @@ const sizeClass = computed(() => {
 
 const variantClass = computed(() => {
   const variants = {
-    default: 'bg-gray-200 text-black',
-    primary: 'bg-primary text-black',
-    danger: 'bg-danger text-white',
-    warning: 'bg-warning text-black',
-    bordered: 'border border-primary bg-black/50',
+    default: 'bg-gray-200 text-black hover:bg-gray-300',
+    primary: 'bg-primary text-black hover:bg-primary/90',
+    danger: 'bg-danger text-white hover:bg-danger/90',
+    warning: 'bg-warning text-black hover:bg-warning/90',
+    bordered: 'border border-primary bg-black/50 hover:bg-black/70',
   }
   return variants[variant]
 })

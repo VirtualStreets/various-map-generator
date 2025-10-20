@@ -137,7 +137,7 @@ function calculateZoom(boundNW: LatLng, boundSE: LatLng, limit: number) {
 }
 
 async function renderLayer(
-  ctx: CanvasRenderingContext2D,
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
   layer: LayerType,
   zoom: number,
   x1: number,
@@ -183,19 +183,20 @@ function distanceFromPointInMeters(lat1: number, lng1: number, bearing: number, 
 }
 
 export async function blueLineDetector(boundNW: LatLng, boundSE: LatLng) {
-  const ctx = document.createElement('canvas').getContext('2d')
+  const canvas = new OffscreenCanvas(1, 1)
+  const ctx = canvas.getContext('2d')
   if (!ctx) {
     throw new Error('Failed to obtain 2D rendering context')
   }
 
   const { zoom, cols, rows, tileCoordNW } = calculateZoom(boundNW, boundSE, MAX_TILES)
 
-  ctx.canvas.width = TILE_SIZE * cols
-  ctx.canvas.height = TILE_SIZE * rows
+  canvas.width = TILE_SIZE * cols
+  canvas.height = TILE_SIZE * rows
 
   await renderLayer(ctx, 'thin', zoom, tileCoordNW.x, tileCoordNW.y, cols, rows)
 
-  const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height)
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
 
   return function (lat: number, lng: number, radius: number) {
     const cxr = distanceFromPointInMeters(lat, lng, 270, radius)
