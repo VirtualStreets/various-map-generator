@@ -209,7 +209,7 @@
           </Checkbox>
           <div v-if="settings.markersOnImport" class="ml-4">
             <label class="text-s">Markers opacity: {{ Math.round((settings.importedMarkersOpacity ?? 1.0) * 100)
-            }}%</label>
+              }}%</label>
             <Slider v-model="settings.importedMarkersOpacity" @input="updateImportedMarkersOpacity"
               :value="settings.importedMarkersOpacity ?? 1.0" :max="1.0" :step="0.01" :tooltips="false" :lazy="false"
               class="mt-1 w-80" />
@@ -333,7 +333,7 @@
               Speed :
               <span>
                 <input type="number" v-model.number="settings.speed" min="1" max="1000" @input="handleSpeedInput" />
-                attemps
+                attempts
               </span>
             </div>
 
@@ -839,20 +839,15 @@ import {
   searchInDescription,
   getCurrentDate,
   parseDate,
-  extractDateFromPanoId,
-  isDate,
   randomInRange,
   distanceBetween,
   readFileAsText,
   getPolygonName,
   changePolygonName,
-  tencentToGcj02,
   headingToMapillaryX,
   pitchToMapillaryY,
   wgs84_to_isn93,
-  getMonthEndTimestamp,
-  sendToDiscord,
-  getDayEndTimestamp
+  getMonthEndTimestamp
 } from '@/composables/utils.ts'
 import StreetViewProviders from '@/providers'
 import { degToRad, radToDeg } from 'web-merc-projection/util'
@@ -923,9 +918,9 @@ function findDateInObject(obj: any): Date | null {
 }
 
 function getCachedDates() {
-  if (cachedDates.value.fromDate === null || 
-      cachedDates.value.lastFromDate !== settings.fromDate || 
-      cachedDates.value.lastToDate !== settings.toDate) {
+  if (cachedDates.value.fromDate === null ||
+    cachedDates.value.lastFromDate !== settings.fromDate ||
+    cachedDates.value.lastToDate !== settings.toDate) {
     cachedDates.value.fromDate = Date.parse(settings.fromDate)
     cachedDates.value.toDate = getMonthEndTimestamp(settings.toDate)
     cachedDates.value.lastFromDate = settings.fromDate

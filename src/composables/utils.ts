@@ -19,12 +19,6 @@ export function getMonthEndTimestamp(monthString: string): number {
   return date.getTime();
 }
 
-export function getDayEndTimestamp(dayString: string): number {
-  const date = new Date(dayString);
-  date.setHours(23, 59, 59, 999);
-  return date.getTime();
-}
-
 async function createDiscordMessage(title: string, pano: {
   panoId: string;
   lat: number;
@@ -445,11 +439,6 @@ export function formatTimeStr(datetimeStr: string): string {
   const min = date.getMinutes().toString().padStart(2, '0');
   const sec = date.getSeconds().toString().padStart(2, '0');
   return `${yyyy}-${mm}-${dd}T${hh}:${min}:${sec}`;
-}
-
-export const isDate = (date: string) => {
-  const parsed = new Date(date)
-  return !isNaN(parsed.getTime())
 }
 
 export function randomPointInPoly(polygon: Polygon) {

@@ -1,6 +1,6 @@
 <template>
   <div class="group">
-    <span class="cursor-help text-gray-300">🛈</span>
+    <span class="cursor-help text-gray-300">ℹ️</span>
     <div
       class="tooltip absolute z-10 hidden group-hover:block w-72 rounded-sm p-2 text-xs shadow-md"
       style="top: 100%; left: 0"
