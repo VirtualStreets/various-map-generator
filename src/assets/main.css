@@ -83,6 +83,27 @@ hr {
   @apply h-px my-2 mx-8 bg-primary border-none;
 }
 
+/* Optimized polygon list styles for better performance */
+.polygon-list {
+  @apply flex flex-col gap-1 overflow-y-auto px-1 pb-1;
+}
+
+.polygon-item {
+  @apply flex items-center gap-2;
+}
+
+.polygon-name {
+  @apply flex-grow truncate min-h-5 cursor-text;
+}
+
+.polygon-counter {
+  @apply ml-auto flex items-center gap-1;
+}
+
+.polygon-actions {
+  @apply flex gap-1;
+}
+
 .small {
   font-size: 0.8rem;
 }
