@@ -1383,6 +1383,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       for (const loc of res.time) {
         if (settings.rejectUnofficial && !isOfficial(loc.pano, settings.provider)) continue
 
+        if (!loc.date) continue
         const iDate = parseDate(loc.date)
         if (iDate >= fromDate && iDate <= toDate) {
           // if date ranges from fromDate to toDate, set dateWithin to true and stop the loop
@@ -1493,8 +1494,8 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
     for (const loc of pano.time) {
       if (settings.rejectUnofficial && !isOfficial(loc.pano, settings.provider)) continue
       if (loc.pano == pano.location?.pano) continue
-      const date = loc.date
-      const iDate = parseDate(date)
+      if (!loc.date) continue
+      const iDate = parseDate(loc.date)
       if (iDate >= fromDate && iDate <= toDate) return false
     }
   }
@@ -1513,10 +1514,11 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
     }
 
     let dateWithin = false
-    for (let i = 0; i < pano.time.length; i++) {
-      if (settings.rejectUnofficial && !isOfficial(pano.time[i].pano, settings.provider)) continue
+      for (let i = 0; i < pano.time.length; i++) {
+        if (settings.rejectUnofficial && !isOfficial(pano.time[i].pano, settings.provider)) continue
 
-      const iDate = parseDate(pano.time[i].date)
+        if (!pano.time[i].date) continue
+        const iDate = parseDate(pano.time[i].date)
 
       if (iDate >= fromDate && iDate <= toDate) {
         dateWithin = true
@@ -1534,6 +1536,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
       for (let i = 0; i < pano.time.length; i++) {
         if (settings.rejectUnofficial && !isOfficial(pano.time[i].pano, settings.provider)) continue
 
+        if (!pano.time[i].date) continue
         const timeframeDate = pano.time[i].date
         const iDateMonth = timeframeDate.getMonth() + 1
         const iDateYear = timeframeDate.getFullYear()
@@ -1608,6 +1611,7 @@ function getPanoDeep(id: string, polygon: Polygon, depth: number) {
       for (const loc of pano.time) {
         if (settings.rejectUnofficial && !isOfficial(loc.pano, settings.provider)) continue
 
+        if (!loc.date) continue
         const iDate = parseDate(loc.date)
         if (iDate >= fromDate && iDate <= toDate) {
           // if date ranges from fromDate to toDate, set dateWithin to true and stop the loop
