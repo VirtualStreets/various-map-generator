@@ -1198,7 +1198,6 @@ async function generate(polygon: Polygon) {
     const randomCoords = []
     const n = Math.min(polygon.nbNeeded * 100, settings.speed)
 
-    let attempts = 0
     while (randomCoords.length < n) {
       const point = randomPointInPoly(polygon)
       if (
@@ -1206,10 +1205,6 @@ async function generate(polygon: Polygon) {
         (!settings.onlyCheckBlueLines || detector(point.lat, point.lng, settings.radius))
       ) {
         randomCoords.push(point)
-      }
-      //yield to main thread every 10 attempts to prevent hitching
-      if (++attempts % 10 === 0) {
-        await new Promise(resolve => setTimeout(resolve, 0))
       }
     }
 
