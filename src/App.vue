@@ -905,7 +905,12 @@ const countdown = ref<number>(0)
 const pauseCountdown = ref<number>(0)
 const resumeCountdown = ref<number>(0)
 
-const cachedDates = ref({ fromDate: null, toDate: null, lastFromDate: null, lastToDate: null })
+const cachedDates = ref({
+  fromDate: Date.parse(settings.fromDate),
+  toDate: getMonthEndTimestamp(settings.toDate),
+  lastFromDate: settings.fromDate,
+  lastToDate: settings.toDate
+})
 
 function findDateInObject(obj: any): Date | null {
   for (const key in obj) {
@@ -918,8 +923,7 @@ function findDateInObject(obj: any): Date | null {
 }
 
 function getCachedDates() {
-  if (cachedDates.value.fromDate === null ||
-    cachedDates.value.lastFromDate !== settings.fromDate ||
+  if (cachedDates.value.lastFromDate !== settings.fromDate ||
     cachedDates.value.lastToDate !== settings.toDate) {
     cachedDates.value.fromDate = Date.parse(settings.fromDate)
     cachedDates.value.toDate = getMonthEndTimestamp(settings.toDate)
@@ -1372,11 +1376,11 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       const randomPano = res.time[randomIndex]
       const panoDate = findDateInObject(randomPano)
       const parsedDate = panoDate ? panoDate.getTime() : undefined
-      if (
-        parsedDate &&
-        (parsedDate < cachedDates.value.fromDate || parsedDate > cachedDates.value.toDate)
-      )
-        return false
+      if (parsedDate) {
+        const { fromDate, toDate } = getCachedDates()
+        if (parsedDate < fromDate || parsedDate > toDate)
+          return false
+      }
       getPano(randomPano.pano, polygon)
     }
 
@@ -1403,12 +1407,12 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       if (!dateWithin) return false
     } else {
       if (settings.rejectDateless && !res.imageDate) return false
-      if (
-        res.imageDate &&
-        (Date.parse(res.imageDate) < cachedDates.value.fromDate ||
-          Date.parse(res.imageDate) > cachedDates.value.toDate)
-      ) {
-        return false
+      if (res.imageDate) {
+        const { fromDate, toDate } = getCachedDates()
+        const date = Date.parse(res.imageDate)
+        if (date < fromDate || date > toDate) {
+          return false
+        }
       }
       getPano(res.location.pano, polygon)
     }
