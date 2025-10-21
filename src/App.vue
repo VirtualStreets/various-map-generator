@@ -209,7 +209,7 @@
           </Checkbox>
           <div v-if="settings.markersOnImport" class="ml-4">
             <label class="text-s">Markers opacity: {{ Math.round((settings.importedMarkersOpacity ?? 1.0) * 100)
-              }}%</label>
+            }}%</label>
             <Slider v-model="settings.importedMarkersOpacity" @input="updateImportedMarkersOpacity"
               :value="settings.importedMarkersOpacity ?? 1.0" :max="1.0" :step="0.01" :tooltips="false" :lazy="false"
               class="mt-1 w-80" />
@@ -325,7 +325,7 @@
                 <input type="number" v-model.number="settings.numOfGenerators" min="1" max="10"
                   class="w-8 h-5 px-2 py-1 border rounded text-right" />
                 <Slider v-model="settings.numOfGenerators" range="true" :min="1" :max="10" :step="1" :tooltips="false"
-                  class="w-30 mr-2" />
+                  :lazy="false" class="w-30 mr-2" />
               </div>
             </div>
 
@@ -905,7 +905,12 @@ const countdown = ref<number>(0)
 const pauseCountdown = ref<number>(0)
 const resumeCountdown = ref<number>(0)
 
-const cachedDates = ref({ fromDate: null, toDate: null, lastFromDate: null, lastToDate: null })
+const cachedDates = ref({
+  fromDate: Date.parse(settings.fromDate),
+  toDate: getMonthEndTimestamp(settings.toDate),
+  lastFromDate: settings.fromDate,
+  lastToDate: settings.toDate
+})
 
 function findDateInObject(obj: any): Date | null {
   for (const key in obj) {
@@ -918,8 +923,7 @@ function findDateInObject(obj: any): Date | null {
 }
 
 function getCachedDates() {
-  if (cachedDates.value.fromDate === null ||
-    cachedDates.value.lastFromDate !== settings.fromDate ||
+  if (cachedDates.value.lastFromDate !== settings.fromDate ||
     cachedDates.value.lastToDate !== settings.toDate) {
     cachedDates.value.fromDate = Date.parse(settings.fromDate)
     cachedDates.value.toDate = getMonthEndTimestamp(settings.toDate)
@@ -1372,11 +1376,11 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       const randomPano = res.time[randomIndex]
       const panoDate = findDateInObject(randomPano)
       const parsedDate = panoDate ? panoDate.getTime() : undefined
-      if (
-        parsedDate &&
-        (parsedDate < cachedDates.value.fromDate || parsedDate > cachedDates.value.toDate)
-      )
-        return false
+      if (parsedDate) {
+        const { fromDate, toDate } = getCachedDates()
+        if (parsedDate < fromDate || parsedDate > toDate)
+          return false
+      }
       getPano(randomPano.pano, polygon)
     }
 
@@ -1403,12 +1407,12 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
       if (!dateWithin) return false
     } else {
       if (settings.rejectDateless && !res.imageDate) return false
-      if (
-        res.imageDate &&
-        (Date.parse(res.imageDate) < cachedDates.value.fromDate ||
-          Date.parse(res.imageDate) > cachedDates.value.toDate)
-      ) {
-        return false
+      if (res.imageDate) {
+        const { fromDate, toDate } = getCachedDates()
+        const date = Date.parse(res.imageDate)
+        if (date < fromDate || date > toDate) {
+          return false
+        }
       }
       getPano(res.location.pano, polygon)
     }
