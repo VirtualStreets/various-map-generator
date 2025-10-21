@@ -209,7 +209,7 @@
           </Checkbox>
           <div v-if="settings.markersOnImport" class="ml-4">
             <label class="text-s">Markers opacity: {{ Math.round((settings.importedMarkersOpacity ?? 1.0) * 100)
-              }}%</label>
+            }}%</label>
             <Slider v-model="settings.importedMarkersOpacity" @input="updateImportedMarkersOpacity"
               :value="settings.importedMarkersOpacity ?? 1.0" :max="1.0" :step="0.01" :tooltips="false" :lazy="false"
               class="mt-1 w-80" />
@@ -325,7 +325,7 @@
                 <input type="number" v-model.number="settings.numOfGenerators" min="1" max="10"
                   class="w-8 h-5 px-2 py-1 border rounded text-right" />
                 <Slider v-model="settings.numOfGenerators" range="true" :min="1" :max="10" :step="1" :tooltips="false"
-                  class="w-30 mr-2" />
+                  :lazy="false" class="w-30 mr-2" />
               </div>
             </div>
 
