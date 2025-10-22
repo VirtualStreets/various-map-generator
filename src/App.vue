@@ -463,11 +463,11 @@
             <div v-if="!settings.selectMonths" class="flex flex-col gap-0.5">
               <div class="flex justify-between">
                 From :
-                <input :type="'month'" v-model="settings.fromDate" min="2007-01-01" :max="currentDate" />
+                <input :type="'month'" v-model="settings.fromDate" min="2007-01" :max="currentDate" />
               </div>
               <div class="flex justify-between">
                 To :
-                <input :type="'month'" v-model="settings.toDate" min="2007-01-01" :max="currentDate" />
+                <input :type="'month'" v-model="settings.toDate" min="2007-01" :max="currentDate" />
               </div>
             </div>
 
