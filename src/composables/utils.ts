@@ -58,8 +58,8 @@ export async function sendToDiscord(url: string,
   const content = data ? await createDiscordMessage(title, data) : title;
   const payload = JSON.stringify({
     content,
-    username: "Various Map Generator",
-    avatar_url: "https://various-map-generator.vercel.app/favicon.png"
+    username: "Various MapGenerator",
+    avatar_url: "https://various-map-generator.pages.dev/favicon.png"
   });
   try {
     const response = await fetch(url, {

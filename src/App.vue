@@ -1869,7 +1869,7 @@ function addLocation(
               url = `https://lookmap.eu.pythonanywhere.com/#c=18/${location.lat}/${location.lng}&p=${location.lat}/${location.lng}&a=${heading}/${pitch}`
               break
             case 'bing':
-              url = `https://www.bing.com/maps/?style=x&lvl=18&id=${location.panoId}&cp=${location.lat}%7E${location.lng}&dir=${heading || 0}&pi=${pitch || 0}`
+              url = `https://www.bing.com/maps/?cc=cn&style=x&lvl=18&id=${location.panoId}&cp=${location.lat}%7E${location.lng}&dir=${heading || 0}&pi=${pitch || 0}&setlang=en`
               break
             case 'kakao':
               url = `https://map.kakao.com/?map_type=TYPE_MAP&map_attribute=ROADVIEW&panoid=${location.panoId}&pan=${heading}&tilt=${pitch}`
