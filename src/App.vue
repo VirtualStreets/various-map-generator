@@ -1810,7 +1810,7 @@ function addLocation(
 
   if (polygon.found.length < polygon.nbNeeded) {
     polygon.found.push(location)
-    if (!imported) {
+    if (settings.notification.enabled && !imported) {
       const elapsedTime = ((Date.now() - generationStartTime.value) / 1000).toFixed(1)
       if (settings.notification.anyLocation && polygon.found.length === 1) {
         sendNotifications(
