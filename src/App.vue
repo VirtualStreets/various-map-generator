@@ -1246,7 +1246,7 @@ async function getNonBadcamRes(pano: string): Promise<StreetViewPanoramaData | n
 
   if (!initialRes) return null
 
-  const gen = getCameraGeneration(initialRes)
+  const gen = getCameraGeneration(initialRes, 'google')
 
   if (gen != 'badcam') return initialRes
 
@@ -1265,7 +1265,7 @@ async function getNonBadcamRes(pano: string): Promise<StreetViewPanoramaData | n
       })
     })
 
-    if (fallbackRes && getCameraGeneration(fallbackRes) != 'badcam') {
+    if (fallbackRes && getCameraGeneration(fallbackRes, 'google') != 'badcam') {
       return fallbackRes
     }
   }
