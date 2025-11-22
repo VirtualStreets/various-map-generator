@@ -1844,7 +1844,20 @@ function addLocation(
       }
     }
     if (addMarker) {
-      const marker = L.marker([location.lat, location.lng], { icon: iconType, forceZIndex: zIndex, opacity: opacity })
+      const marker = L.marker([location.lat, location.lng], {
+        icon: iconType,
+        forceZIndex: zIndex,
+        opacity: opacity,
+        contextmenu: true,
+        contextmenuItems: [
+          {
+            text: 'Remove Marker',
+            callback: () => {
+              markerLayer.removeLayer(marker)
+            }
+          }
+        ]
+      })
         .on('click', () => {
           const heading = location.heading ?? 0
           const pitch = location.pitch ?? 0

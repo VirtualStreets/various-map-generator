@@ -7,7 +7,10 @@ declare module 'leaflet' {
     // Typescript complains if these are not included,
     // seems like contextmenu is expected in MarkerOptions as well even if only used in L.Map
     contextmenu?: boolean
-    contextmenuItems?: []
+    contextmenuItems?: Array<{
+      text: string
+      callback: (e: ContextMenuItemClickEvent) => void
+    }>
   }
 
   interface Marker {
