@@ -485,7 +485,7 @@ const markerLayers: Record<MarkerLayersTypes, L.MarkerClusterGroup> = {
 export interface LayerMeta {
   label: string
   key: string
-  source: string | L.Layer
+  source: string | L.Layer | GeoJSON.GeoJsonObject
   visible: boolean
 }
 const availableLayers = ref<LayerMeta[]>([
@@ -729,6 +729,90 @@ function exportLayer(l: LayerMeta) {
   linkElement.click()
 }
 
+async function importGeoJSONFromSearch(geojson: GeoJSON.GeoJsonObject, name: string) {
+  if (!isValidGeoJSON(geojson)) {
+    console.error('Invalid GeoJSON received:', geojson)
+    throw new Error('Invalid GeoJSON structure. Please try a different location.')
+  }
+
+  try {
+    // Parse features from GeoJSON
+    let features: GeoJSON.Feature[] = []
+    
+    if (geojson.type === 'Feature') {
+      features = [geojson as GeoJSON.Feature]
+    } else if (geojson.type === 'FeatureCollection') {
+      features = (geojson as GeoJSON.FeatureCollection).features
+    }
+
+    if (features.length === 0) {
+      throw new Error('No valid features found in GeoJSON')
+    }
+
+    // Add each feature as a polygon to drawnPolygonsLayer
+    const toSelect: Polygon[] = []
+    const bounds: L.LatLngBounds[] = []
+    
+    features.forEach((feature, index) => {
+      // Create temporary GeoJSON layer to parse the feature
+      const tempLayer = L.geoJSON(feature, { 
+        style: polygonStyles.customPolygonStyle()
+      })
+      
+      const layers = tempLayer.getLayers()
+      if (layers.length > 0) {
+        const polygon = layers[0] as Polygon
+        
+        // Set properties and name
+        polygon.feature = feature as any
+        polygon.feature.properties = polygon.feature.properties || {} as any
+        
+        // Use search name for single feature, add index for multiple features
+        if (features.length === 1) {
+          (polygon.feature.properties as any).name = name
+        } else {
+          (polygon.feature.properties as any).name = `${name} (${index + 1})`
+        }
+        
+        // Initialize polygon properties
+        initPolygon(polygon)
+        
+        // Set highlight style and add event listeners
+        polygon.setStyle(polygonStyles.highlighted())
+        polygon.on('mouseover', (e: L.LeafletMouseEvent) => highlightFeature(e))
+        polygon.on('mouseout', (e: L.LeafletMouseEvent) => resetHighlight(e))
+        polygon.on('click', (e: L.LeafletMouseEvent) => selectPolygon(e))
+        
+        // Add to drawn polygons layer
+        drawnPolygonsLayer.addLayer(polygon)
+        toSelect.push(polygon)
+        
+        // Collect bounds for fitting view
+        if ('getBounds' in polygon) {
+          bounds.push((polygon as any).getBounds())
+        }
+      }
+    })
+    
+    // Select all imported polygons
+    selected.value.push(...toSelect)
+    
+    // Fit map view to imported polygons
+    if (bounds.length > 0) {
+      const featureBounds = bounds.reduce((acc, b) => {
+        return acc ? acc.extend(b) : b
+      })
+      if (featureBounds) {
+        map.fitBounds(featureBounds, { padding: [50, 50] })
+      }
+    }
+    
+  } catch (err) {
+    console.error('Error importing GeoJSON:', err)
+    throw new Error(`Failed to import GeoJSON: ${err instanceof Error ? err.message : 'Unknown error'}`)
+  }
+}
+
 function updateMarkerLayers(gen: MarkerLayersTypes) {
   if (
     (gen === 'gen4' && settings.markers.gen4) ||
@@ -845,6 +929,7 @@ export {
   setCoverageLayerOpacity,
   setGSVLayerStyle,
   importLayer,
+  importGeoJSONFromSearch,
   exportLayer,
   updateMarkerLayers,
   availableLayers,

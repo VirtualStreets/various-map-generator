@@ -4,11 +4,14 @@ export const MONTHS_NAME = ['January', 'February', 'March', 'April', 'May', 'Jun
 
 export function getCountryName(countryCode: string, locale: string = 'en'): string {
   try {
+    if (!countryCode) {
+      return 'Unknown'
+    }
     const displayNames = new Intl.DisplayNames([locale], { type: 'region' });
     return displayNames.of(countryCode.toUpperCase()) || countryCode;
   } catch (error) {
     console.warn('Failed to get country name:', error);
-    return countryCode;
+    return countryCode || 'Unknown';
   }
 }
 
@@ -37,8 +40,9 @@ async function createDiscordMessage(title: string, pano: {
   }
   else if (pano.road) position_word = 'on'
   const link = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${pano.panoId}`;
-  const countryName = getCountryName(pano.country);
-  return `:white_check_mark: ${title}\n\n:flag_${pano.country.toLowerCase()}:${pano.update_type ? ` :${pano.update_type}: ` : ' '}${MONTHS_NAME[parseInt(pano.imageDate.slice(5, 7)) - 1]} ${pano.imageDate.slice(0, 4)} ${position_word} ${pano.locality || pano.road || ''}${(pano.locality || pano.road) ? ', ' : ''}${pano.region}, ${countryName}\n<${link}>`;
+  const countryName = getCountryName(pano.country || '');
+  const countryCode = pano.country ? pano.country.toLowerCase() : 'xx';
+  return `:white_check_mark: ${title}\n\n:flag_${countryCode}:${pano.update_type ? ` :${pano.update_type}: ` : ' '}${MONTHS_NAME[parseInt(pano.imageDate.slice(5, 7)) - 1]} ${pano.imageDate.slice(0, 4)} ${position_word} ${pano.locality || pano.road || ''}${(pano.locality || pano.road) ? ', ' : ''}${pano.region || ''}, ${countryName}\n<${link}>`;
 }
 
 export async function sendToDiscord(url: string,
