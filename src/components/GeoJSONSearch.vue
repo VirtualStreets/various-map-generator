@@ -128,49 +128,130 @@ function handleKeydown(e: KeyboardEvent) {
 
     <div
       v-if="showResults && hasResults"
-      class="bg-black/50 border border-neutral-500 rounded-sm max-h-48 overflow-y-auto"
+      class="rounded-sm max-h-48 overflow-y-auto geojson-results"
     >
       <div
         v-for="(result, index) in searchResults"
         :key="index"
-        class="px-2 py-1.5 border-b border-neutral-500/50 last:border-b-0 cursor-pointer hover:bg-black/70 transition-colors"
-        :class="{ 'bg-black/70': selectedResult?.osm_id === result.osm_id }"
+        class="px-2 py-1.5 cursor-pointer transition-colors geojson-result-item"
+        :class="{ 'geojson-result-selected': selectedResult?.osm_id === result.osm_id }"
         @click="handleSelect(result)"
       >
         <div class="text-xs font-semibold text-primary truncate">
           {{ result.display_name.split(',')[0] }}
         </div>
-        <div class="text-xs text-gray-400 truncate">
+        <div class="text-xs truncate geojson-result-secondary">
           {{ getAddressInfo(result) }}
         </div>
-        <div v-if="isLoading && selectedResult?.osm_id === result.osm_id" class="text-xs text-gray-300 mt-1">
+        <div v-if="isLoading && selectedResult?.osm_id === result.osm_id" class="text-xs mt-1 geojson-loading">
           Importing...
         </div>
       </div>
     </div>
 
-    <div v-if="showResults && !hasResults && !isSearching" class="text-xs text-gray-400 px-2 py-2">
+    <div v-if="showResults && !hasResults && !isSearching" class="text-xs px-2 py-2 geojson-empty">
       No places found
     </div>
   </div>
 </template>
 
+<style>
+/* Light theme variables (default) */
+:root {
+  --geojson-input-bg: rgba(255, 255, 255, 0.9);
+  --geojson-input-text: black;
+  --geojson-input-border: rgb(180, 180, 180);
+  --geojson-input-hover-brightness: 0.95;
+  --geojson-results-bg: rgba(255, 255, 255, 0.7);
+  --geojson-results-border: rgb(150, 150, 150);
+  --geojson-result-text: black;
+  --geojson-result-secondary-text: rgb(100, 100, 100);
+  --geojson-result-hover-bg: rgba(83, 224, 170, 0.15);
+  --geojson-result-selected-bg: rgba(83, 224, 170, 0.25);
+  --geojson-result-divider: rgba(150, 150, 150, 0.3);
+  --geojson-empty-text: rgb(100, 100, 100);
+  --geojson-loading-text: rgb(80, 80, 80);
+}
+
+/* Dark theme variables */
+html.dark {
+  --geojson-input-bg: rgba(0, 0, 0, 0.8);
+  --geojson-input-text: #eee;
+  --geojson-input-border: rgb(115, 115, 115);
+  --geojson-input-hover-brightness: 1.2;
+  --geojson-results-bg: rgba(0, 0, 0, 0.9);
+  --geojson-results-border: rgb(115, 115, 115);
+  --geojson-result-text: #eee;
+  --geojson-result-secondary-text: rgb(170, 170, 170);
+  --geojson-result-hover-bg: rgba(83, 224, 170, 0.2);
+  --geojson-result-selected-bg: rgba(83, 224, 170, 0.3);
+  --geojson-result-divider: rgba(115, 115, 115, 0.5);
+  --geojson-empty-text: rgb(170, 170, 170);
+  --geojson-loading-text: rgb(200, 200, 200);
+}
+</style>
+
 <style scoped>
 input[type='text'] {
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--geojson-input-bg);
+  color: var(--geojson-input-text);
   text-align: center;
   border-radius: 0.125rem;
   outline: none;
-  border: 1px solid rgb(115, 115, 115);
+  border: 1px solid var(--geojson-input-border);
   padding: 0 0.5rem;
+  transition: background-color 0.2s, border-color 0.2s, filter 0.2s;
 }
 
 input[type='text']:hover {
-  filter: brightness(1.2);
+  filter: brightness(var(--geojson-input-hover-brightness));
 }
 
 input:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.geojson-results {
+  background-color: var(--geojson-results-bg);
+  border: 0px solid var(--geojson-results-border);
+  color: var(--geojson-result-text);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+html.dark .geojson-results {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.geojson-result-item {
+  border-bottom: 1px solid var(--geojson-result-divider);
+}
+
+.geojson-result-item:last-child {
+  border-bottom: none;
+}
+
+.geojson-result-item:hover {
+  background-color: var(--geojson-result-hover-bg);
+}
+
+.geojson-result-item.geojson-result-selected {
+  background-color: var(--geojson-result-selected-bg);
+}
+
+.geojson-result-secondary {
+  color: var(--geojson-result-secondary-text);
+}
+
+.geojson-empty {
+  color: var(--geojson-empty-text);
+}
+
+.geojson-loading {
+  color: var(--geojson-loading-text);
+}
+</style>
+
+<style>
+/* Additional non-scoped styles if needed */
 </style>
