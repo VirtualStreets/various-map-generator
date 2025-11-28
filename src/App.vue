@@ -180,7 +180,9 @@
           <ChevronDownIcon class="collapsible-indicator absolute top-0 right-0" />
         </div>
 
-        <Collapsible :is-open="panels.layer" class="flex flex-col gap-1 max-h-[140px] overflow-y-auto mt-2 p-1">
+        <Collapsible :is-open="panels.layer" class="flex flex-col gap-1 max-h-[220px] overflow-y-auto mt-2 p-1">
+          <GeoJSONSearch @import="handleGeoJSONImport" />
+          <hr class="my-1" />
           <div v-for="layer in availableLayers" :key="layer.key" class="flex gap-1 justify-between">
             <Checkbox v-model="layer.visible" @change="toggleLayer(layer as LayerMeta)" class="truncate">
               <span class="truncate">{{ layer.label }}</span>
@@ -790,6 +792,7 @@ import Tooltip from '@/components/Elements/Tooltip.vue'
 import Clipboard from '@/components/Clipboard.vue'
 import ExportToJSON from '@/components/ExportToJSON.vue'
 import ExportToCSV from '@/components/ExportToCSV.vue'
+import GeoJSONSearch from '@/components/GeoJSONSearch.vue'
 import FileImportIcon from '@/assets/icons/file-import.svg'
 import FileExportIcon from '@/assets/icons/file-export.svg'
 import MarkerIcon from '@/assets/icons/marker.svg'
@@ -814,6 +817,7 @@ import {
   setGSVLayerStyle,
   setCoverageLayerOpacity,
   importLayer,
+  importGeoJSONFromSearch,
   exportLayer,
   updateMarkerLayers,
   availableLayers,
@@ -1996,6 +2000,16 @@ async function changeLocationsCap() {
 
   for (const polygon of selected.value) {
     polygon.nbNeeded = newCap
+  }
+}
+
+async function handleGeoJSONImport(data: GeoJSON.GeoJsonObject, name: string) {
+  try {
+    await importGeoJSONFromSearch(data, name)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    alert(`Failed to import location: ${message}`)
+    console.error('GeoJSON import error:', err)
   }
 }
 
