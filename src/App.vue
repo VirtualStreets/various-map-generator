@@ -536,7 +536,9 @@
               </span>
             </div>
 
-            <Checkbox v-model="settings.checkAllDates">Check all dates</Checkbox>
+            <Checkbox v-model="settings.checkAllDates"
+              title="Checks all dates at a location instead of only the default one. Mostly useful for countries with prior coverage where a new date may not be the default yet. Lowers generation speed slightly.">
+              Check all dates</Checkbox>
 
             <Checkbox v-if="settings.rejectUnofficial && !settings.rejectOfficial" v-model="settings.randomInTimeline">
               Choose random date in time range
@@ -2021,7 +2023,7 @@ async function handleImportSubdivisions(data: GeoJSON.FeatureCollection, country
     // Create a new layer for subdivisions with country name
     const layerKey = `subdivisions_${countryCode.toLowerCase()}`
     const layerLabel = `${countryName}`
-    
+
     // Add to availableLayers if not already present
     const existingLayer = availableLayers.value.find(layer => layer.key === layerKey)
     if (!existingLayer) {
@@ -2032,7 +2034,7 @@ async function handleImportSubdivisions(data: GeoJSON.FeatureCollection, country
         visible: true
       }
       availableLayers.value.push(newLayer)
-      
+
       // Load the layer on the map
       await toggleLayer(newLayer as LayerMeta)
     } else {
