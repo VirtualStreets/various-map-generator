@@ -17,8 +17,8 @@ export function getCountryName(countryCode: string, locale: string = 'en'): stri
 
 export function getMonthEndTimestamp(monthString: string): number {
   const date = new Date(monthString);
-  date.setMonth(date.getMonth() + 1, 0);
-  date.setHours(23, 59, 59, 999);
+  date.setUTCMonth(date.getUTCMonth() + 1, 0);
+  date.setUTCHours(23, 59, 59, 999);
   return date.getTime();
 }
 
@@ -415,10 +415,10 @@ export function getCurrentDate() {
   }
 }
 
-// this will parse the Date object from res.time[i] (like Fri Oct 01 2021 00:00:00 GMT-0700 (Pacific Daylight Time)) to a local timestamp, like Date.parse("2021-09") == 1630454400000 for Pacific Daylight Time
+// this will parse the Date object from res.time[i] (like Fri Oct 01 2021 00:00:00 GMT-0700 (Pacific Daylight Time)) to a UTC timestamp
 export function parseDate(date: Date): number {
-  const year = date.getFullYear()
-  const month = date.getMonth() + 1
+  const year = date.getUTCFullYear()
+  const month = date.getUTCMonth() + 1
   const monthStr = month < 10 ? `0${month}` : `${month}`
   return Date.parse(`${year}-${monthStr}`)
 }
