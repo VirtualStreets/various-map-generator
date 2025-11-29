@@ -537,7 +537,7 @@
             </div>
 
             <Checkbox v-model="settings.checkAllDates"
-              title="Checks all dates at a location instead of only the default one. Mostly useful for countries with prior coverage where a new date may not be the default yet. Lowers generation speed slightly.">
+              title="Checks all dates/panos at a location instead of only the default one. Mostly useful for countries with prior coverage where a new date may not be the default yet. Lowers generation speed slightly.">
               Check all dates</Checkbox>
 
             <Checkbox v-if="settings.rejectUnofficial && !settings.rejectOfficial" v-model="settings.randomInTimeline">
