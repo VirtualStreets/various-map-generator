@@ -403,7 +403,7 @@
                 Reject locations with road name
               </Checkbox>
               <Checkbox v-if="settings.provider.includes('google')" v-model="settings.rejectDescription">Find trekker
-                coverage
+                coverage (only Gen 3)
               </Checkbox>
 
               <Checkbox v-model="settings.findNightCoverage" v-if="settings.provider === 'tencent'">
