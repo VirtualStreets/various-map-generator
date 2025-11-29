@@ -1554,8 +1554,8 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
         if (settings.rejectUnofficial && !isOfficial(pano.time[i].pano, settings.provider)) continue
 
         const timeframeDate = findDateInObject(pano.time[i])
-        const iDateMonth = timeframeDate.getMonth() + 1
-        const iDateYear = timeframeDate.getFullYear()
+        const iDateMonth = timeframeDate.getUTCMonth() + 1
+        const iDateYear = timeframeDate.getUTCFullYear()
 
         if (fromMonth <= toMonth) {
           if (
