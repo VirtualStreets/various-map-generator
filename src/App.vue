@@ -1218,7 +1218,7 @@ async function generate(polygon: Polygon) {
       }
     }
 
-    const chunkSize = settings.findRegions ? 1 : 75
+    const chunkSize = settings.findRegions ? 1 : 150
     for (const locationGroup of randomCoords.chunk(chunkSize)) {
       await Promise.allSettled(locationGroup.map((l) => getLoc(l, polygon)))
     }
