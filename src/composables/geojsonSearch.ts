@@ -1,7 +1,10 @@
+import { countryCodeMap } from '../constants'
+
 export interface SearchResult {
   display_name: string
   osm_id: number
   osm_type?: string
+  addresstype?: string
   address?: {
     country?: string
     country_code?: string
@@ -13,6 +16,11 @@ export interface SearchResult {
   }
   lat?: string
   lon?: string
+}
+
+function convertCountryCode(code2: string): string | null {
+  const lower = code2.toLowerCase()
+  return countryCodeMap[lower] || null
 }
 
 export async function getOSMID(placeName: string): Promise<SearchResult[] | null> {
@@ -130,6 +138,50 @@ export async function downloadGeoJSON(osmID: number) {
     return feature
   } catch (e) {
     console.error("GeoJSON download failed:", e)
+    return null
+  }
+}
+
+/**
+ * Download and compress subdivisions from GADM API
+ * @param countryCode2 - ISO 3166-1 alpha-2 country code (e.g., 'us', 'gb', 'cn')
+ * @returns FeatureCollection with compressed subdivisions, preserving all properties
+ */
+export async function downloadSubdivisions(countryCode2: string): Promise<GeoJSON.FeatureCollection | null> {
+  const code3 = convertCountryCode(countryCode2)
+  if (!code3) {
+    console.error(`Invalid country code: ${countryCode2}`)
+    return null
+  }
+
+  const url = `https://cors-proxy.ac4.stocc.dev/https://geodata.ucdavis.edu/gadm/gadm4.1/json/gadm41_${code3}_1.json`
+  
+  try {
+    const res = await fetch(url)
+    if (!res.ok) {
+      console.error(`Failed to fetch subdivisions for ${code3}: ${res.status}`)
+      return null
+    }
+    
+    const data = await res.json() as GeoJSON.FeatureCollection
+    
+    // Compress each subdivision feature individually, preserving properties
+    const compressedFeatures: GeoJSON.Feature[] = data.features.map(feature => {
+      const compressedGeometry = simplifyGeometry(feature.geometry)
+      
+      return {
+        type: "Feature",
+        geometry: compressedGeometry,
+        properties: feature.properties || {}
+      }
+    })
+    
+    return {
+      type: "FeatureCollection",
+      features: compressedFeatures
+    }
+  } catch (error) {
+    console.error(`Error downloading subdivisions for ${code3}:`, error)
     return null
   }
 }
