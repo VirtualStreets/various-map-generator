@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { getOSMID, downloadGeoJSON, type SearchResult } from '@/composables/geojsonSearch'
+import { getOSMID, downloadGeoJSON, downloadSubdivisions, type SearchResult } from '@/composables/geojsonSearch'
 import Button from '@/components/Elements/Button.vue'
 import Tooltip from '@/components/Elements/Tooltip.vue'
 
 const emit = defineEmits<{
   import: [data: GeoJSON.GeoJsonObject, name: string]
+  importSubdivisions: [data: GeoJSON.FeatureCollection, countryName: string, countryCode: string]
 }>()
 
 const searchInput = ref('')
@@ -15,36 +16,42 @@ const isSearching = ref(false)
 const isLoading = ref(false)
 const showResults = ref(false)
 const error = ref('')
+const loadingSubdivisions = ref(false)
 
 const hasResults = computed(() => searchResults.value.length > 0)
 
 function getAddressInfo(result: SearchResult): string {
   // Build a detailed address from components
   const parts: string[] = []
-  
+
   if (result.address) {
-    const { city, county, state, region, country } = result.address
+    if (result.address.country_code && ['tw', 'mo', 'hk'].includes(result.address.country_code)) {
+      result.address.country_code = 'cn'
+      result.address.country = 'China'
+    }
+    const { city, state, region, country, province } = result.address
     if (city) parts.push(city)
-    if (county && county !== city) parts.push(county)
-    if (state && state !== city && state !== county) parts.push(state)
+    if (state && state !== city) parts.push(state)
     if (region && region !== state && region !== city) parts.push(region)
+    if (province && province !== state && province !== city) parts.push(province)
+    if (country) parts.push(country)
   }
-  
+
   if (parts.length === 0) {
     // Fallback: parse from display_name
     const displayParts = result.display_name.split(',')
-    return displayParts.slice(0, 2).map(s => s.trim()).join(', ')
+    return displayParts.slice(0, 3).map(s => s.trim()).join(', ')
   }
-  
+
   return parts.join(', ')
 }
 
 async function handleSearch() {
   if (!searchInput.value.trim()) return
-  
+
   isSearching.value = true
   error.value = ''
-  
+
   const results = await getOSMID(searchInput.value)
   if (results) {
     searchResults.value = results
@@ -57,11 +64,38 @@ async function handleSearch() {
   isSearching.value = false
 }
 
+async function handleSearchSubdivisions(result: SearchResult) {
+  if (!result.address?.country_code) {
+    error.value = 'Country code not found'
+    return
+  }
+
+  loadingSubdivisions.value = true
+  selectedResult.value = result
+  error.value = ''
+
+  try {
+    const subdivisions = await downloadSubdivisions(result.address.country_code)
+    if (subdivisions) {
+      const countryName = result.address.country || result.display_name.split(',')[0].trim()
+      const countryCode = result.address.country_code
+      emit('importSubdivisions', subdivisions, countryName, countryCode)
+      resetSearch()
+    } else {
+      error.value = 'Failed to download subdivisions'
+    }
+  } catch (err) {
+    console.error('Error downloading subdivisions:', err)
+    error.value = `Error: ${err instanceof Error ? err.message : 'Unknown error'}`
+  }
+  loadingSubdivisions.value = false
+}
+
 async function handleSelect(result: SearchResult) {
   selectedResult.value = result
   isLoading.value = true
   error.value = ''
-  
+
   try {
     const geojson = await downloadGeoJSON(result.osm_id)
     if (geojson) {
@@ -100,24 +134,14 @@ function handleKeydown(e: KeyboardEvent) {
   <div class="space-y-2">
     <div class="flex items-center gap-2 relative">
       <div class="flex-1 flex items-center gap-1">
-        <input
-          v-model="searchInput"
-          type="text"
-          placeholder="Search place name or OSM ID..."
-          class="flex-1 px-2 py-1"
-          @keydown="handleKeydown"
-          :disabled="isSearching || isLoading"
-        />
+        <input v-model="searchInput" type="text" placeholder="Search place name or OSM ID..." class="flex-1 px-2 py-1"
+          @keydown="handleKeydown" :disabled="isSearching || isLoading" />
         <Tooltip>
-          Enter a place name (e.g., "Paris", "New York") or OSM ID (e.g., "71525") to search and import as polygon
+          Enter a place name (e.g., "Paris") or OSM ID (e.g., "71525") to search and import as polygon
         </Tooltip>
       </div>
-      <Button
-        size="sm"
-        variant="primary"
-        :disabled="!searchInput.trim() || isSearching || isLoading"
-        @click="handleSearch"
-      >
+      <Button size="sm" variant="primary" :disabled="!searchInput.trim() || isSearching || isLoading"
+        @click="handleSearch">
         {{ isSearching ? 'Searching...' : 'Search' }}
       </Button>
     </div>
@@ -126,25 +150,30 @@ function handleKeydown(e: KeyboardEvent) {
       {{ error }}
     </div>
 
-    <div
-      v-if="showResults && hasResults"
-      class="rounded-sm max-h-48 overflow-y-auto geojson-results"
-    >
-      <div
-        v-for="(result, index) in searchResults"
-        :key="index"
+    <div v-if="showResults && hasResults" class="rounded-sm max-h-34 overflow-y-auto geojson-results">
+      <div v-for="(result, index) in searchResults" :key="index"
         class="px-2 py-1.5 cursor-pointer transition-colors geojson-result-item"
-        :class="{ 'geojson-result-selected': selectedResult?.osm_id === result.osm_id }"
-        @click="handleSelect(result)"
-      >
-        <div class="text-xs font-semibold text-primary truncate">
-          {{ result.display_name.split(',')[0] }}
-        </div>
-        <div class="text-xs truncate geojson-result-secondary">
-          {{ getAddressInfo(result) }}
-        </div>
-        <div v-if="isLoading && selectedResult?.osm_id === result.osm_id" class="text-xs mt-1 geojson-loading">
-          Importing...
+        :class="{ 'geojson-result-selected': selectedResult?.osm_id === result.osm_id }" @click="handleSelect(result)">
+        <div class="flex items-center gap-1.5">
+          <span :class="`flag-icon flag-` + (result.address?.country_code || '🌍').toLowerCase()"></span>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs font-semibold text-primary truncate">
+              {{ result.display_name.split(',')[0] }}
+            </div>
+            <div class="text-xs truncate geojson-result-secondary">
+              {{ getAddressInfo(result) }}
+            </div>
+          </div>
+          <div v-if="!isLoading && !loadingSubdivisions && result.addresstype === 'country'" class="flex-shrink-0">
+            <Button size="sm" variant="primary" :disabled="isSearching || isLoading || loadingSubdivisions" 
+              @click.stop="handleSearchSubdivisions(result)">
+              subdivisions
+            </Button>
+          </div>
+          <div v-if="(isLoading || loadingSubdivisions) && selectedResult?.osm_id === result.osm_id"
+            class="flex-shrink-0 text-lg animate-hourglass">
+            ⏳
+          </div>
         </div>
       </div>
     </div>
@@ -162,7 +191,7 @@ function handleKeydown(e: KeyboardEvent) {
   --geojson-input-text: black;
   --geojson-input-border: rgb(180, 180, 180);
   --geojson-input-hover-brightness: 0.95;
-  --geojson-results-bg: rgba(255, 255, 255, 0.7);
+  --geojson-results-bg: rgba(248, 248, 248, 0.8);
   --geojson-results-border: rgb(150, 150, 150);
   --geojson-result-text: black;
   --geojson-result-secondary-text: rgb(100, 100, 100);
@@ -250,8 +279,22 @@ html.dark .geojson-results {
 .geojson-loading {
   color: var(--geojson-loading-text);
 }
-</style>
 
-<style>
-/* Additional non-scoped styles if needed */
+/* Hourglass animation */
+@keyframes spin-hourglass {
+
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+
+  50% {
+    transform: rotate(180deg);
+  }
+}
+
+.animate-hourglass {
+  animation: spin-hourglass 3s ease-in-out infinite;
+  display: inline-block;
+}
 </style>

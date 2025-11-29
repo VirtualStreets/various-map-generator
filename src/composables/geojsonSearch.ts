@@ -1,12 +1,13 @@
-// 核心GeoJSON搜索函数
+import { countryCodeMap } from '../constants'
+
 export interface SearchResult {
   display_name: string
-  country: string
-  country_code?: string
   osm_id: number
   osm_type?: string
+  addresstype?: string
   address?: {
     country?: string
+    country_code?: string
     state?: string
     city?: string
     county?: string
@@ -15,6 +16,11 @@ export interface SearchResult {
   }
   lat?: string
   lon?: string
+}
+
+function convertCountryCode(code2: string): string | null {
+  const lower = code2.toLowerCase()
+  return countryCodeMap[lower] || null
 }
 
 export async function getOSMID(placeName: string): Promise<SearchResult[] | null> {
@@ -33,264 +39,149 @@ export async function getOSMID(placeName: string): Promise<SearchResult[] | null
   }
 }
 
-/**
- * Adaptive point decimation based on current data size
- * More aggressive decimation for larger datasets
- * @param coords Array of [lon, lat] coordinates
- * @param targetSize Target size in KB (smaller = more aggressive decimation)
- * @param currentSize Current data size in bytes
- */
-function simplifyLineAdaptive(coords: any[], targetSize: number = 50, currentSize: number = 0): any[] {
-  if (coords.length <= 4) return coords
-  
-  // Calculate decimation factor based on current size vs target
-  // If data is 3x larger than target, keep only 1/3rd of points
-  let decimation = 1
-  if (currentSize > 0) {
-    const targetBytes = targetSize * 1024
-    if (currentSize > targetBytes) {
-      decimation = Math.max(1, Math.ceil(currentSize / targetBytes * 0.5))
-    }
-  }
-  
-  const simplified: any[] = []
-  
-  // Always keep first point
-  simplified.push(coords[0])
-  
-  // Keep every nth point
-  if (decimation > 1) {
-    for (let i = decimation; i < coords.length - 1; i += decimation) {
-      simplified.push(coords[i])
-    }
-  } else {
-    // No decimation needed, keep more points
-    for (let i = 1; i < coords.length - 1; i++) {
-      simplified.push(coords[i])
-    }
-  }
-  
-  // Always keep last point
-  const lastCoord = coords[coords.length - 1]
-  if (JSON.stringify(simplified[simplified.length - 1]) !== JSON.stringify(lastCoord)) {
-    simplified.push(lastCoord)
-  }
-  
-  // Ensure minimum points for valid shape
-  if (simplified.length < 3 && coords.length >= 3) {
-    return [coords[0], coords[Math.floor(coords.length / 2)], coords[coords.length - 1]]
-  }
-  
-  return simplified
+/** Visvalingam–Whyatt simplification */
+function simplifyVW(points: number[][], targetCount: number): number[][] {
+  if (points.length <= targetCount) return points
+
+  const areas = points.map((p, i) => {
+    if (i === 0 || i === points.length - 1) return Infinity
+    const a = points[i - 1], b = points[i], c = points[i + 1]
+    return Math.abs(
+      (a[0] * (b[1] - c[1]) +
+       b[0] * (c[1] - a[1]) +
+       c[0] * (a[1] - b[1])) / 2
+    )
+  })
+
+  const indices = [...areas.keys()].sort((a, b) => areas[b] - areas[a])
+  const keep = new Set(indices.slice(0, targetCount))
+  return points.filter((_, i) => keep.has(i))
 }
 
-/**
- * Moderately simplify coordinates to meet 50KB target
- * Balances compression with shape preservation
- */
-function SimplifyGeometry(geometry: GeoJSON.Geometry, pass: number = 1): GeoJSON.Geometry {
-  if (!geometry) return geometry
+/** keep the largest polygon, remove holes */
+function filterMainPolygon(coordinates: number[][][]): number[][][] {
+  // Find largest ring (area)
+  let maxArea = -Infinity
+  let mainRing: number[][] = coordinates[0]
 
-  const simplified = { ...geometry } as any
+  for (const ring of coordinates) {
+    const area = Math.abs(ring.reduce((acc, p, i) => {
+      const q = ring[(i + 1) % ring.length]
+      return acc + p[0] * q[1] - q[0] * p[1]
+    }, 0)) / 2
 
-  const processPoly = (coords: any[][], pass: number): any[][] => {
-    return coords.map((ring, ringIdx) => {
-      if (ring.length < 3) return ring
-      
-      // Moderate decimation that preserves shape better
-      // Pass 1: Keep 1 in 2 (exterior) or 1 in 3 (interior)
-      // Pass 2: Keep 1 in 3 (exterior) or 1 in 5 (interior)
-      // Pass 3: Keep 1 in 5 (exterior) or 1 in 8 (interior)
-      const isExterior = ringIdx === 0
-      const baseDecimals = isExterior ? [2, 3, 5] : [3, 5, 8]
-      const decimation = baseDecimals[Math.min(pass - 1, 2)]
-      
-      const rounded = ring.map((coord: any) => [
-        Math.round(coord[0] * 10000) / 10000,  // 4 decimals = ~11m accuracy
-        Math.round(coord[1] * 10000) / 10000
-      ])
-      
-      const decimated = simplifyLineAdaptive(rounded, 50, JSON.stringify(ring).length)
-      
-      // Apply additional decimation only if necessary
-      let result = decimated
-      if (result.length > 50 && pass > 1) {
-        result = result.filter((_: any, i: number) => i === 0 || i === result.length - 1 || i % decimation === 0)
-      }
-      
-      // Ensure polygon is closed
-      if (JSON.stringify(result[0]) !== JSON.stringify(result[result.length - 1])) {
-        result.push(result[0])
-      }
-      
-      return result.length >= 3 ? result : ring
-    })
-  }
-
-  const processLine = (coords: any[], pass: number): any[] => {
-    if (coords.length < 2) return coords
-    
-    const decimation = pass === 1 ? 1 : (pass === 2 ? 2 : 3)
-    
-    const rounded = coords.map((coord: any) => [
-      Math.round(coord[0] * 10000) / 10000,
-      Math.round(coord[1] * 10000) / 10000
-    ])
-    
-    let result = simplifyLineAdaptive(rounded, 50, JSON.stringify(coords).length)
-    
-    if (result.length > 30 && decimation > 1) {
-      result = result.filter((_: any, i: number) => i === 0 || i === result.length - 1 || i % decimation === 0)
+    if (area > maxArea) {
+      maxArea = area
+      mainRing = ring
     }
-    
-    return result.length >= 2 ? result : rounded
   }
 
-  switch (geometry.type) {
-    case 'Point':
-      simplified.coordinates = [
-        Math.round(geometry.coordinates[0] * 10000) / 10000,
-        Math.round(geometry.coordinates[1] * 10000) / 10000
-      ]
-      break
-    case 'LineString':
-    case 'MultiPoint':
-      simplified.coordinates = processLine(geometry.coordinates as any, pass)
-      break
-    case 'Polygon':
-      simplified.coordinates = processPoly(geometry.coordinates as any, pass)
-      break
-    case 'MultiLineString':
-      simplified.coordinates = (geometry.coordinates as any[]).map(line => processLine(line, pass))
-      break
-    case 'MultiPolygon':
-      simplified.coordinates = (geometry.coordinates as any[]).map(poly => processPoly(poly, pass))
-      break
-    case 'GeometryCollection':
-      simplified.geometries = (geometry as any).geometries.map((g: GeoJSON.Geometry) => 
-        SimplifyGeometry(g, pass)
-      )
-      break
-  }
-
-  return simplified
+  return [mainRing] // only exterior, remove holes
 }
 
-/**
- * Enforce 50KB size limit with moderate simplification
- */
-function enforceMaxSize(data: GeoJSON.GeoJsonObject, maxSizeKB: number = 50): GeoJSON.GeoJsonObject {
-  let currentSize = JSON.stringify(data).length / 1024
+/** Simplify polygon → target <10 KB */
+function simplifyPolygon(poly: number[][][]): number[][][] {
+  const filtered = filterMainPolygon(poly)
+  let ring = filtered[0]
 
-  if (currentSize <= maxSizeKB) {
-    return data
+  // Rough target: ~100–300 points → 1–5 KB
+  const targetCount = Math.max(40, Math.floor(ring.length * 0.1))
+  ring = simplifyVW(ring, targetCount)
+
+  // Close ring
+  if (ring[0][0] !== ring[ring.length - 1][0] ||
+      ring[0][1] !== ring[ring.length - 1][1]) {
+    ring.push([...ring[0]])
   }
 
-  // For FeatureCollection: remove features starting from largest
-  if (data.type === 'FeatureCollection') {
-    let features = [...(data as GeoJSON.FeatureCollection).features]
-    
-    while (features.length > 0 && currentSize > maxSizeKB) {
-      let largestIdx = 0
-      let largestSize = JSON.stringify(features[0]).length
-      
-      for (let i = 1; i < features.length; i++) {
-        const featureSize = JSON.stringify(features[i]).length
-        if (featureSize > largestSize) {
-          largestSize = featureSize
-          largestIdx = i
-        }
-      }
-      
-      features.splice(largestIdx, 1)
-      currentSize = (JSON.stringify({
-        type: 'FeatureCollection',
-        features
-      }).length / 1024)
-    }
-    
+  return [ring]
+}
+
+/** Simplify any geometry */
+function simplifyGeometry(geom: GeoJSON.Geometry): GeoJSON.Geometry {
+  if (geom.type === "Polygon") {
+    return { type: "Polygon", coordinates: simplifyPolygon(geom.coordinates) }
+  }
+
+  if (geom.type === "MultiPolygon") {
+    if (geom.coordinates.length === 0) return geom
     return {
-      type: 'FeatureCollection',
-      features
-    } as any
-  }
-
-  // For single Feature: apply re-simplification passes
-  if (data.type === 'Feature') {
-    let pass = 1
-    let result = data as any
-    
-    while (currentSize > maxSizeKB && pass < 4) {
-      result = {
-        ...result,
-        geometry: SimplifyGeometry(result.geometry, pass + 1)
-      }
-      currentSize = JSON.stringify(result).length / 1024
-      pass++
+      type: "Polygon", // reduce multipolygon to single largest
+      coordinates: simplifyPolygon(geom.coordinates.flat(1))
     }
-    
-    return result
   }
 
-  return data
+  return geom
 }
 
-export async function downloadGeoJSON(osmID: number): Promise<GeoJSON.GeoJsonObject | null> {
+/** Download + simplify */
+export async function downloadGeoJSON(osmID: number) {
   const url = `https://polygons.openstreetmap.fr/get_geojson.py?id=${osmID}`
   try {
-    const response = await fetch(url)
-    if (!response.ok) {
-      throw new Error('Failed to fetch GeoJSON data.')
+    const res = await fetch(url)
+    const data = await res.json()
+
+    const feature: GeoJSON.Feature = {
+      type: "Feature",
+      geometry: simplifyGeometry(
+        data.type === "Feature" ? data.geometry : data
+      ),
+      properties: {}
     }
-    let data = await response.json()
 
-    const originalSize = JSON.stringify(data).length
-    const originalSizeKB = (originalSize / 1024).toFixed(2)
+    // ensure <10 KB (usually 1–5 KB)
+    let size = JSON.stringify(feature).length
+    if (size > 10000) {
+      feature.geometry = simplifyGeometry(feature.geometry)
+      size = JSON.stringify(feature).length
+    }
+    return feature
+  } catch (e) {
+    console.error("GeoJSON download failed:", e)
+    return null
+  }
+}
 
-    // Wrap geometry in Feature if needed
-    if (data.type === 'Polygon' || data.type === 'MultiPolygon') {
-      data = {
-        type: 'Feature',
-        geometry: SimplifyGeometry(data, 1),
-        properties: {}
+/**
+ * Download and compress subdivisions from GADM API
+ * @param countryCode2 - ISO 3166-1 alpha-2 country code (e.g., 'us', 'gb', 'cn')
+ * @returns FeatureCollection with compressed subdivisions, preserving all properties
+ */
+export async function downloadSubdivisions(countryCode2: string): Promise<GeoJSON.FeatureCollection | null> {
+  const code3 = convertCountryCode(countryCode2)
+  if (!code3) {
+    console.error(`Invalid country code: ${countryCode2}`)
+    return null
+  }
+
+  const url = `https://cors-proxy.ac4.stocc.dev/https://geodata.ucdavis.edu/gadm/gadm4.1/json/gadm41_${code3}_1.json`
+  
+  try {
+    const res = await fetch(url)
+    if (!res.ok) {
+      console.error(`Failed to fetch subdivisions for ${code3}: ${res.status}`)
+      return null
+    }
+    
+    const data = await res.json() as GeoJSON.FeatureCollection
+    
+    // Compress each subdivision feature individually, preserving properties
+    const compressedFeatures: GeoJSON.Feature[] = data.features.map(feature => {
+      const compressedGeometry = simplifyGeometry(feature.geometry)
+      
+      return {
+        type: "Feature",
+        geometry: compressedGeometry,
+        properties: feature.properties || {}
       }
-    } else if (data.type === 'GeometryCollection' && data.geometries) {
-      // Convert GeometryCollection to FeatureCollection
-      data = {
-        type: 'FeatureCollection',
-        features: data.geometries.map((geom: any) => ({
-          type: 'Feature',
-          geometry: SimplifyGeometry(geom, 1),
-          properties: {}
-        }))
-      }
-    } else if (data.type === 'Feature') {
-      data.geometry = SimplifyGeometry(data.geometry, 1)
-    } else if (data.type === 'FeatureCollection') {
-      data.features = data.features.map((f: GeoJSON.Feature) => ({
-        ...f,
-        geometry: SimplifyGeometry(f.geometry, 1)
-      }))
+    })
+    
+    return {
+      type: "FeatureCollection",
+      features: compressedFeatures
     }
-
-    // Enforce 50KB maximum size
-    data = enforceMaxSize(data, 50)
-
-    const finalSize = JSON.stringify(data).length
-    const finalSizeKB = (finalSize / 1024).toFixed(2)
-    const compressionRatio = ((1 - finalSize / originalSize) * 100).toFixed(1)
-
-    console.info(`GeoJSON: ${originalSizeKB}KB → ${finalSizeKB}KB (${compressionRatio}% reduction)`)
-
-    if (finalSize > 50 * 1024) {
-      console.warn(`⚠️ GeoJSON ${finalSizeKB}KB exceeds 50KB target`)
-    } else {
-      console.info(`✓ GeoJSON successfully compressed to ${finalSizeKB}KB`)
-    }
-
-    return data
   } catch (error) {
-    console.error('Error downloading GeoJSON:', error)
+    console.error(`Error downloading subdivisions for ${code3}:`, error)
     return null
   }
 }

@@ -181,8 +181,10 @@
         </div>
 
         <Collapsible :is-open="panels.layer" class="flex flex-col gap-1 max-h-[220px] overflow-y-auto mt-2 p-1">
-          <GeoJSONSearch @import="handleGeoJSONImport" />
-          <hr class="my-1" />
+          <div class="relative">
+            <GeoJSONSearch @import="handleGeoJSONImport" @importSubdivisions="handleImportSubdivisions" />
+            <hr />
+          </div>
           <div v-for="layer in availableLayers" :key="layer.key" class="flex gap-1 justify-between">
             <Checkbox v-model="layer.visible" @change="toggleLayer(layer as LayerMeta)" class="truncate">
               <span class="truncate">{{ layer.label }}</span>
@@ -1595,6 +1597,7 @@ function getPano(id: string, polygon: Polygon) {
 }
 
 function getPanoDeep(id: string, polygon: Polygon, depth: number) {
+  if (!state.started) return
   if (depth > settings.linksDepth) return
   if (polygon.checkedPanos.has(id)) return
   else polygon.checkedPanos.add(id)
@@ -2010,6 +2013,37 @@ async function handleGeoJSONImport(data: GeoJSON.GeoJsonObject, name: string) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     alert(`Failed to import location: ${message}`)
     console.error('GeoJSON import error:', err)
+  }
+}
+
+async function handleImportSubdivisions(data: GeoJSON.FeatureCollection, countryName: string, countryCode: string) {
+  try {
+    // Create a new layer for subdivisions with country name
+    const layerKey = `subdivisions_${countryCode.toLowerCase()}`
+    const layerLabel = `${countryName}`
+    
+    // Add to availableLayers if not already present
+    const existingLayer = availableLayers.value.find(layer => layer.key === layerKey)
+    if (!existingLayer) {
+      const newLayer: LayerMeta = {
+        key: layerKey,
+        label: layerLabel,
+        source: data,
+        visible: true
+      }
+      availableLayers.value.push(newLayer)
+      
+      // Load the layer on the map
+      await toggleLayer(newLayer as LayerMeta)
+    } else {
+      // If layer exists, just toggle it on
+      existingLayer.visible = true
+      await toggleLayer(existingLayer as LayerMeta)
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    alert(`Failed to import subdivisions: ${message}`)
+    console.error('Subdivisions import error:', err)
   }
 }
 

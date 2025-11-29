@@ -97,7 +97,7 @@ function getStreetViewService() {
     return svService
 }
 
-function parseGoogle(data: any): google.maps.StreetViewPanoramaData {
+function parseGoogle(data: any): google.maps.StreetViewPanoramaData | null {
     try {
         let country = null;
         let region = null;
@@ -204,7 +204,7 @@ function parseGoogle(data: any): google.maps.StreetViewPanoramaData {
         return panorama;
     } catch (error: any) {
         console.error('Failed to parse panorama data:', error.message);
-        throw new Error('Invalid panorama data format');
+        return null;
     }
 }
 
@@ -248,7 +248,11 @@ async function getFromGoogle(
     if ('pano' in request && typeof request.pano === 'string' && request.pano.length == 22) {
         try {
             const result = await getMetadata(request.pano)
-            if (result.length > 1) onCompleted(parseGoogle(result), google.maps.StreetViewStatus.OK)
+            if (result.length > 1){
+                const panorama = parseGoogle(result);
+                if(panorama)onCompleted(panorama, google.maps.StreetViewStatus.OK)
+                else await sv.getPanorama(request, onCompleted)
+            } 
             else onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
         }
         catch (error) {
@@ -258,7 +262,6 @@ async function getFromGoogle(
     else {
         await sv.getPanorama(request, onCompleted)
     }
-
 }
 
 // Apple Look Around
