@@ -181,8 +181,10 @@
         </div>
 
         <Collapsible :is-open="panels.layer" class="flex flex-col gap-1 max-h-[220px] overflow-y-auto mt-2 p-1">
-          <GeoJSONSearch @import="handleGeoJSONImport" />
-          <hr class="my-1" />
+          <div class="relative">
+            <GeoJSONSearch @import="handleGeoJSONImport" />
+            <hr />
+          </div>
           <div v-for="layer in availableLayers" :key="layer.key" class="flex gap-1 justify-between">
             <Checkbox v-model="layer.visible" @change="toggleLayer(layer as LayerMeta)" class="truncate">
               <span class="truncate">{{ layer.label }}</span>
@@ -1595,6 +1597,7 @@ function getPano(id: string, polygon: Polygon) {
 }
 
 function getPanoDeep(id: string, polygon: Polygon, depth: number) {
+  if (!state.started) return
   if (depth > settings.linksDepth) return
   if (polygon.checkedPanos.has(id)) return
   else polygon.checkedPanos.add(id)
