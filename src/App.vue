@@ -213,7 +213,7 @@
           </Checkbox>
           <div v-if="settings.markersOnImport" class="ml-4">
             <label class="text-s">Markers opacity: {{ Math.round((settings.importedMarkersOpacity ?? 1.0) * 100)
-            }}%</label>
+              }}%</label>
             <Slider v-model="settings.importedMarkersOpacity" @input="updateImportedMarkersOpacity"
               :value="settings.importedMarkersOpacity ?? 1.0" :max="1.0" :step="0.01" :tooltips="false" :lazy="false"
               class="mt-1 w-80" />
@@ -537,7 +537,7 @@
             </div>
 
             <Checkbox v-model="settings.checkAllDates"
-              title="Checks all dates/panos at a location instead of only the default one. Mostly useful for countries with prior coverage where a new date may not be the default yet. Lowers generation speed slightly.">
+              title="Checks all dates/panos at a location instead of only the default one. Mostly useful for countries with prior coverage where a new date may not be the default yet. May lower generation speed slightly if generating countries with prior coverage.">
               Check all dates</Checkbox>
 
             <Checkbox v-if="settings.rejectUnofficial && !settings.rejectOfficial" v-model="settings.randomInTimeline">
