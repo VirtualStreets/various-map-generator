@@ -415,12 +415,18 @@ export function getCurrentDate() {
   }
 }
 
-// this will parse the Date object from res.time[i] (like Fri Oct 01 2021 00:00:00 GMT-0700 (Pacific Daylight Time)) to a UTC timestamp
 export function parseDate(date: Date): number {
-  const year = date.getUTCFullYear()
-  const month = date.getUTCMonth() + 1
-  const monthStr = month < 10 ? `0${month}` : `${month}`
-  return Date.parse(`${year}-${monthStr}`)
+  const isLocalMidnight = date.getHours() === 0
+  const year = isLocalMidnight ? date.getFullYear() : date.getUTCFullYear()
+  const month = isLocalMidnight ? date.getMonth() : date.getUTCMonth()
+  return Date.UTC(year, month)
+}
+
+export function extractMonthYear(date: Date): { month: number; year: number } {
+  const isLocalMidnight = date.getHours() === 0
+  const year = isLocalMidnight ? date.getFullYear() : date.getUTCFullYear()
+  const month = isLocalMidnight ? date.getMonth() + 1 : date.getUTCMonth() + 1
+  return { month, year }
 }
 
 export function extractDateFromPanoId(pano: string) {
