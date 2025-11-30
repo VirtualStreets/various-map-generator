@@ -169,7 +169,7 @@ function parseGoogle(data: any): google.maps.StreetViewPanoramaData | null {
 
         const history = historyRaw ? (historyRaw.map((node: any) => ({
             pano: nodes[node[0]][0][1],
-            date: new Date(`${node[1][0]}-${String(node[1][1]).padStart(2, '0')}`),
+            date: new Date(Date.UTC(node[1][0], node[1][1] - 1)),
         })))
             : [];
         const panorama: google.maps.StreetViewPanoramaData = {
@@ -197,7 +197,7 @@ function parseGoogle(data: any): google.maps.StreetViewPanoramaData | null {
             },
             imageDate,
             copyright: '© Google',
-            time: [...history, { pano: panoId, date: new Date(imageDate) }]
+            time: [...history, { pano: panoId, date: new Date(`${imageDate}T00:00:00Z`) }]
                 .sort((a, b) => a.date.getTime() - b.date.getTime()),
         };
 

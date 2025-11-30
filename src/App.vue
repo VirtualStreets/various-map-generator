@@ -847,6 +847,7 @@ import {
   searchInDescription,
   getCurrentDate,
   parseDate,
+  extractMonthYear,
   randomInRange,
   distanceBetween,
   readFileAsText,
@@ -1556,8 +1557,7 @@ async function isPanoGood(pano: google.maps.StreetViewPanoramaData) {
         if (settings.rejectUnofficial && !isOfficial(pano.time[i].pano, settings.provider)) continue
 
         const timeframeDate = findDateInObject(pano.time[i])
-        const iDateMonth = timeframeDate.getUTCMonth() + 1
-        const iDateYear = timeframeDate.getUTCFullYear()
+        const { month: iDateMonth, year: iDateYear } = extractMonthYear(timeframeDate)
 
         if (fromMonth <= toMonth) {
           if (
