@@ -386,8 +386,7 @@
           <Collapsible :is-open="panels.coverageSettings" class="p-1">
             <Checkbox v-if="!settings.rejectOfficial" v-model="settings.rejectUnofficial">Reject unofficial</Checkbox>
 
-            <Checkbox v-if="settings.rejectOfficial" v-model="settings.rejectOfficial">Find unofficial coverage
-            </Checkbox>
+            <Checkbox v-model="settings.rejectOfficial">Find unofficial coverage</Checkbox>
             <Checkbox v-if="settings.rejectOfficial" v-model="settings.findPhotospheres">Find photospheres only
             </Checkbox>
             <Checkbox v-if="settings.rejectOfficial" v-model="settings.findDrones">Find drone photospheres only

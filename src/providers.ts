@@ -99,111 +99,125 @@ function getStreetViewService() {
 
 function parseGoogle(data: any): google.maps.StreetViewPanoramaData | null {
     try {
-        let country = null;
-        let region = null;
-        let locality = null;
-        let road = null;
-        let desc_raw = null;
-        let shortDesc_raw = null;
-        let service = null;
+        const root = data?.[1]?.[0];
+        if (!root) return null;
 
-        const panoId = data[1][0][1][1];
-        const lat = data[1][0][5][0][1][0][2];
-        const lng = data[1][0][5][0][1][0][3];
-        const heading = data[1][0][5][0][1][2][0];
-        const worldsize = data[1][0][2][2];
+        const meta = root[5]?.[0];
+        const loc = meta?.[1];
+        const view = meta?.[2];
+        const addr = root[3];
+        const nodes = meta?.[3]?.[0];
+        const linksRaw = meta?.[6];
+        const historyRaw = meta?.[8];
+        const panoId = root[1]?.[1];
+        const lat = loc?.[0]?.[2];
+        const lng = loc?.[0]?.[3];
 
-        const imageYear = data[1][0][6][7][0];
-        const imageMonth = data[1][0][6][7][1];
-        const imageDate = `${imageYear}-${String(imageMonth).padStart(2, '0')}`;
+        if (typeof panoId !== "string" || typeof lat !== "number" || typeof lng !== "number") {
+            return null;
+        }
 
-        const historyRaw = data[1][0][5][0][8];
-        const linksRaw = data[1][0][5][0][6];
-        const nodes = data[1][0][5][0][3][0];
+        const heading = view?.[0] ?? 0;
 
-        const altitude = data[1][0][5][0][1][1][0]
+        const worldsize = root[2]?.[2] ?? [4096, 4096];
 
-        try {
-            country = data[1][0][5][0][1][4];
-            if (['TW', 'HK', 'MO'].includes(country)) {
-                country = 'CN';
-            }
-        } catch (e) { }
-        try {
-            const address = data[1][0][3][2][1][0];
-            const parts = address.split(',')
+        const imageYear = root[6]?.[7]?.[0];
+        const imageMonth = root[6]?.[7]?.[1];
+
+        const imageDate = `${imageYear}-${String(imageMonth).padStart(2, "0")}T00:00:00Z`;
+
+        const altitude = loc?.[1]?.[0] ?? null;
+
+        let country = loc?.[4] ?? null;
+        if (country && ['TW', 'HK', 'MO'].includes(country)) {
+            country = "CN";
+        }
+
+        let region: string | null = null;
+        let locality: string | null = null;
+        let desc_raw: string | null = null;
+        let shortDesc_raw: string | null = null;
+
+        const addrFull = addr?.[2]?.[1]?.[0] ?? addr?.[2]?.[0]?.[0] ?? null;
+        if (addrFull && typeof addrFull === "string") {
+            const parts = addrFull.split(',');
             if (parts.length > 1) {
+                locality = parts[0].trim();
                 region = parts[parts.length - 1].trim();
-                locality = parts[0].trim()
             } else {
-                region = address;
-            }
-        } catch (e) {
-            try {
-                const address = data[1][0][3][2][0][0]
-                const parts = address.split(',')
-                if (parts.length > 1) {
-                    region = parts[parts.length - 1].trim();
-                    locality = parts[0].trim()
-                }
-                else region = address;
-            }
-            catch (e) {
-                region = null;
+                region = addrFull.trim();
             }
         }
-        try {
-            road = data[1][0][5][0][12][0][0][0][2][0];
-        } catch (e) { }
-        try {
-            service = data[1][0][6][5][2];
-        } catch (e) { }
-        try {
-            desc_raw = data[1][0][3][2][1][0]
-        } catch (e) {
-            try { desc_raw = data[1][0][3][0][0] } catch (error) { }
-        }
-        try {
-            shortDesc_raw = data[1][0][3][2][0][0]
-        } catch (e) { try { shortDesc_raw = data[1][0][3][0][0] } catch (error) { } }
 
-        const history = historyRaw ? (historyRaw.map((node: any) => ({
-            pano: nodes[node[0]][0][1],
-            date: new Date(Date.UTC(node[1][0], node[1][1] - 1)),
-        })))
-            : [];
-        const panorama: google.maps.StreetViewPanoramaData = {
+        desc_raw = addr?.[2]?.[1]?.[0]
+            ?? addr?.[0]?.[0]
+            ?? null;
+
+        shortDesc_raw = addr?.[2]?.[0]?.[0]
+            ?? addr?.[0]?.[0]
+            ?? null;
+
+        const service = root[6]?.[5]?.[2] ?? null;
+
+        const history = [];
+        if (historyRaw && nodes) {
+            for (let i = 0; i < historyRaw.length; i++) {
+                const node = historyRaw[i];
+                const pano = nodes?.[node[0]]?.[0]?.[1];
+
+                if (typeof pano !== "string" || pano.startsWith("CIHM0")) continue;
+
+                const y = node[1]?.[0];
+                const m = node[1]?.[1];
+                if (!y || !m) continue;
+
+                history.push({ pano, date: new Date(Date.UTC(y, m - 1)), });
+            }
+        }
+
+        history.push({ pano: panoId, date: new Date(imageDate) } as any);
+
+        history.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+        const links = [];
+        if (linksRaw && nodes) {
+            for (let i = 0; i < linksRaw.length; i++) {
+                const link = linksRaw[i];
+                const ref = nodes?.[link[0]];
+                links.push({
+                    pano: ref?.[0]?.[1] ?? null,
+                    heading: link[1]?.[3] ?? 0,
+                    description: '',
+                });
+            }
+        }
+
+        return {
             location: {
                 pano: panoId,
                 latLng: new google.maps.LatLng(lat, lng),
-                description: !desc_raw && !shortDesc_raw ? null : `${shortDesc_raw}, ${desc_raw}`,
-                shortDescription: shortDesc_raw,
                 altitude,
                 country,
                 region,
                 locality,
-                road,
-                service
+                road: meta?.[12]?.[0]?.[0]?.[0]?.[2]?.[0] ?? null,
+                description: [shortDesc_raw, desc_raw].filter(Boolean).join(", ") || null,
+                shortDescription: shortDesc_raw,
+                service,
             },
-            links: linksRaw ? linksRaw.map((link: any) => ({
-                pano: nodes[link[0]][0][1],
-                heading: link[1][3] ?? 0,
-            })) : [],
+            links,
             tiles: {
                 centerHeading: heading,
                 tileSize: new google.maps.Size(512, 512),
                 worldSize: new google.maps.Size(worldsize[1], worldsize[0]),
-                getTileUrl: () => '',
+                getTileUrl: () => "",
             },
             imageDate,
-            copyright: '© Google',
-            time: [...history, { pano: panoId, date: new Date(`${imageDate}T00:00:00Z`) }]
-                .sort((a, b) => a.date.getTime() - b.date.getTime()),
+            copyright: "© Google",
+            time: history,
         };
 
-        return panorama;
-    } catch (error: any) {
-        console.error('Failed to parse panorama data:', error.message);
+    } catch {
         return null;
     }
 }
@@ -248,11 +262,7 @@ async function getFromGoogle(
     if ('pano' in request && typeof request.pano === 'string' && request.pano.length == 22) {
         try {
             const result = await getMetadata(request.pano)
-            if (result.length > 1){
-                const panorama = parseGoogle(result);
-                if(panorama)onCompleted(panorama, google.maps.StreetViewStatus.OK)
-                else await sv.getPanorama(request, onCompleted)
-            } 
+            if (result.length > 1) onCompleted(parseGoogle(result), google.maps.StreetViewStatus.OK)
             else onCompleted(null, google.maps.StreetViewStatus.ZERO_RESULTS)
         }
         catch (error) {
