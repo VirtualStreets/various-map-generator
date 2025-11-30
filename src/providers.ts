@@ -171,12 +171,11 @@ function parseGoogle(data: any): google.maps.StreetViewPanoramaData | null {
                 const m = node[1]?.[1];
                 if (!y || !m) continue;
 
-                history.push({ pano, date: new Date(y, m - 1) });
+                history.push({ pano, date: new Date(Date.UTC(y, m - 1)) });
             }
         }
 
-        history.push({ pano: panoId, date: new Date(imageYear, imageMonth-1) } as any);
-
+        history.push({ pano: panoId, date: new Date(`${imageDate}T00:00:00Z`) } as any);
         history.sort((a, b) => a.date.getTime() - b.date.getTime());
 
         const links = [];
