@@ -323,6 +323,16 @@
                 <option value="prefix">Prefix</option>
               </select>
             </div>
+
+            <div class="flex items-center justify-between">
+              Strategy :
+              <select v-model="settings.strategy" class="w-24"
+                title="Random: generates random coordinates within polygon. Grid: systematically covers polygon with grid-based coordinates using search radius.">
+                <option value="random">Random</option>
+                <option value="grid">Grid</option>
+              </select>
+            </div>
+
             <div class="flex justify-between">
               Generators :
               <div class="flex items-center gap-4">
@@ -837,6 +847,7 @@ import { getTileUrl, getTileColorPresence } from '@/composables/tileColorDetecto
 import {
   sendNotifications,
   randomPointInPoly,
+  GridCoordinateGenerator,
   isOfficial,
   isPhotosphere,
   isDrone,
@@ -912,6 +923,9 @@ const resumeCountdownTimer = ref<number | null>(null)
 const countdown = ref<number>(0)
 const pauseCountdown = ref<number>(0)
 const resumeCountdown = ref<number>(0)
+
+// Grid generators cache - persist across pause/resume
+const gridGenerators = new Map<number, GridCoordinateGenerator>()
 
 const cachedDates = ref({
   fromDate: Date.parse(settings.fromDate),
@@ -1099,11 +1113,25 @@ function clearPolygon(polygon: Polygon) {
     })
   })
   polygon.found.length = 0
+  
+  // Clear cached generator and its persisted state
+  const generator = gridGenerators.get(polygon._leaflet_id)
+  if (generator) {
+    generator.clearSavedState()
+    gridGenerators.delete(polygon._leaflet_id)
+  }
 }
 
 function clearAllLocations() {
   for (const polygon of selected.value) {
     polygon.found.length = 0
+    
+    // Clear cached generators and their persisted states
+    const generator = gridGenerators.get(polygon._leaflet_id)
+    if (generator) {
+      generator.clearSavedState()
+      gridGenerators.delete(polygon._leaflet_id)
+    }
   }
   clearMarkers()
 }
@@ -1123,6 +1151,12 @@ onBeforeUnmount(() => {
     countdownTimer.value = null;
   }
   countdown.value = 0;
+  
+  // Clean up grid generators
+  for (const generator of gridGenerators.values()) {
+    generator.clearSavedState()
+  }
+  gridGenerators.clear()
 })
 
 // Process
@@ -1201,6 +1235,67 @@ async function generate(polygon: Polygon) {
     const boundsNW = { lat: bounds.getNorth(), lng: bounds.getWest() }
     const boundsSE = { lat: bounds.getSouth(), lng: bounds.getEast() }
     detector = await blueLineDetector(boundsNW, boundsSE)
+  }
+
+  if (settings.strategy === 'grid') {
+    const chunkSize = settings.findRegions ? 1 : 75
+    const batchSize = Math.max(chunkSize * 2, 150)
+    
+    polygon.isProcessing = true
+    
+    let gridGenerator = gridGenerators.get(polygon._leaflet_id)
+    if (!gridGenerator) {
+      gridGenerator = new GridCoordinateGenerator(polygon, settings.radius)
+      gridGenerators.set(polygon._leaflet_id, gridGenerator)
+    }
+    
+    // Loop until target is reached
+    while (polygon.found.length < polygon.nbNeeded) {
+      if (!state.started) break
+      
+      // Check if we should reset (after many iterations with no new unique coords)
+      if (gridGenerator.shouldReset()) {
+        gridGenerator.reset()
+      }
+      
+      // Use generator to stream coordinates in batches
+      const batchGenerator = gridGenerator.generateBatch(batchSize)
+      let hasMoreCoords = false
+      
+      for (const batch of batchGenerator) {
+        if (!state.started) break
+        if (polygon.found.length >= polygon.nbNeeded) break
+        
+        hasMoreCoords = true
+        
+        // Filter valid coordinates within polygon
+        const validCoords = batch.filter(point => 
+          booleanPointInPolygon([point.lng, point.lat], polygon.feature) &&
+          (!settings.onlyCheckBlueLines || detector(point.lat, point.lng, settings.radius))
+        )
+        
+        // Process in chunks
+        for (const locationGroup of validCoords.chunk(chunkSize)) {
+          if (!state.started) break
+          if (polygon.found.length >= polygon.nbNeeded) break
+          await Promise.allSettled(locationGroup.map((l) => getLoc(l, polygon)))
+        }
+      }
+      
+      // If no new coordinates were generated in this iteration, brief pause before next cycle
+      if (!hasMoreCoords && polygon.found.length < polygon.nbNeeded) {
+        await new Promise(resolve => setTimeout(resolve, 50))
+      }
+    }
+    
+    polygon.isProcessing = false
+    
+    // Clean up generator when polygon is complete
+    if (polygon.found.length >= polygon.nbNeeded) {
+      gridGenerators.delete(polygon._leaflet_id)
+    }
+    
+    return
   }
 
   while (polygon.found.length < polygon.nbNeeded) {
