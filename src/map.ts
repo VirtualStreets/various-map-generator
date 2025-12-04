@@ -8,6 +8,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import 'leaflet-contextmenu'
 import 'leaflet-contextmenu/dist/leaflet.contextmenu.css'
+import 'leaflet.glify'
 
 import markerBlue from '@/assets/markers/marker-blue.png'
 import markerRed from '@/assets/markers/marker-red.png'
@@ -482,6 +483,260 @@ const markerLayers: Record<MarkerLayersTypes, L.MarkerClusterGroup> = {
   noBlueLine: L.markerClusterGroup({ maxClusterRadius: 100, disableClusteringAtZoom: 15 }),
 }
 
+// ============ High Performance WebGL Rendering (glify) ============
+// Color scheme matching the marker icons (RGB values 0-255 normalized to 0-1)
+const GLIFY_COLORS: Record<MarkerLayersTypes, L.glify.IColor> = {
+  gen4: { r: 40 / 255, g: 128 / 255, b: 202 / 255 },       // #2880CA
+  gen2Or3: { r: 154 / 255, g: 40 / 255, b: 202 / 255 },   // #9A28CA
+  gen1: { r: 36 / 255, g: 172 / 255, b: 32 / 255 },       // #24AC20
+  newRoad: { r: 202 / 255, g: 40 / 255, b: 63 / 255 },    // #CA283F
+  noBlueLine: { r: 228 / 255, g: 18 / 255, b: 210 / 255 }, // #E412D2 
+}
+
+// Store point data for WebGL rendering
+interface GlifyPoint {
+  lat: number
+  lng: number
+  panoId: string
+  type: MarkerLayersTypes
+  polygonId: number
+  location: Panorama  // Store full location data for click events
+}
+
+const GLIFY_CONFIG = {
+  updateInterval: 500, 
+}
+
+let glifyPoints: GlifyPoint[] = []
+let glifyPointsInstance: L.glify.PointsInstance | null = null
+let glifyEnabled = false
+let glifyClickHandler: ((location: Panorama) => void) | null = null
+
+
+let pendingNewPoints: GlifyPoint[] = []
+let lastUpdateTime = 0
+let updateScheduledFrameId: number | null = null
+let lastRenderedCount = 0 
+
+function getPointVisibilityFilter(): (point: GlifyPoint) => boolean {
+  return (point) => {
+    switch (point.type) {
+      case 'gen4': return settings.markers.gen4
+      case 'gen2Or3': return settings.markers.gen2Or3
+      case 'gen1': return settings.markers.gen1
+      case 'newRoad': return settings.markers.newRoad
+      case 'noBlueLine': return settings.markers.noBlueLine
+      default: return true
+    }
+  }
+}
+
+function buildGeoJSONFeature(point: GlifyPoint, pointIndex: number): GeoJSON.Feature<GeoJSON.Point> {
+  return {
+    type: 'Feature' as const,
+    geometry: {
+      type: 'Point' as const,
+      coordinates: [point.lat, point.lng], 
+    },
+    properties: {
+      index: pointIndex,
+      panoId: point.panoId,
+      type: point.type,
+      polygonId: point.polygonId,
+      _pointIndex: pointIndex,
+    },
+  }
+}
+
+function getGlifyData(): GeoJSON.FeatureCollection<GeoJSON.Point> {
+  const isVisible = getPointVisibilityFilter()
+  const features: GeoJSON.Feature<GeoJSON.Point>[] = []
+  
+  for (let i = 0; i < glifyPoints.length; i++) {
+    const point = glifyPoints[i]
+    if (isVisible(point)) {
+      features.push(buildGeoJSONFeature(point, i))
+    }
+  }
+
+  return {
+    type: 'FeatureCollection',
+    features,
+  }
+}
+
+function scheduleGlifyUpdate() {
+  const now = Date.now()
+  const timeSinceLastUpdate = now - lastUpdateTime
+
+  if (updateScheduledFrameId !== null) {
+    return
+  }
+
+  if (timeSinceLastUpdate >= GLIFY_CONFIG.updateInterval) {
+    updateScheduledFrameId = requestAnimationFrame(() => {
+      updateScheduledFrameId = null
+      flushGlifyUpdate()
+    })
+  } else {
+    const remainingTime = GLIFY_CONFIG.updateInterval - timeSinceLastUpdate
+    
+    updateScheduledFrameId = window.setTimeout(() => {
+      updateScheduledFrameId = null
+      requestAnimationFrame(() => {
+        flushGlifyUpdate()
+      })
+    }, remainingTime) as any
+  }
+}
+
+function flushGlifyUpdate() {
+  if (!map || !glifyEnabled || pendingNewPoints.length === 0) {
+    return
+  }
+
+  lastUpdateTime = Date.now()
+
+  refreshGlifyLayer()
+  pendingNewPoints = []
+}
+
+function refreshGlifyLayer() {
+  if (!map || !glifyEnabled) return
+
+  // Remove existing layer
+  if (glifyPointsInstance) {
+    glifyPointsInstance.remove()
+    glifyPointsInstance = null
+  }
+
+  const data = getGlifyData()
+  if (data.features.length === 0) return
+
+  glifyPointsInstance = L.glify.points({
+    map: map,
+    data: data,
+    size: 12,
+    opacity: 0.9,
+    color: (index, feature) => {
+      if (typeof feature === 'object' && 'properties' in feature) {
+        const type = feature.properties?.type as MarkerLayersTypes
+        return GLIFY_COLORS[type] || GLIFY_COLORS.gen4
+      }
+      return GLIFY_COLORS.gen4
+    },
+    click: (_e, feature, _xy) => {
+      if (typeof feature === 'object' && 'properties' in feature) {
+        const pointIndex = feature.properties?._pointIndex as number
+        if (pointIndex !== undefined && glifyPoints[pointIndex]) {
+          const point = glifyPoints[pointIndex]
+          if (glifyClickHandler && point.location) {
+            glifyClickHandler(point.location)
+          }
+        }
+      }
+      return true
+    },
+    sensitivity: 3,
+    pane: 'overlayPane',
+  })
+
+  lastRenderedCount = data.features.length
+}
+
+function setGlifyMode(enabled: boolean) {
+  glifyEnabled = enabled
+  settings.markers.glify = enabled
+
+  if (enabled) {
+    // Disable cluster mode when enabling high performance
+    settings.markers.cluster = false
+    
+    // Hide all Leaflet marker layers
+    Object.values(markerLayers).forEach(layer => {
+      if (map.hasLayer(layer)) {
+        map.removeLayer(layer)
+      }
+    })
+    
+    // Clear pending updates and render initial layer
+    pendingNewPoints = []
+    lastRenderedCount = 0
+    refreshGlifyLayer()
+  } else {
+    // Remove glify layer
+    if (glifyPointsInstance) {
+      glifyPointsInstance.remove()
+      glifyPointsInstance = null
+    }
+    
+    // Cancel pending updates
+    if (updateScheduledFrameId !== null) {
+      cancelAnimationFrame(updateScheduledFrameId)
+      updateScheduledFrameId = null
+    }
+    
+    // Restore Leaflet marker layers based on settings
+    Object.entries(markerLayers).forEach(([key]) => {
+      updateMarkerLayers(key as MarkerLayersTypes)
+    })
+  }
+}
+
+function addGlifyPoint(location: Panorama, type: MarkerLayersTypes, polygonId: number) {
+  glifyPoints.push({
+    lng: location.lng,
+    lat: location.lat,
+    panoId: location.panoId,
+    type,
+    polygonId,
+    location,
+  })
+  
+  if (glifyEnabled) {
+    pendingNewPoints.push(glifyPoints[glifyPoints.length - 1])
+    scheduleGlifyUpdate()
+  }
+}
+
+function removeGlifyPointsForPolygon(polygonId: number) {
+  const beforeCount = glifyPoints.length
+  glifyPoints = glifyPoints.filter(p => p.polygonId !== polygonId)
+  
+  if (beforeCount !== glifyPoints.length) {
+    pendingNewPoints = pendingNewPoints.filter(p => p.polygonId !== polygonId)
+    if (glifyEnabled) {
+      refreshGlifyLayer()
+    }
+  }
+}
+
+function clearGlifyPoints() {
+  glifyPoints = []
+  pendingNewPoints = []
+  lastRenderedCount = 0
+  
+  if (glifyPointsInstance) {
+    glifyPointsInstance.remove()
+    glifyPointsInstance = null
+  }
+  
+  if (updateScheduledFrameId !== null) {
+    cancelAnimationFrame(updateScheduledFrameId)
+    updateScheduledFrameId = null
+  }
+}
+
+function registerGlifyClickHandler(handler: (location: Panorama) => void) {
+  glifyClickHandler = handler
+}
+
+function configureGlifyPerformance(options: Partial<typeof GLIFY_CONFIG>) {
+  Object.assign(GLIFY_CONFIG, options)
+}
+
+// ============ End High Performance Rendering ============
+
 export interface LayerMeta {
   label: string
   key: string
@@ -814,6 +1069,12 @@ async function importGeoJSONFromSearch(geojson: GeoJSON.GeoJsonObject, name: str
 }
 
 function updateMarkerLayers(gen: MarkerLayersTypes) {
+  // In high performance mode, just refresh the glify layer
+  if (glifyEnabled) {
+    refreshGlifyLayer()
+    return
+  }
+
   if (
     (gen === 'gen4' && settings.markers.gen4) ||
     (gen === 'gen2Or3' && settings.markers.gen2Or3) ||
@@ -830,6 +1091,11 @@ function updateMarkerLayers(gen: MarkerLayersTypes) {
 }
 
 function updateClusters() {
+  // Cluster mode is mutually exclusive with high performance mode
+  if (glifyEnabled) {
+    return
+  }
+  
   Object.values(markerLayers).forEach((markerLayer) => {
     if (settings.markers.cluster) markerLayer.enableClustering()
     else markerLayer.disableClustering()
@@ -846,6 +1112,8 @@ function clearPolygon(polygon: Polygon) {
       markerLayer.removeLayer(marker)
     })
   })
+  // Also clear high performance points for this polygon
+  removeGlifyPointsForPolygon(polygon._leaflet_id)
   polygon.found.length = 0
 }
 
@@ -853,6 +1121,8 @@ function clearMarkers() {
   Object.values(markerLayers).forEach((markerLayer) => {
     markerLayer.clearLayers()
   })
+  // Also clear high performance points
+  clearGlifyPoints()
 }
 
 function onEachFeature(_: Feature, layer: L.Layer) {
@@ -938,4 +1208,9 @@ export {
   clearMarkers,
   currentZoom,
   icons,
+  setGlifyMode,
+  addGlifyPoint,
+  registerGlifyClickHandler,
+  GLIFY_CONFIG,
+  type MarkerLayersTypes,
 }

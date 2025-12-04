@@ -376,6 +376,7 @@ const defaultSettings = {
     newRoad: true,
     noBlueLine: true,
     cluster: false,
+    glify: false,
   },
   markersOnImport: true,
   checkImports: false,
