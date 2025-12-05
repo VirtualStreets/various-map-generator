@@ -66,7 +66,7 @@ async function handleSearch() {
 
 async function handleSearchSubdivisions(result: SearchResult) {
   if (!result.address?.country_code) {
-    error.value = 'Country code not found'
+    error.value = 'Country code not found.'
     return
   }
 
@@ -76,17 +76,18 @@ async function handleSearchSubdivisions(result: SearchResult) {
 
   try {
     const subdivisions = await downloadSubdivisions(result.address.country_code)
-    if (subdivisions) {
+    if (subdivisions && subdivisions.features.length > 0) {
       const countryName = result.address.country || result.display_name.split(',')[0].trim()
       const countryCode = result.address.country_code
       emit('importSubdivisions', subdivisions, countryName, countryCode)
       resetSearch()
     } else {
-      error.value = 'Failed to download subdivisions'
+      error.value = 'No subdivisions found for this country. The database may not contain this country.'
     }
   } catch (err) {
-    console.error('Error downloading subdivisions:', err)
-    error.value = `Error: ${err instanceof Error ? err.message : 'Unknown error'}`
+    let msg = 'Unknown error.'
+    if (err instanceof Error) msg = err.message
+    error.value = `Failed to download subdivisions: ${msg}`
   }
   loadingSubdivisions.value = false
 }
@@ -98,17 +99,18 @@ async function handleSelect(result: SearchResult) {
 
   try {
     const geojson = await downloadGeoJSON(result.osm_id)
-    if (geojson) {
+    if (geojson && geojson.geometry && geojson.geometry.type) {
       // Use only the first part of display_name as polygon name
       const placeName = result.display_name.split(',')[0].trim()
       emit('import', geojson, placeName)
       resetSearch()
     } else {
-      error.value = 'Failed to download GeoJSON'
+      error.value = 'No geojson found for this location. The database may not contain this polygon.'
     }
   } catch (err) {
-    console.error('Error during import:', err)
-    error.value = `Error: ${err instanceof Error ? err.message : 'Unknown error'}`
+    let msg = 'Unknown error.'
+    if (err instanceof Error) msg = err.message
+    error.value = `Failed to download GeoJSON: ${msg}`
   }
   isLoading.value = false
 }

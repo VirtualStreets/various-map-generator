@@ -323,6 +323,16 @@
                 <option value="prefix">Prefix</option>
               </select>
             </div>
+
+            <div class="flex items-center justify-between">
+              Strategy :
+              <select v-model="settings.strategy" class="w-24"
+                title="Random: generates random coordinates within polygon. Grid: systematically covers polygon with grid-based coordinates using search radius.">
+                <option value="random">Random</option>
+                <option value="grid">Grid</option>
+              </select>
+            </div>
+
             <div class="flex justify-between">
               Generators :
               <div class="flex items-center gap-4">
@@ -755,13 +765,24 @@
               v-on:change="updateMarkerLayers('gen1')">
               <span class="h-3 w-3 bg-[#24AC20] rounded-full"></span>Gen 1 Update
             </Checkbox>
-            <Checkbox v-model="settings.markers.cluster" v-on:change="updateClusters" title="For lag reduction.">
+            <Checkbox v-model="settings.markers.cluster" v-on:change="handleClusterToggle" 
+              :disabled="settings.markers.glify"
+              title="For lag reduction. Disabled when High Performance mode is on.">
               <span class="inline-block w-3 h-3 rounded-full" style="background: 
               linear-gradient(90deg, #FF5F6D, #FFC371, #F9F871, #A1FFCE, #58CFFB, #845EC2);
               background-size: 600% 600%;
               animation: gradientFlow 5s ease infinite;">
               </span>
               Cluster markers
+            </Checkbox>
+            <Checkbox v-model="settings.markers.glify" v-on:change="handleGlifyToggle"
+              title="Use WebGL for rendering massive numbers of points.">
+              <span class="inline-block w-3 h-3 rounded-full" style="background: 
+              linear-gradient(60deg, #2880CA, #9A28CA, #24AC20, #CA283F, #E412D2);
+              background-size: 400% 400%;
+              animation: gradientFlow 3s ease infinite;">
+              </span>
+              High Performance
             </Checkbox>
             <Button :disabled="!totalLocs" size="sm" variant="warning"
               class="mt-2 w-full justify-center flex items-center gap-1"
@@ -829,7 +850,11 @@ import {
   clearMarkers,
   currentZoom,
   icons,
+  setGlifyMode,
+  addGlifyPoint,
+  registerGlifyClickHandler,
   type LayerMeta,
+  type MarkerLayersTypes,
 } from '@/map'
 
 import { blueLineDetector } from '@/composables/blueLineDetector'
@@ -837,6 +862,7 @@ import { getTileUrl, getTileColorPresence } from '@/composables/tileColorDetecto
 import {
   sendNotifications,
   randomPointInPoly,
+  GridCoordinateGenerator,
   isOfficial,
   isPhotosphere,
   isDrone,
@@ -912,6 +938,9 @@ const resumeCountdownTimer = ref<number | null>(null)
 const countdown = ref<number>(0)
 const pauseCountdown = ref<number>(0)
 const resumeCountdown = ref<number>(0)
+
+// Grid generators cache - persist across pause/resume
+const gridGenerators = new Map<number, GridCoordinateGenerator>()
 
 const cachedDates = ref({
   fromDate: Date.parse(settings.fromDate),
@@ -1099,17 +1128,117 @@ function clearPolygon(polygon: Polygon) {
     })
   })
   polygon.found.length = 0
+  
+  // Clear cached generator and its persisted state
+  const generator = gridGenerators.get(polygon._leaflet_id)
+  if (generator) {
+    generator.clearSavedState()
+    gridGenerators.delete(polygon._leaflet_id)
+  }
 }
 
 function clearAllLocations() {
   for (const polygon of selected.value) {
     polygon.found.length = 0
+    
+    // Clear cached generators and their persisted states
+    const generator = gridGenerators.get(polygon._leaflet_id)
+    if (generator) {
+      generator.clearSavedState()
+      gridGenerators.delete(polygon._leaflet_id)
+    }
   }
   clearMarkers()
 }
 
+// Generate panorama URL for a given location
+function openPanorama(location: Panorama) {
+  const heading = location.heading ?? 0
+  const pitch = location.pitch ?? 0
+  const zoom = location.zoom ?? 0
+  let url = ''
+
+  switch (settings.provider) {
+    case 'google':
+    case 'googleZoom':
+      url = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}&heading=${heading}&pitch=${pitch}&fov=${180 / 2 ** zoom}`
+      break
+    case 'yandex':
+      url = `https://yandex.com/maps/?l=stv%2Csta&ll=${location.lng},${location.lat}&panorama%5Bdirection%5D=${heading},0&panorama%5Bfull%5D=true&panorama%5Bid%5D=${location.panoId}&panorama%5Bpoint%5D=${location.lng},${location.lat}`
+      break
+    case 'tencent':
+      url = `https://qq-map.netlify.app/#base=roadmap&zoom=18&center=${location.lat},${location.lng}&pano=${location.panoId}&heading=${heading}&pitch=${pitch}&svz=0`
+      break
+    case 'baidu':
+      url = `https://map.baidu.com/?newmap=1&shareurl=1&panotype=street&l=21&tn=B_NORMAL_MAP&sc=0&panoid=${location.panoId}&heading=${heading}&pitch=${pitch}&pid=${location.panoId}`
+      break
+    case 'apple':
+      url = `https://lookmap.eu.pythonanywhere.com/#c=18/${location.lat}/${location.lng}&p=${location.lat}/${location.lng}&a=${heading}/${pitch}`
+      break
+    case 'bing':
+      url = `https://www.bing.com/maps/?cc=cn&style=x&lvl=18&id=${location.panoId}&cp=${location.lat}%7E${location.lng}&dir=${heading || 0}&pi=${pitch || 0}&setlang=en`
+      break
+    case 'kakao':
+      url = `https://map.kakao.com/?map_type=TYPE_MAP&map_attribute=ROADVIEW&panoid=${location.panoId}&pan=${heading}&tilt=${pitch}`
+      break
+    case 'naver':
+      url = `https://map.naver.com/p?c=10.00,0,0,0,adh&p=${location.panoId},${heading > 180 ? (heading - 360) : heading},${pitch},80`
+      break
+    case 'mapycz':
+      url = `https://mapy.cz/app?pid=${location.panoId}&yaw=${heading}&pitch=${pitch}&x=${location.lng}&y=${location.lat}&z=15`
+      break
+    case 'mapillary':
+      url = `https://www.mapillary.com/app/?lat=${location.lat}&lng=${location.lng}&z=15&pKey=${location.panoId}&focus=photo&x=${heading}&y=${pitch}&zoom=${zoom}`
+      break
+    case 'openmap':
+      url = `https://vn-map.netlify.app/#zoom=15&center=${location.lat},${location.lng}&pano=${location.panoId}&ppos=${location.lat},${location.lng}&heading=${heading}&pitch=${pitch}`
+      break
+    case 'asig':
+      url = `https://360.asig.gov.al/AlbaniaStreetView/player2/?sv_startup_pano=${location.panoId}&sv_startup_heading=${heading}&sv_startup_tilt=&sv_startup_zoom=${zoom}&map_center=${location.lat},${location.lng}&map_zoom=15&v_lat=${location.lat}&v_lng=${location.lng}&vl_showshare=yes`
+      break
+    case 'ja':
+      const [x, y] = wgs84_to_isn93(location.lat, location.lng)
+      url = `https://ja.is/kort/?x=${(x)}&y=${(y)}&nz=15&ja360=1&jh=${heading}`
+      break
+    case 'vegbilder':
+      url = `https://vegbilder.atlas.vegvesen.no/?lat=${location.lat}&lng=${location.lng}&zoom=15&view=image&imageId=${location.panoId}&year=${location.imageDate?.slice(0, 4)}`
+      break
+    default:
+      url = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}&heading=${heading}&pitch=${pitch}&fov=${180 / 2 ** zoom}`
+  }
+
+  window.open(url, '_blank')
+}
+
+// Handle high performance mode toggle
+function handleGlifyToggle() {
+  if (settings.markers.glify) {
+    // Disable cluster when enabling high performance
+    settings.markers.cluster = false
+  }
+  setGlifyMode(settings.markers.glify)
+}
+
+// Handle cluster toggle
+function handleClusterToggle() {
+  if (settings.markers.cluster) {
+    // Disable high performance when enabling cluster
+    settings.markers.glify = false
+    setGlifyMode(false)
+  }
+  updateClusters()
+}
+
 onMounted(async () => {
   await initMap('map')
+  
+  // Register click handler for high performance mode
+  registerGlifyClickHandler(openPanorama)
+  
+  // Restore high performance mode if it was enabled
+  if (settings.markers.glify) {
+    setGlifyMode(true)
+  }
 })
 
 onBeforeUnmount(() => {
@@ -1123,6 +1252,12 @@ onBeforeUnmount(() => {
     countdownTimer.value = null;
   }
   countdown.value = 0;
+  
+  // Clean up grid generators
+  for (const generator of gridGenerators.values()) {
+    generator.clearSavedState()
+  }
+  gridGenerators.clear()
 })
 
 // Process
@@ -1180,16 +1315,23 @@ const handleClickStart = async () => {
 }
 
 async function start() {
-  if (settings.oneCountryAtATime)
+  if (settings.oneCountryAtATime) {
     for (const polygon of selected.value) await generate(polygon as Polygon)
-
-  const generator = []
-  for (const polygon of selected.value) {
-    for (let i = 0; i < Math.min(settings.numOfGenerators, 10); i++) {
-      generator.push(generate(polygon as Polygon))
+  } else {
+    const tasks = []
+    for (const polygon of selected.value) {
+      // Grid strategy: one generator per polygon to avoid race conditions
+      // Random strategy: multiple generators per polygon for parallel sampling
+      const generatorCount = settings.strategy === 'grid' 
+        ? 1 
+        : Math.min(settings.numOfGenerators, 10)
+      
+      for (let i = 0; i < generatorCount; i++) {
+        tasks.push(generate(polygon as Polygon))
+      }
     }
+    await Promise.all(tasks)
   }
-  await Promise.all(generator)
   state.started = false
 }
 
@@ -1201,6 +1343,67 @@ async function generate(polygon: Polygon) {
     const boundsNW = { lat: bounds.getNorth(), lng: bounds.getWest() }
     const boundsSE = { lat: bounds.getSouth(), lng: bounds.getEast() }
     detector = await blueLineDetector(boundsNW, boundsSE)
+  }
+
+  if (settings.strategy === 'grid') {
+    const chunkSize = settings.findRegions ? 1 : 75
+    const batchSize = Math.max(chunkSize * 2, 150)
+    
+    polygon.isProcessing = true
+    
+    let gridGenerator = gridGenerators.get(polygon._leaflet_id)
+    if (!gridGenerator) {
+      gridGenerator = new GridCoordinateGenerator(polygon, settings.radius)
+      gridGenerators.set(polygon._leaflet_id, gridGenerator)
+    }
+    
+    // Loop until target is reached
+    while (polygon.found.length < polygon.nbNeeded) {
+      if (!state.started) break
+      
+      // Check if we should reset (after many iterations with no new unique coords)
+      if (gridGenerator.shouldReset()) {
+        gridGenerator.reset()
+      }
+      
+      // Use generator to stream coordinates in batches
+      const batchGenerator = gridGenerator.generateBatch(batchSize)
+      let hasMoreCoords = false
+      
+      for (const batch of batchGenerator) {
+        if (!state.started) break
+        if (polygon.found.length >= polygon.nbNeeded) break
+        
+        hasMoreCoords = true
+        
+        // Filter valid coordinates within polygon
+        const validCoords = batch.filter(point => 
+          booleanPointInPolygon([point.lng, point.lat], polygon.feature) &&
+          (!settings.onlyCheckBlueLines || detector(point.lat, point.lng, settings.radius))
+        )
+        
+        // Process in chunks
+        for (const locationGroup of validCoords.chunk(chunkSize)) {
+          if (!state.started) break
+          if (polygon.found.length >= polygon.nbNeeded) break
+          await Promise.allSettled(locationGroup.map((l) => getLoc(l, polygon)))
+        }
+      }
+      
+      // If no new coordinates were generated in this iteration, brief pause before next cycle
+      if (!hasMoreCoords && polygon.found.length < polygon.nbNeeded) {
+        await new Promise(resolve => setTimeout(resolve, 50))
+      }
+    }
+    
+    polygon.isProcessing = false
+    
+    // Clean up generator when polygon is complete
+    if (polygon.found.length >= polygon.nbNeeded) {
+      gridGenerators.delete(polygon._leaflet_id)
+    }
+    
+    return
   }
 
   while (polygon.found.length < polygon.nbNeeded) {
@@ -1796,28 +1999,36 @@ function addLocation(
   allFoundPanoIds.add(location.panoId)
 
   let markerLayer = markerLayers['gen4']
+  let markerType: MarkerLayersTypes = 'gen4'
   let zIndex = 1
   switch (iconType) {
     case icons.gen2Or3:
       markerLayer = markerLayers['gen2Or3']
+      markerType = 'gen2Or3'
       zIndex = 2
       break
     case icons.gen1:
       markerLayer = markerLayers['gen1']
+      markerType = 'gen1'
       zIndex = 3
       break
     case icons.newLoc:
       markerLayer = markerLayers['newRoad']
+      markerType = 'newRoad'
       zIndex = 4
       break
     case icons.noBlueLine:
       markerLayer = markerLayers['noBlueLine']
+      markerType = 'noBlueLine'
       zIndex = 5
       break
   }
 
   if (polygon.found.length < polygon.nbNeeded) {
     polygon.found.push(location)
+    
+    addGlifyPoint(location, markerType, polygon._leaflet_id)
+    
     if (settings.notification.enabled && !imported) {
       const elapsedTime = ((Date.now() - generationStartTime.value) / 1000).toFixed(1)
       if (settings.notification.anyLocation && polygon.found.length === 1) {
@@ -1867,61 +2078,7 @@ function addLocation(
         ]
       })
         .on('click', () => {
-          const heading = location.heading ?? 0
-          const pitch = location.pitch ?? 0
-          const zoom = location.zoom ?? 0
-          let url = ''
-
-          switch (settings.provider) {
-            case 'google':
-            case 'googleZoom':
-              url = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}&heading=${heading}&pitch=${pitch}&fov=${180 / 2 ** zoom}`
-              break
-            case 'yandex':
-              url = `https://yandex.com/maps/?l=stv%2Csta&ll=${location.lng},${location.lat}&panorama%5Bdirection%5D=${heading},0&panorama%5Bfull%5D=true&panorama%5Bid%5D=${location.panoId}&panorama%5Bpoint%5D=${location.lng},${location.lat}`
-              break
-            case 'tencent':
-              url = `https://qq-map.netlify.app/#base=roadmap&zoom=18&center=${location.lat},${location.lng}&pano=${location.panoId}&heading=${heading}&pitch=${pitch}&svz=0`
-              break
-            case 'baidu':
-              url = `https://map.baidu.com/?newmap=1&shareurl=1&panotype=street&l=21&tn=B_NORMAL_MAP&sc=0&panoid=${location.panoId}&heading=${heading}&pitch=${pitch}&pid=${location.panoId}`
-              break
-            case 'apple':
-              url = `https://lookmap.eu.pythonanywhere.com/#c=18/${location.lat}/${location.lng}&p=${location.lat}/${location.lng}&a=${heading}/${pitch}`
-              break
-            case 'bing':
-              url = `https://www.bing.com/maps/?cc=cn&style=x&lvl=18&id=${location.panoId}&cp=${location.lat}%7E${location.lng}&dir=${heading || 0}&pi=${pitch || 0}&setlang=en`
-              break
-            case 'kakao':
-              url = `https://map.kakao.com/?map_type=TYPE_MAP&map_attribute=ROADVIEW&panoid=${location.panoId}&pan=${heading}&tilt=${pitch}`
-              break
-            case 'naver':
-              url = `https://map.naver.com/p?c=10.00,0,0,0,adh&p=${location.panoId},${heading > 180 ? (heading - 360) : heading},${pitch},80`
-              break
-            case 'mapycz':
-              url = `https://mapy.cz/app?pid=${location.panoId}&yaw=${heading}&pitch=${pitch}&x=${location.lng}&y=${location.lat}&z=15`
-              break
-            case 'mapillary':
-              url = `https://www.mapillary.com/app/?lat=${location.lat}&lng=${location.lng}&z=15&pKey=${location.panoId}&focus=photo&x=${heading}&y=${pitch}&zoom=${zoom}`
-              break
-            case 'openmap':
-              url = `https://vn-map.netlify.app/#zoom=15&center=${location.lat},${location.lng}&pano=${location.panoId}&ppos=${location.lat},${location.lng}&heading=${heading}&pitch=${pitch}`
-              break
-            case 'asig':
-              url = `https://360.asig.gov.al/AlbaniaStreetView/player2/?sv_startup_pano=${location.panoId}&sv_startup_heading=${heading}&sv_startup_tilt=&sv_startup_zoom=${zoom}&map_center=${location.lat},${location.lng}&map_zoom=15&v_lat=${location.lat}&v_lng=${location.lng}&vl_showshare=yes`
-              break
-            case 'ja':
-              const [x, y] = wgs84_to_isn93(location.lat, location.lng)
-              url = `https://ja.is/kort/?x=${(x)}&y=${(y)}&nz=15&ja360=1&jh=${heading}`
-              break
-            case 'vegbilder':
-              url = `https://vegbilder.atlas.vegvesen.no/?lat=${location.lat}&lng=${location.lng}&zoom=15&view=image&imageId=${location.panoId}&year=${location.imageDate?.slice(0, 4)}`
-              break
-            default:
-              url = `https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}&heading=${heading}&pitch=${pitch}&fov=${180 / 2 ** zoom}`
-          }
-
-          window.open(url, '_blank')
+          openPanorama(location)
         })
         .setZIndexOffset(zIndex)
         .addTo(markerLayer)

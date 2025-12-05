@@ -42,6 +42,7 @@ const defaultSettings = {
   numOfGenerators: 1,
   speed: 100,
   radius: 500,
+  strategy: 'random', // 'random' or 'grid'
   disableCheckBlueLine: false,
   oneCountryAtATime: false,
   onlyCheckBlueLines: false,
@@ -375,6 +376,7 @@ const defaultSettings = {
     newRoad: true,
     noBlueLine: true,
     cluster: false,
+    glify: false,
   },
   markersOnImport: true,
   checkImports: false,

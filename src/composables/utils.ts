@@ -468,6 +468,308 @@ export function randomPointInPoly(polygon: Polygon) {
   return { lat, lng }
 }
 
+
+/**
+ * Grid coordinate generator that yields coordinates in batches.
+ * Supports iteration offset to generate different grid patterns on each cycle.
+ * Uses generator pattern for memory efficiency - coordinates are generated on demand.
+ * 
+ * Optimized with:
+ * - Pagination storage (chunks of 500 coords per localStorage entry)
+ * - Coordinate compression (5 decimal places precision)
+ * - Lazy loading to minimize memory usage
+ */
+export class GridCoordinateGenerator {
+  private bounds: { south: number; north: number; west: number; east: number }
+  private latStep: number
+  private lngStep: number
+  private iteration: number = 0
+  private checkedCoords: Set<string> = new Set()
+  private polygonId: number // Polygon's leaflet ID for persistence
+  private storageKey: string
+  private coordsBuffer: LatLng[] = [] // Buffer for coords waiting to be yielded
+  private currentBatchIndex: number = 0 // Track position in coordinate generation
+  
+  // Storage pagination settings
+  private readonly CHUNK_SIZE = 500 // Store max 500 coords per chunk
+  private loadedChunks: Set<number> = new Set() // Track which chunks are loaded
+
+  constructor(polygon: Polygon, radiusMeters: number) {
+    this.polygonId = polygon._leaflet_id
+    this.storageKey = `grid_${this.polygonId}`
+    
+    const bounds = polygon.getBounds()
+    this.bounds = {
+      south: bounds.getSouth(),
+      north: bounds.getNorth(),
+      west: bounds.getWest(),
+      east: bounds.getEast()
+    }
+
+    // Calculate grid spacing
+    const spacingMeters = radiusMeters * 2 * 0.866
+    const midLat = (this.bounds.south + this.bounds.north) / 2
+    const metersPerDegreeLat = 111320
+    const metersPerDegreeLng = 111320 * Math.cos(midLat * Math.PI / 180)
+
+    this.latStep = spacingMeters / metersPerDegreeLat
+    this.lngStep = spacingMeters / metersPerDegreeLng
+
+    // Restore state from localStorage
+    this.restoreState()
+  }
+
+  /**
+   * Compress coordinate to string: "lat5,lng5" (5 decimal places)
+   * Reduces storage from ~40 chars to ~24 chars per coordinate
+   */
+  private compressCoord(lat: number, lng: number): string {
+    return `${lat.toFixed(5)},${lng.toFixed(5)}`
+  }
+
+  /**
+   * Decompress coordinate string back to lat/lng
+   */
+  private decompressCoord(compressed: string): LatLng {
+    const [lat, lng] = compressed.split(',').map(Number)
+    return { lat, lng }
+  }
+
+  /**
+   * Save state to localStorage with chunked storage
+   */
+  private saveState(): void {
+    try {
+      // Save metadata (iteration, buffer, chunk count)
+      const chunkCount = Math.ceil(this.checkedCoords.size / this.CHUNK_SIZE)
+      const metadata = {
+        iteration: this.iteration,
+        totalCoords: this.checkedCoords.size,
+        chunkCount: chunkCount,
+        buffer: this.coordsBuffer.map(c => this.compressCoord(c.lat, c.lng))
+      }
+      localStorage.setItem(`${this.storageKey}_meta`, JSON.stringify(metadata))
+
+      // Save chunks of coordinates
+      const coordsArray = Array.from(this.checkedCoords)
+      for (let i = 0; i < chunkCount; i++) {
+        const start = i * this.CHUNK_SIZE
+        const end = start + this.CHUNK_SIZE
+        const chunk = coordsArray.slice(start, end)
+        localStorage.setItem(`${this.storageKey}_chunk_${i}`, JSON.stringify(chunk))
+      }
+    } catch (e) {
+      console.warn('Failed to save GridCoordinateGenerator state:', e)
+    }
+  }
+
+  /**
+   * Restore state from localStorage
+   */
+  private restoreState(): void {
+    try {
+      const metaStr = localStorage.getItem(`${this.storageKey}_meta`)
+      if (!metaStr) return
+
+      const meta = JSON.parse(metaStr)
+      this.iteration = meta.iteration || 0
+      
+      // Load buffer
+      if (meta.buffer && Array.isArray(meta.buffer)) {
+        this.coordsBuffer = meta.buffer.map((c: string) => this.decompressCoord(c))
+      }
+
+      // Load chunks lazily - only load the first chunk initially
+      const chunkCount = meta.chunkCount || 0
+      if (chunkCount > 0) {
+        const firstChunk = localStorage.getItem(`${this.storageKey}_chunk_0`)
+        if (firstChunk) {
+          const coords = JSON.parse(firstChunk)
+          coords.forEach((c: string) => this.checkedCoords.add(c))
+          this.loadedChunks.add(0)
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to restore GridCoordinateGenerator state:', e)
+    }
+  }
+
+  /**
+   * Load additional chunks on demand
+   */
+  private loadChunkIfNeeded(chunkIndex: number): void {
+    if (this.loadedChunks.has(chunkIndex)) return
+
+    try {
+      const chunk = localStorage.getItem(`${this.storageKey}_chunk_${chunkIndex}`)
+      if (chunk) {
+        const coords = JSON.parse(chunk)
+        coords.forEach((c: string) => this.checkedCoords.add(c))
+        this.loadedChunks.add(chunkIndex)
+      }
+    } catch (e) {
+      console.warn(`Failed to load chunk ${chunkIndex}:`, e)
+    }
+  }
+
+  /**
+   * Load all chunks (when needed)
+   */
+  private loadAllChunks(): void {
+    try {
+      const metaStr = localStorage.getItem(`${this.storageKey}_meta`)
+      if (!metaStr) return
+
+      const meta = JSON.parse(metaStr)
+      const chunkCount = meta.chunkCount || 0
+
+      for (let i = 0; i < chunkCount; i++) {
+        this.loadChunkIfNeeded(i)
+      }
+    } catch (e) {
+      console.warn('Failed to load all chunks:', e)
+    }
+  }
+
+  /**
+   * Clear saved state from localStorage
+   */
+  clearSavedState(): void {
+    try {
+      // Clear metadata
+      const metaStr = localStorage.getItem(`${this.storageKey}_meta`)
+      if (metaStr) {
+        const meta = JSON.parse(metaStr)
+        const chunkCount = meta.chunkCount || 0
+
+        // Clear all chunks
+        for (let i = 0; i < chunkCount; i++) {
+          localStorage.removeItem(`${this.storageKey}_chunk_${i}`)
+        }
+      }
+
+      // Clear metadata
+      localStorage.removeItem(`${this.storageKey}_meta`)
+    } catch (e) {
+      console.warn('Failed to clear GridCoordinateGenerator state:', e)
+    }
+  }
+
+  /**
+   * Generate a batch of coordinates with offset based on iteration count.
+   * Each iteration produces a different grid pattern by applying random offset.
+   * Supports pause/resume by maintaining state in localStorage.
+   * @param batchSize Number of coordinates to generate per batch
+   */
+  *generateBatch(batchSize: number): Generator<LatLng[], void, unknown> {
+    // First, check if we have buffered coordinates from before pause
+    if (this.coordsBuffer.length > 0) {
+      let batch: LatLng[] = []
+      while (this.coordsBuffer.length > 0 && batch.length < batchSize) {
+        batch.push(this.coordsBuffer.shift()!)
+      }
+      if (batch.length > 0) {
+        yield batch
+        this.saveState()
+      }
+    }
+
+    // Apply offset based on iteration to create different grid patterns
+    // Use golden ratio for better distribution across iterations
+    const goldenRatio = 0.618033988749895
+    const latOffset = (this.iteration * goldenRatio * this.latStep) % this.latStep
+    const lngOffset = (this.iteration * goldenRatio * this.lngStep) % this.lngStep
+    
+    let batch: LatLng[] = []
+    let rowIndex = 0
+
+    for (let lat = this.bounds.south + latOffset; lat <= this.bounds.north; lat += this.latStep) {
+      // Hexagonal offset for alternating rows
+      const hexOffset = (rowIndex % 2) * (this.lngStep / 2)
+      
+      for (let lng = this.bounds.west + lngOffset + hexOffset; lng <= this.bounds.east; lng += this.lngStep) {
+        // Create coordinate key for deduplication (5 decimal places = ~1.1m precision)
+        const coordKey = this.compressCoord(lat, lng)
+        
+        if (!this.checkedCoords.has(coordKey)) {
+          this.checkedCoords.add(coordKey)
+          batch.push(this.decompressCoord(coordKey))
+          
+          if (batch.length >= batchSize) {
+            yield batch
+            this.saveState() // Save state after yielding batch
+            batch = []
+          }
+        }
+      }
+      rowIndex++
+    }
+
+    // Store remaining coordinates in buffer for next resume
+    if (batch.length > 0) {
+      this.coordsBuffer.push(...batch)
+      yield batch
+      this.saveState()
+    }
+
+    this.iteration++
+    this.saveState()
+  }
+
+  /**
+   * Reset the checked coordinates for a new search cycle.
+   * Call this when starting fresh or after exhausting all grid patterns.
+   */
+  reset(): void {
+    this.checkedCoords.clear()
+    this.iteration = 0
+    this.coordsBuffer = []
+    this.currentBatchIndex = 0
+    this.loadedChunks.clear()
+    this.saveState()
+  }
+
+  /**
+   * Get current iteration count
+   */
+  getIteration(): number {
+    return this.iteration
+  }
+
+  /**
+   * Get number of checked coordinates
+   * Note: only counts loaded chunks, call loadAllChunks() for total
+   */
+  getCheckedCount(): number {
+    return this.checkedCoords.size
+  }
+
+  /**
+   * Get total checked coordinates from storage metadata
+   */
+  getTotalCheckedCount(): number {
+    try {
+      const metaStr = localStorage.getItem(`${this.storageKey}_meta`)
+      if (metaStr) {
+        const meta = JSON.parse(metaStr)
+        return meta.totalCoords || 0
+      }
+    } catch (e) {
+      console.warn('Failed to get total checked count:', e)
+    }
+    return this.checkedCoords.size
+  }
+
+  /**
+   * Check if we've likely exhausted unique positions
+   * (after many iterations with diminishing returns)
+   */
+  shouldReset(): boolean {
+    // After ~10 iterations, most unique positions are likely found
+    return this.iteration >= 10
+  }
+}
+
 export function radians_to_degrees(radians: number) {
   var pi = Math.PI;
   return radians * (180 / pi);
