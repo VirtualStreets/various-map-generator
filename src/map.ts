@@ -637,8 +637,8 @@ function refreshGlifyLayer() {
       }
       return true
     },
-    sensitivity: 3,
-    pane: 'overlayPane',
+    sensitivity: 2,
+    pane: 'labelPane',
   })
 
   lastRenderedCount = data.features.length
