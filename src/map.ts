@@ -1211,6 +1211,7 @@ export {
   setGlifyMode,
   addGlifyPoint,
   registerGlifyClickHandler,
+  removeGlifyPointsForPolygon,
   GLIFY_CONFIG,
   type MarkerLayersTypes,
 }

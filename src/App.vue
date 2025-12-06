@@ -853,6 +853,7 @@ import {
   setGlifyMode,
   addGlifyPoint,
   registerGlifyClickHandler,
+  removeGlifyPointsForPolygon,
   type LayerMeta,
   type MarkerLayersTypes,
 } from '@/map'
@@ -1127,6 +1128,10 @@ function clearPolygon(polygon: Polygon) {
       markerLayer.removeLayer(marker)
     })
   })
+  
+  // Clear glify points for this polygon
+  removeGlifyPointsForPolygon(polygon._leaflet_id)
+  
   polygon.found.length = 0
   
   // Clear cached generator and its persisted state
