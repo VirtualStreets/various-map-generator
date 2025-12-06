@@ -469,155 +469,116 @@ export function randomPointInPoly(polygon: Polygon) {
 }
 
 type LatLng = { lat: number; lng: number }
-type PolygonLike = { _leaflet_id?: number; feature?: any; getBounds?: () => any }
 
-class BitsetTwoHash {
-  private bytes: Uint8Array
-  private bits: number
-  private mask: number
-
-  constructor(bitsPow2 = 20) {
-    // bitsPow2 = 20 => 2^20 bits = 1,048,576 bits = 131,072 bytes
-    this.bits = 1 << bitsPow2
-    this.mask = this.bits - 1
-    this.bytes = new Uint8Array(this.bits >>> 3)
-  }
-
-  // FNV-1a 32-bit hash for small strings
-  static fnv1a32(str: string): number {
-    let h = 0x811c9dc5 >>> 0
-    for (let i = 0; i < str.length; i++) {
-      h ^= str.charCodeAt(i)
-      h = Math.imul(h, 0x01000193) >>> 0
-    }
-    return h >>> 0
-  }
-
-  // multiply-mix hash for second hash (fast)
-  static mulHash32(n: number): number {
-    // 32-bit integer mix (from splitmix-like)
-    let x = (n + 0x9e3779b97f4a7c15) >>> 0
-    x = Math.imul(x ^ (x >>> 16), 0x85ebca6b) >>> 0
-    x = Math.imul(x ^ (x >>> 13), 0xc2b2ae35) >>> 0
-    return x >>> 0
-  }
-
-  private setBit(idx: number) {
-    this.bytes[idx >>> 3] |= 1 << (idx & 7)
-  }
-
-  private getBit(idx: number): boolean {
-    return (this.bytes[idx >>> 3] & (1 << (idx & 7))) !== 0
-  }
-
-  hasTwoHash(keyStr: string, numericSeed?: number): boolean {
-    const h1 = BitsetTwoHash.fnv1a32(keyStr)
-    const h2 = BitsetTwoHash.mulHash32(numericSeed ?? h1)
-    const i1 = (h1 & this.mask) >>> 0
-    const i2 = (h2 & this.mask) >>> 0
-    return this.getBit(i1) && this.getBit(i2)
-  }
-
-  addTwoHash(keyStr: string, numericSeed?: number) {
-    const h1 = BitsetTwoHash.fnv1a32(keyStr)
-    const h2 = BitsetTwoHash.mulHash32(numericSeed ?? h1)
-    const i1 = (h1 & this.mask) >>> 0
-    const i2 = (h2 & this.mask) >>> 0
-    this.setBit(i1)
-    this.setBit(i2)
-  }
-
-  toBase64(): string {
-    // Convert bytes -> binary string in chunks
-    const CH = 0x8000
-    let i = 0
-    const len = this.bytes.length
-    let s = ''
-    while (i < len) {
-      const sub = this.bytes.subarray(i, Math.min(i + CH, len))
-      // apply String.fromCharCode on numbers
-      s += String.fromCharCode.apply(null, Array.from(sub))
-      i += CH
-    }
-    return btoa(s)
-  }
-
-  static fromBase64(b64: string, bitsPow2 = 20): BitsetTwoHash {
-    const bs = new BitsetTwoHash(bitsPow2)
-    try {
-      const bin = atob(b64)
-      const arr = new Uint8Array(bin.length)
-      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i)
-      if (arr.length <= bs.bytes.length) {
-        bs.bytes.set(arr)
-      } else {
-        bs.bytes.set(arr.subarray(0, bs.bytes.length))
-      }
-    } catch (e) {
-      // ignore parse errors -> return empty bitset
-    }
-    return bs
-  }
-
-  reset() {
-    this.bytes.fill(0)
-  }
-
-  // approximate count not supported (would need popcount)
+interface GridOptions {
+  bitsetPow2?: number
+  bitsetBytesLimit?: number
+  insertionSortThreshold?: number
+  dedupeEpsilon?: number
+  debug?: boolean
 }
 
-export class GridCoordinateGenerator {
-  // bounds and steps (degrees)
+interface PolygonState {
+  iteration: number
+  currentRow: number
+  sortedPtr: number
+  oddIntersectionsSeen: number
+}
+
+const POLY_STATES = new WeakMap<Polygon, PolygonState>()
+
+export class GridGenerator {
+  // Bounds & grid
   private bounds: { south: number; north: number; west: number; east: number }
   private latStep: number
   private lngStep: number
+  private rows: number
+  private cols: number
 
-  // edges typed arrays
+  // SOA edge arrays
   private edgeCount = 0
-  private yMinArr!: Float64Array
-  private yMaxArr!: Float64Array
-  private xAtYMinArr!: Float64Array
-  private invSlopeArr!: Float64Array
+  private yMinArr!: Float32Array
+  private yMaxArr!: Float32Array
+  private xAtYMinArr!: Float32Array
+  private invSlopeArr!: Float32Array
+  private sortedByY!: Int32Array
 
-  // active edge table (indices) + currentX
-  private activeIdx: Int32Array // capacity = edgeCount
-  private activeX!: Float64Array
-  private activeCount = 0
+  // AET
+  private activeIdx!: Int32Array
+  private activeX!: Float64Array // use Float64 for intersection precision
+  private activeCap = 0
 
-  // iteration / offsets
-  private iteration = 0
+  // temp arrays preallocated (no per-row alloc)
+  private tmpIdx!: Int32Array
+  private tmpX!: Float64Array
+
+  // bitset
+  private bitWords!: Uint32Array
+  private bitCount = 0
+  private bitMask = 0
+
+  // state
+  private state: PolygonState
+
+  // config
+  private insertionSortThreshold: number
+  private dedupeEpsilon: number
+  private debug: boolean
   private readonly golden = 0.618033988749895
 
-  // bitset visited
-  private bitset: BitsetTwoHash
-  private readonly BITSET_POW2: number
+  // safety
+  private readonly BITSET_BYTES_LIMIT: number // max bytes for bitset to allow (avoid OOM)
 
-  // storage key
-  private readonly STORAGE_KEY: string
-
-  // resume state
-  private currentRowIndex = 0
-
-  // save thinning
-  private yieldsSinceSave = 0
-  private readonly SAVE_EVERY_YIELDS = 6
-
-  constructor(polygon: PolygonLike, radiusMeters: number, opts?: { bitsetPow2?: number }) {
-    this.STORAGE_KEY = `grid_ultra_${String((polygon as any)._leaflet_id || (polygon.feature && polygon.feature.id) || Math.random().toString(36).slice(2, 8))}`
-    this.BITSET_POW2 = opts?.bitsetPow2 ?? 20
-    this.bitset = new BitsetTwoHash(this.BITSET_POW2)
-
-    // bounds
-    if (!polygon.getBounds) throw new Error('polygon must provide getBounds()')
-    const b = polygon.getBounds()
-    this.bounds = {
-      south: b.getSouth(),
-      north: b.getNorth(),
-      west: b.getWest(),
-      east: b.getEast()
+  constructor(polygon: Polygon, radiusMeters: number, opts?: GridOptions) {
+    let ll: any = polygon.getLatLngs()
+    
+    // Handle nested arrays - flatten to get the actual coordinate array
+    // getLatLngs() can return LatLng[], LatLng[][], or LatLng[][][]
+    while (Array.isArray(ll) && ll.length > 0 && Array.isArray(ll[0])) {
+      ll = ll[0]
     }
+    
+    // Verify we have valid coordinates
+    if (!Array.isArray(ll) || ll.length < 3) {
+      console.error('Invalid polygon structure:', polygon.getLatLngs())
+      throw new Error('Invalid polygon coords')
+    }
+    
+    // Map to [lng, lat] coordinate pairs
+    let coords : [number,number][] = ll.map((p:any) => {
+      if (p && typeof p.lat === 'number' && typeof p.lng === 'number') {
+        return [p.lng, p.lat]
+      }
+      throw new Error('Invalid coordinate point in polygon')
+    })
+    
+    if (!coords || coords.length < 3) throw new Error('Invalid polygon coords')
 
-    // spacing
+    // get or create in-memory polygon state
+    let st = POLY_STATES.get(polygon)
+    if (!st) {
+      st = { iteration: 0, currentRow: 0, sortedPtr: 0, oddIntersectionsSeen: 0 }
+      POLY_STATES.set(polygon, st)
+    }
+    this.state = st
+
+    this.insertionSortThreshold = opts?.insertionSortThreshold ?? 64
+    this.dedupeEpsilon = opts?.dedupeEpsilon ?? 1e-9
+    this.debug = !!opts?.debug
+    this.BITSET_BYTES_LIMIT = opts?.bitsetBytesLimit ?? 64 * 1024 * 1024 // default 64MB safe limit
+
+    // compute bounds
+    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity
+    for (const [lng, lat] of coords) {
+      if (lat < minLat) minLat = lat
+      if (lat > maxLat) maxLat = lat
+      if (lng < minLng) minLng = lng
+      if (lng > maxLng) maxLng = lng
+    }
+    const eps = 1e-12
+    this.bounds = { south: minLat - eps, north: maxLat + eps, west: minLng - eps, east: maxLng + eps }
+
+    // compute grid step degrees
     const spacingMeters = radiusMeters * 2 * 0.866
     const midLat = (this.bounds.south + this.bounds.north) / 2
     const metersPerDegLat = 111320
@@ -625,308 +586,381 @@ export class GridCoordinateGenerator {
     this.latStep = spacingMeters / metersPerDegLat
     this.lngStep = spacingMeters / metersPerDegLng
 
-    // build edges into typed arrays
-    this.buildEdgeArrays(polygon)
+    // compute rows & cols
+    this.rows = Math.floor((this.bounds.north - this.bounds.south) / this.latStep) + 1
+    this.cols = Math.floor((this.bounds.east - this.bounds.west) / this.lngStep) + 1
 
-    // active arrays init (max capacity = edgeCount)
-    this.activeIdx = new Int32Array(this.edgeCount)
-    this.activeX = new Float64Array(this.edgeCount)
-
-    // try restore state
-    this.restoreState()
-  }
-
-  /** Build typed arrays from polygon feature coordinates (ignore horizontal edges). */
-  private buildEdgeArrays(polygon: PolygonLike) {
-    const feature = (polygon as any).feature
-    if (!feature || !feature.geometry) {
-      this.edgeCount = 0
-      this.yMinArr = new Float64Array(0)
-      this.yMaxArr = new Float64Array(0)
-      this.xAtYMinArr = new Float64Array(0)
-      this.invSlopeArr = new Float64Array(0)
-      return
+    // safety: check bitset size
+    const totalBits = this.rows * this.cols
+    const totalBytes = Math.ceil(totalBits / 8)
+    if (totalBytes > this.BITSET_BYTES_LIMIT) {
+      throw new Error(`Bitset size ${totalBytes} bytes exceeds limit ${this.BITSET_BYTES_LIMIT}. Choose larger grid step or use sparse mode.`)
     }
 
-    const coords = feature.geometry.coordinates
-    const polygons = feature.geometry.type === 'MultiPolygon' ? coords : [coords]
+    // allocate dense bitset words
+    const wordCount = Math.ceil(totalBits / 32)
+    this.bitWords = new Uint32Array(wordCount)
+    this.bitCount = totalBits
+    this.bitMask = totalBits - 1 // not used for mapping since we use direct index calc
 
-    // count non-horizontal edges
-    let cnt = 0
-    for (const rings of polygons) {
-      for (const ring of rings as any[]) {
-        const n = ring.length
-        for (let i = 0; i < n - 1; i++) {
-          const p1 = ring[i], p2 = ring[i + 1]
-          if (Math.abs(p2[1] - p1[1]) < 1e-12) continue
-          cnt++
+    // build SOA edge arrays
+    this.buildEdgeSOA(coords)
+
+    // allocate active arrays and temp arrays based on edgeCount
+    this.activeCap = Math.max(8, this.edgeCount)
+    this.activeIdx = new Int32Array(this.activeCap)
+    this.activeX = new Float64Array(this.activeCap)
+    this.tmpIdx = new Int32Array(this.activeCap)
+    this.tmpX = new Float64Array(this.activeCap)
+  }
+
+  // -------------------- helpers --------------------
+  private normalizeCoords(input: any): [number, number][] {
+    if (!input) throw new Error('Empty polygon input')
+
+    if (Array.isArray(input)) {
+      const first = input[0]
+      if (!first) return []
+      if (Array.isArray(first) && first.length >= 2) {
+        // [[lng,lat], ...]
+        return input as [number, number][]
+      } else if (typeof first === 'object' && 'lat' in first && 'lng' in first) {
+        return (input as LatLng[]).map(p => [p.lng, p.lat])
+      }
+    }
+    // GeoJSON feature
+    if (input.geometry && input.geometry.type) {
+      const type = input.geometry.type
+      const coords = input.geometry.coordinates
+      if (type === 'Polygon') {
+        return coords[0] as [number, number][]
+      }
+      if (type === 'MultiPolygon') {
+        return coords[0][0] as [number, number][]
+      }
+    }
+    throw new Error('Unsupported polygon input format')
+  }
+
+  private buildEdgeSOA(coords: [number, number][]) {
+    // collect edges excluding horizontal edges
+    const tmp: { yMin: number; yMax: number; xAtYMin: number; invSlope: number }[] = []
+    const n = coords.length
+    for (let i = 0; i < n; i++) {
+      const [x1, y1] = coords[i]
+      const [x2, y2] = coords[(i + 1) % n]
+      if (Math.abs(y2 - y1) < 1e-12) continue
+      if (y1 < y2) {
+        tmp.push({ yMin: y1, yMax: y2, xAtYMin: x1, invSlope: (x2 - x1) / (y2 - y1) })
+      } else {
+        tmp.push({ yMin: y2, yMax: y1, xAtYMin: x2, invSlope: (x1 - x2) / (y1 - y2) })
+      }
+    }
+
+    this.edgeCount = tmp.length
+    this.yMinArr = new Float32Array(this.edgeCount)
+    this.yMaxArr = new Float32Array(this.edgeCount)
+    this.xAtYMinArr = new Float32Array(this.edgeCount)
+    this.invSlopeArr = new Float32Array(this.edgeCount)
+
+    for (let i = 0; i < this.edgeCount; i++) {
+      const e = tmp[i]
+      this.yMinArr[i] = e.yMin
+      this.yMaxArr[i] = e.yMax
+      this.xAtYMinArr[i] = e.xAtYMin
+      this.invSlopeArr[i] = e.invSlope
+    }
+
+    // sorted indices by yMin (Int32Array)
+    const idxs: number[] = Array.from({ length: this.edgeCount }, (_, i) => i)
+    idxs.sort((a, b) => this.yMinArr[a] - this.yMinArr[b])
+    this.sortedByY = new Int32Array(idxs)
+  }
+
+  // ---------------- bitset operations ----------------
+  private setBitByIndex(bitIndex: number) {
+    const w = (bitIndex >>> 5)
+    const b = bitIndex & 31
+    this.bitWords[w] |= (1 << b)
+  }
+
+  private testBitByIndex(bitIndex: number): boolean {
+    const w = (bitIndex >>> 5)
+    const b = bitIndex & 31
+    return (this.bitWords[w] & (1 << b)) !== 0
+  }
+
+  // ---------------- in-place quicksort + insertionSort ----------------
+  private insertionSort(activeCount: number) {
+    // typed arrays activeX & activeIdx
+    const activeX = this.activeX
+    const activeIdx = this.activeIdx
+    for (let i = 1; i < activeCount; i++) {
+      const ax = activeX[i]
+      const ai = activeIdx[i]
+      let j = i - 1
+      while (j >= 0 && activeX[j] > ax) {
+        activeX[j + 1] = activeX[j]
+        activeIdx[j + 1] = activeIdx[j]
+        j--
+      }
+      activeX[j + 1] = ax
+      activeIdx[j + 1] = ai
+    }
+  }
+
+  private quicksortInPlace(lo: number, hi: number) {
+    const activeX = this.activeX
+    const activeIdx = this.activeIdx
+    // non-recursive stack
+    const stack: number[] = []
+    stack.push(lo, hi)
+    while (stack.length) {
+      const r = stack.pop()!; const l = stack.pop()!
+      if (l >= r) continue
+      let i = l, j = r
+      const pivot = activeX[(l + r) >> 1]
+      while (i <= j) {
+        while (activeX[i] < pivot) i++
+        while (activeX[j] > pivot) j--
+        if (i <= j) {
+          // swap
+          const tx = activeX[i]; activeX[i] = activeX[j]; activeX[j] = tx
+          const ti = activeIdx[i]; activeIdx[i] = activeIdx[j]; activeIdx[j] = ti
+          i++; j--
         }
       }
-    }
-
-    this.edgeCount = cnt
-    this.yMinArr = new Float64Array(cnt)
-    this.yMaxArr = new Float64Array(cnt)
-    this.xAtYMinArr = new Float64Array(cnt)
-    this.invSlopeArr = new Float64Array(cnt)
-
-    // fill
-    let idx = 0
-    for (const rings of polygons) {
-      for (const ring of rings as any[]) {
-        const n = ring.length
-        for (let i = 0; i < n - 1; i++) {
-          const p1 = ring[i], p2 = ring[i + 1]
-          const lng1 = p1[0], lat1 = p1[1]
-          const lng2 = p2[0], lat2 = p2[1]
-          if (Math.abs(lat2 - lat1) < 1e-12) continue
-
-          const yMin = Math.min(lat1, lat2)
-          const yMax = Math.max(lat1, lat2)
-          const xAtYMin = lat1 < lat2 ? lng1 : lng2
-          const xAtYMax = lat1 < lat2 ? lng2 : lng1
-          const invSlope = (xAtYMax - xAtYMin) / (yMax - yMin)
-
-          this.yMinArr[idx] = yMin
-          this.yMaxArr[idx] = yMax
-          this.xAtYMinArr[idx] = xAtYMin
-          this.invSlopeArr[idx] = invSlope
-          idx++
-        }
-      }
-    }
-
-    // sort by yMin ascending (parallel arrays)
-    if (this.edgeCount > 1) {
-      const order = new Uint32Array(this.edgeCount)
-      for (let i = 0; i < this.edgeCount; i++) order[i] = i
-      const orderArr = Array.from(order)
-      orderArr.sort((a, b) => this.yMinArr[a] - this.yMinArr[b])
-      const newYMin = new Float64Array(this.edgeCount)
-      const newYMax = new Float64Array(this.edgeCount)
-      const newXAt = new Float64Array(this.edgeCount)
-      const newInv = new Float64Array(this.edgeCount)
-      for (let i = 0; i < this.edgeCount; i++) {
-        const o = orderArr[i]
-        newYMin[i] = this.yMinArr[o]
-        newYMax[i] = this.yMaxArr[o]
-        newXAt[i] = this.xAtYMinArr[o]
-        newInv[i] = this.invSlopeArr[o]
-      }
-      this.yMinArr = newYMin
-      this.yMaxArr = newYMax
-      this.xAtYMinArr = newXAt
-      this.invSlopeArr = newInv
+      if (l < j) { stack.push(l, j) }
+      if (i < r) { stack.push(i, r) }
     }
   }
 
-  /** Save minimal state to localStorage: iteration, currentRowIndex, bitset */
-  private saveState() {
-    try {
-      const meta = {
-        iteration: this.iteration,
-        currentRowIndex: this.currentRowIndex,
-        latStep: this.latStep,
-        lngStep: this.lngStep,
-        bounds: this.bounds,
-        bitsetPow2: this.BITSET_POW2
-      }
-      localStorage.setItem(`${this.STORAGE_KEY}_meta`, JSON.stringify(meta))
-      localStorage.setItem(`${this.STORAGE_KEY}_bits`, this.bitset.toBase64())
-    } catch (e) {
-      console.warn('Grid saveState error', e)
-    }
-  }
-
-  private restoreState() {
-    try {
-      const metaStr = localStorage.getItem(`${this.STORAGE_KEY}_meta`)
-      if (metaStr) {
-        const meta = JSON.parse(metaStr)
-        this.iteration = meta.iteration || 0
-        this.currentRowIndex = meta.currentRowIndex || 0
-      }
-      const bits = localStorage.getItem(`${this.STORAGE_KEY}_bits`)
-      if (bits) {
-        this.bitset = BitsetTwoHash.fromBase64(bits, this.BITSET_POW2)
-      }
-    } catch (e) {
-      console.warn('Grid restoreState error', e)
-    }
-  }
-
-  public clearSavedState() {
-    try {
-      localStorage.removeItem(`${this.STORAGE_KEY}_meta`)
-      localStorage.removeItem(`${this.STORAGE_KEY}_bits`)
-      this.bitset.reset()
-      this.iteration = 0
-      this.currentRowIndex = 0
-    } catch (e) {
-      console.warn('clearSavedState error', e)
-    }
-  }
-
-  /** Quantize grid index for lat/lng (integers) */
-  private quantizeLatIndex(lat: number): number {
-    return Math.round((lat - this.bounds.south) / this.latStep)
-  }
-  private quantizeLngIndex(lng: number): number {
-    return Math.round((lng - this.bounds.west) / this.lngStep)
-  }
-
-  /** Make a compact string key for hashing (short) */
-  private makeKeyStr(latIdx: number, lngIdx: number): string {
-    // small string representation: "l<lat>,g<lng>" is compact
-    return `${latIdx},${lngIdx}`
-  }
-
-  /** The core: AET-based generateBatch */
+  // ---------------- main generator ----------------
   *generateBatch(batchSize: number): Generator<LatLng[], void, unknown> {
     const batch: LatLng[] = []
-    // row range computed from bounds
-    const totalRows = Math.floor((this.bounds.north - this.bounds.south) / this.latStep) + 1
-    // fractional offsets for this iteration -> vary grid each iteration
-    const frac = (this.iteration * this.golden) % 1
-    const latStartOffset = frac * this.latStep // shift rows fractionally
-    const lngFrac = ((this.iteration + 7) * 0.7548776662466927) % 1 // second irrational for lng
-    const lngStartFrac = lngFrac * this.lngStep
+    const st = this.state
 
-    // AET maintenance pointers
-    let edgeAddPtr = 0
-    this.activeCount = 0
-    let row = this.currentRowIndex || 0
+    let row = st.currentRow || 0
+    let sortedPtr = st.sortedPtr || 0
+    let activeCount = 0
 
-    // baseRowLat computed as bounds.south + latStartOffset + row * latStep
-    for (; row < totalRows; row++) {
-      const lat = this.bounds.south + latStartOffset + row * this.latStep
+    // precompute constants
+    const latStep = this.latStep
+    const lngStep = this.lngStep
+    const west = this.bounds.west
+    const east = this.bounds.east
+    const rows = this.rows
+    const dedupeEps = this.dedupeEpsilon
+    const insertThresh = this.insertionSortThreshold
 
-      // add edges whose yMin <= lat
-      while (edgeAddPtr < this.edgeCount && this.yMinArr[edgeAddPtr] <= lat) {
-        // only activate if lat < yMax (edge spans current lat)
-        if (lat <= this.yMaxArr[edgeAddPtr]) {
-          // compute initial currentX = xAtYMin + (lat - yMin) * invSlope
-          const curX = this.xAtYMinArr[edgeAddPtr] + (lat - this.yMinArr[edgeAddPtr]) * this.invSlopeArr[edgeAddPtr]
-          this.activeIdx[this.activeCount] = edgeAddPtr
-          this.activeX[this.activeCount] = curX
-          this.activeCount++
+    // iteration fractional offsets
+    const fracLat = (st.iteration * this.golden) % 1
+    const fracLng = ((st.iteration * 0.7548776662466927) % 1)
+    const latOffset = fracLat * latStep
+    const lngOffsetBase = fracLng * lngStep
+
+    // main rows loop
+    for (; row < rows; row++) {
+      const lat = this.bounds.south + latOffset + row * latStep
+      // add new edges whose yMin <= lat
+      while (sortedPtr < this.edgeCount && this.yMinArr[this.sortedByY[sortedPtr]] <= lat) {
+        const ei = this.sortedByY[sortedPtr]
+        if (lat < this.yMaxArr[ei]) {
+          if (activeCount >= this.activeCap) {
+            // should not happen because we sized activeCap >= edgeCount, but guard
+            this.resizeActiveCapacity(activeCount + 4)
+          }
+          this.activeIdx[activeCount] = ei
+          this.activeX[activeCount] = this.xAtYMinArr[ei] + (lat - this.yMinArr[ei]) * this.invSlopeArr[ei]
+          activeCount++
         }
-        edgeAddPtr++
+        sortedPtr++
       }
 
-      // remove edges where yMax <= lat (they no longer intersect this row)
-      // perform in-place compaction
-      if (this.activeCount > 0) {
+      // remove expired edges (yMax <= lat)
+      if (activeCount > 0) {
         let w = 0
-        for (let i = 0; i < this.activeCount; i++) {
+        for (let i = 0; i < activeCount; i++) {
           const ei = this.activeIdx[i]
-          if (lat <= this.yMaxArr[ei]) {
-            // still active
+          if (lat < this.yMaxArr[ei]) {
             this.activeIdx[w] = this.activeIdx[i]
             this.activeX[w] = this.activeX[i]
             w++
           }
         }
-        this.activeCount = w
+        activeCount = w
       }
 
-      if (this.activeCount === 0) {
-        // nothing intersects this row
-        this.currentRowIndex = row + 1
-        continue
-      }
+      if (activeCount === 0) continue
 
-      // Build array of pairs (currentX) sorted ascending
-      if (this.activeCount <= 16) {
-        // insertion sort on activeX & activeIdx (stable)
-        for (let i = 1; i < this.activeCount; i++) {
-          const ai = this.activeIdx[i]
-          const ax = this.activeX[i]
-          let j = i - 1
-          while (j >= 0 && this.activeX[j] > ax) {
-            this.activeIdx[j + 1] = this.activeIdx[j]
-            this.activeX[j + 1] = this.activeX[j]
-            j--
-          }
-          this.activeIdx[j + 1] = ai
-          this.activeX[j + 1] = ax
-        }
+      // sort active edges by X (in-place)
+      if (activeCount <= insertThresh) {
+        this.insertionSort(activeCount)
       } else {
-        // build small array of indices then sort by activeX using built-in sort
-        const idxArr = new Array<number>(this.activeCount)
-        for (let i = 0; i < this.activeCount; i++) idxArr[i] = i
-        idxArr.sort((a, b) => this.activeX[a] - this.activeX[b])
-        // reorder activeIdx & activeX based on sorted idxArr
-        const tmpIdx = new Int32Array(this.activeCount)
-        const tmpX = new Float64Array(this.activeCount)
-        for (let i = 0; i < this.activeCount; i++) {
-          tmpIdx[i] = this.activeIdx[idxArr[i]]
-          tmpX[i] = this.activeX[idxArr[i]]
-        }
-        // copy back
-        for (let i = 0; i < this.activeCount; i++) {
-          this.activeIdx[i] = tmpIdx[i]
-          this.activeX[i] = tmpX[i]
-        }
+        this.quicksortInPlace(0, activeCount - 1)
       }
 
-      const rowHexOffset = (row & 1) ? (this.lngStep / 2) : 0
-      const totalLngOffset = rowHexOffset + lngStartFrac
+      // dedupe nearly-equal intersections (tangents etc.)
+      // compact into tmp arrays, then copy back to active arrays
+      let m = 0
+      let prevX = Number.NaN
+      for (let i = 0; i < activeCount; i++) {
+        const ax = this.activeX[i]
+        if (i === 0 || Math.abs(ax - prevX) > dedupeEps) {
+          this.tmpX[m] = ax
+          this.tmpIdx[m] = this.activeIdx[i]
+          prevX = ax
+          m++
+        } else {
+          // near-duplicate intersection: skip this one (tangent)
+          // do not advance m
+        }
+      }
+      // if dedup removed items, copy back
+      if (m < activeCount) {
+        for (let i = 0; i < m; i++) {
+          this.activeX[i] = this.tmpX[i]
+          this.activeIdx[i] = this.tmpIdx[i]
+        }
+        activeCount = m
+      }
 
-      for (let ai = 0; ai + 1 < this.activeCount; ai += 2) {
-        let xL = this.activeX[ai]
-        let xR = this.activeX[ai + 1]
-        const firstIdx = Math.ceil((xL - this.bounds.west - totalLngOffset) / this.lngStep)
+      // if odd intersections -> geometry problem; drop last intersection and count
+      if ((activeCount & 1) === 1) {
+        st.oddIntersectionsSeen = (st.oddIntersectionsSeen || 0) + 1
+        // drop last
+        activeCount = activeCount - 1
+      }
 
-        for (let lngIdx = firstIdx;; lngIdx++) {
-          const lng = this.bounds.west + lngIdx * this.lngStep + totalLngOffset
-          if (lng > xR) break
+      if (activeCount === 0) continue
 
-          const latQ = this.quantizeLatIndex(lat)
-          const lngQ = this.quantizeLngIndex(lng)
-          const key = this.makeKeyStr(latQ, lngQ)
-          // use two-hash check/add
-          if (!this.bitset.hasTwoHash(key, latQ ^ (lngQ << 1))) {
-            this.bitset.addTwoHash(key, latQ ^ (lngQ << 1))
-            batch.push({ lat, lng })
-            if (batch.length >= batchSize) {
-              // update resume pointers & save occasionally
-              this.currentRowIndex = row
-              this.yieldsSinceSave++
-              if (this.yieldsSinceSave >= this.SAVE_EVERY_YIELDS) {
-                this.saveState()
-                this.yieldsSinceSave = 0
-              }
-              // yield a copy of batch
-              yield batch.splice(0, batch.length)
-            }
+      // precompute latIdx (quantized) for this row -> used for index calc
+      const latIdx = Math.round((lat - this.bounds.south) / latStep) | 0
+
+      // iterate pairs
+      for (let a = 0; a < activeCount; a += 2) {
+        const xL = this.activeX[a]
+        const xR = this.activeX[a + 1]
+        if (xR <= west || xL >= east) continue
+        const minLng = Math.max(west, xL)
+        const maxLng = Math.min(east, xR)
+
+        // compute col index range (integer) with offset
+        // apply row parity hex offset (alternate rows)
+        const rowHexOffset = (row & 1) ? (lngStep * 0.5) : 0
+        const totalLngOffset = lngOffsetBase + rowHexOffset
+
+        const firstCol = Math.ceil((minLng - west - totalLngOffset) / lngStep) | 0
+        const lastCol = Math.floor((maxLng - west - totalLngOffset) / lngStep) | 0
+
+        if (lastCol < firstCol) continue
+
+        // loop columns - simple integer increment
+        for (let col = firstCol; col <= lastCol; col++) {
+          const lng = west + col * lngStep + totalLngOffset
+          // compute unique bit index = latIdx * cols + col
+          const bitIndex = latIdx * this.cols + col
+          if (bitIndex < 0 || bitIndex >= this.bitCount) continue // safety
+          if (this.testBitByIndex(bitIndex)) continue
+          this.setBitByIndex(bitIndex)
+          batch.push({ lat, lng })
+          if (batch.length >= batchSize) {
+            // save resume pointers in-memory
+            st.currentRow = row
+            st.sortedPtr = sortedPtr
+            // yield
+            yield batch.splice(0, batch.length)
           }
         }
-      } // end pairs processing
-
-      for (let i = 0; i < this.activeCount; i++) {
-        const edgeIndex = this.activeIdx[i]
-        this.activeX[i] += this.invSlopeArr[edgeIndex] * this.latStep
       }
 
-      // end row -> next
-      this.currentRowIndex = row + 1
+      // incrementally update activeX for next row
+      for (let i = 0; i < activeCount; i++) {
+        const ei = this.activeIdx[i]
+        // add delta = invSlope * latStep
+        this.activeX[i] += this.invSlopeArr[ei] * latStep
+      }
     } // end rows
 
     // flush remaining
     if (batch.length > 0) {
-      this.saveState()
+      st.currentRow = this.rows
+      st.sortedPtr = this.edgeCount
       yield batch.splice(0, batch.length)
     }
 
-    this.iteration++
-    this.currentRowIndex = 0
-    this.yieldsSinceSave = 0
-    this.saveState()
+    // finished pass: bump iteration and reset pointers
+    st.iteration = (st.iteration || 0) + 1
+    st.currentRow = 0
+    st.sortedPtr = 0
+    // keep bitset to avoid re-visiting points in future iterations in same page
   }
 
-  getCheckedApproxBytes() { return (this.BITSET_POW2 >>> 3) } // approximate bytes allocated
+  private resizeActiveCapacity(newCap: number) {
+    const cap = Math.max(newCap, this.activeCap * 2)
+    const nActive = this.activeCap
+    const newActiveIdx = new Int32Array(cap)
+    const newActiveX = new Float64Array(cap)
+    newActiveIdx.set(this.activeIdx.subarray(0, nActive))
+    newActiveX.set(this.activeX.subarray(0, nActive))
+    this.activeIdx = newActiveIdx
+    this.activeX = newActiveX
+    this.tmpIdx = new Int32Array(cap)
+    this.tmpX = new Float64Array(cap)
+    this.activeCap = cap
+  }
+
+  // clear bitset and state
+  public reset(polygon?: Polygon) {
+    if (polygon) {
+      const st = POLY_STATES.get(polygon)
+      if (st) {
+        st.iteration = 0
+        st.currentRow = 0
+        st.sortedPtr = 0
+        st.oddIntersectionsSeen = 0
+      }
+    }
+    // clear bitset
+    this.bitWords.fill(0)
+  }
+
+  public getState(): PolygonState {
+    return this.state
+  }
+
+  public approxVisitedCountSample(): number {
+    // sample-based estimate of set bits
+    let sum = 0
+    const words = this.bitWords
+    const step = Math.max(1, Math.floor(words.length / 1024))
+    let samples = 0
+    for (let i = 0; i < words.length; i += step) {
+      samples++
+      sum += popcount32(words[i])
+    }
+    if (samples === 0) return 0
+    const avg = sum / samples
+    return Math.round(avg * words.length)
+  }
+
+  /**
+   * Clear saved state for this generator.
+   * Called when polygon is deleted or generation is complete.
+   * Since this implementation uses in-memory state (WeakMap), this resets the state.
+   */
+  public clearSavedState(): void {
+    this.reset()
+  }
 }
+
+// popcount for 32-bit words
+function popcount32(x: number) {
+  x = x - ((x >>> 1) & 0x55555555)
+  x = (x & 0x33333333) + ((x >>> 2) & 0x33333333)
+  return (((x + (x >>> 4)) & 0x0F0F0F0F) * 0x01010101) >>> 24
+}
+
 
 export function radians_to_degrees(radians: number) {
   var pi = Math.PI;

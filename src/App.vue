@@ -863,7 +863,7 @@ import { getTileUrl, getTileColorPresence } from '@/composables/tileColorDetecto
 import {
   sendNotifications,
   randomPointInPoly,
-  GridCoordinateGenerator,
+  GridGenerator,
   isOfficial,
   isPhotosphere,
   isDrone,
@@ -941,7 +941,7 @@ const pauseCountdown = ref<number>(0)
 const resumeCountdown = ref<number>(0)
 
 // Grid generators cache - persist across pause/resume
-const gridGenerators = new Map<number, GridCoordinateGenerator>()
+const gridGenerators = new Map<number, GridGenerator>()
 
 const cachedDates = ref({
   fromDate: Date.parse(settings.fromDate),
@@ -1358,7 +1358,7 @@ async function generate(polygon: Polygon) {
     
     let gridGenerator = gridGenerators.get(polygon._leaflet_id)
     if (!gridGenerator) {
-      gridGenerator = new GridCoordinateGenerator(polygon, settings.radius)
+      gridGenerator = new GridGenerator(polygon, settings.radius)
       gridGenerators.set(polygon._leaflet_id, gridGenerator)
     }
     
@@ -1376,7 +1376,7 @@ async function generate(polygon: Polygon) {
         
         hasMoreCoords = true
         
-        const validCoords = (settings.onlyCheckBlueLines || settings.strategy === 'random')
+        const validCoords = settings.onlyCheckBlueLines
           ? batch.filter(point => detector(point.lat, point.lng, settings.radius))
           : batch
         
