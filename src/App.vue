@@ -1366,11 +1366,6 @@ async function generate(polygon: Polygon) {
     while (polygon.found.length < polygon.nbNeeded) {
       if (!state.started) break
       
-      // Check if we should reset (after many iterations with no new unique coords)
-      if (gridGenerator.shouldReset()) {
-        gridGenerator.reset()
-      }
-      
       // Use generator to stream coordinates in batches
       const batchGenerator = gridGenerator.generateBatch(batchSize)
       let hasMoreCoords = false
@@ -1381,11 +1376,9 @@ async function generate(polygon: Polygon) {
         
         hasMoreCoords = true
         
-        // Filter valid coordinates within polygon
-        const validCoords = batch.filter(point => 
-          booleanPointInPolygon([point.lng, point.lat], polygon.feature) &&
-          (!settings.onlyCheckBlueLines || detector(point.lat, point.lng, settings.radius))
-        )
+        const validCoords = (settings.onlyCheckBlueLines || settings.strategy === 'random')
+          ? batch.filter(point => detector(point.lat, point.lng, settings.radius))
+          : batch
         
         // Process in chunks
         for (const locationGroup of validCoords.chunk(chunkSize)) {
