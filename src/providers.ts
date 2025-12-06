@@ -104,7 +104,7 @@ function parseGoogle(data: any): google.maps.StreetViewPanoramaData | null {
 
         const meta = root[5]?.[0];
         const loc = meta?.[1];
-        const view = meta?.[2];
+        const heading = loc?.[2]?.[0] ?? 0;
         const addr = root[3];
         const nodes = meta?.[3]?.[0];
         const linksRaw = meta?.[6];
@@ -116,8 +116,6 @@ function parseGoogle(data: any): google.maps.StreetViewPanoramaData | null {
         if (typeof panoId !== "string" || typeof lat !== "number" || typeof lng !== "number") {
             return null;
         }
-
-        const heading = view?.[0] ?? 0;
 
         const worldsize = root[2]?.[2] ?? [4096, 4096];
 
