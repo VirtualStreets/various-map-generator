@@ -853,6 +853,7 @@ import {
   setGlifyMode,
   addGlifyPoint,
   registerGlifyClickHandler,
+  removeGlifyPointsForPolygon,
   type LayerMeta,
   type MarkerLayersTypes,
 } from '@/map'
@@ -862,7 +863,7 @@ import { getTileUrl, getTileColorPresence } from '@/composables/tileColorDetecto
 import {
   sendNotifications,
   randomPointInPoly,
-  GridCoordinateGenerator,
+  GridGenerator,
   isOfficial,
   isPhotosphere,
   isDrone,
@@ -940,7 +941,7 @@ const pauseCountdown = ref<number>(0)
 const resumeCountdown = ref<number>(0)
 
 // Grid generators cache - persist across pause/resume
-const gridGenerators = new Map<number, GridCoordinateGenerator>()
+const gridGenerators = new Map<number, GridGenerator>()
 
 const cachedDates = ref({
   fromDate: Date.parse(settings.fromDate),
@@ -1127,6 +1128,10 @@ function clearPolygon(polygon: Polygon) {
       markerLayer.removeLayer(marker)
     })
   })
+  
+  // Clear glify points for this polygon
+  removeGlifyPointsForPolygon(polygon._leaflet_id)
+  
   polygon.found.length = 0
   
   // Clear cached generator and its persisted state
@@ -1353,18 +1358,13 @@ async function generate(polygon: Polygon) {
     
     let gridGenerator = gridGenerators.get(polygon._leaflet_id)
     if (!gridGenerator) {
-      gridGenerator = new GridCoordinateGenerator(polygon, settings.radius)
+      gridGenerator = new GridGenerator(polygon, settings.radius)
       gridGenerators.set(polygon._leaflet_id, gridGenerator)
     }
     
     // Loop until target is reached
     while (polygon.found.length < polygon.nbNeeded) {
       if (!state.started) break
-      
-      // Check if we should reset (after many iterations with no new unique coords)
-      if (gridGenerator.shouldReset()) {
-        gridGenerator.reset()
-      }
       
       // Use generator to stream coordinates in batches
       const batchGenerator = gridGenerator.generateBatch(batchSize)
@@ -1376,11 +1376,9 @@ async function generate(polygon: Polygon) {
         
         hasMoreCoords = true
         
-        // Filter valid coordinates within polygon
-        const validCoords = batch.filter(point => 
-          booleanPointInPolygon([point.lng, point.lat], polygon.feature) &&
-          (!settings.onlyCheckBlueLines || detector(point.lat, point.lng, settings.radius))
-        )
+        const validCoords = settings.onlyCheckBlueLines
+          ? batch.filter(point => detector(point.lat, point.lng, settings.radius))
+          : batch
         
         // Process in chunks
         for (const locationGroup of validCoords.chunk(chunkSize)) {

@@ -468,307 +468,499 @@ export function randomPointInPoly(polygon: Polygon) {
   return { lat, lng }
 }
 
+type LatLng = { lat: number; lng: number }
 
-/**
- * Grid coordinate generator that yields coordinates in batches.
- * Supports iteration offset to generate different grid patterns on each cycle.
- * Uses generator pattern for memory efficiency - coordinates are generated on demand.
- * 
- * Optimized with:
- * - Pagination storage (chunks of 500 coords per localStorage entry)
- * - Coordinate compression (5 decimal places precision)
- * - Lazy loading to minimize memory usage
- */
-export class GridCoordinateGenerator {
+interface GridOptions {
+  bitsetPow2?: number
+  bitsetBytesLimit?: number
+  insertionSortThreshold?: number
+  dedupeEpsilon?: number
+  debug?: boolean
+}
+
+interface PolygonState {
+  iteration: number
+  currentRow: number
+  sortedPtr: number
+  oddIntersectionsSeen: number
+}
+
+const POLY_STATES = new WeakMap<Polygon, PolygonState>()
+
+export class GridGenerator {
+  // Bounds & grid
   private bounds: { south: number; north: number; west: number; east: number }
   private latStep: number
   private lngStep: number
-  private iteration: number = 0
-  private checkedCoords: Set<string> = new Set()
-  private polygonId: number // Polygon's leaflet ID for persistence
-  private storageKey: string
-  private coordsBuffer: LatLng[] = [] // Buffer for coords waiting to be yielded
-  private currentBatchIndex: number = 0 // Track position in coordinate generation
-  
-  // Storage pagination settings
-  private readonly CHUNK_SIZE = 500 // Store max 500 coords per chunk
-  private loadedChunks: Set<number> = new Set() // Track which chunks are loaded
+  private rows: number
+  private cols: number
 
-  constructor(polygon: Polygon, radiusMeters: number) {
-    this.polygonId = polygon._leaflet_id
-    this.storageKey = `grid_${this.polygonId}`
+  // SOA edge arrays
+  private edgeCount = 0
+  private yMinArr!: Float32Array
+  private yMaxArr!: Float32Array
+  private xAtYMinArr!: Float32Array
+  private invSlopeArr!: Float32Array
+  private sortedByY!: Int32Array
+
+  // AET
+  private activeIdx!: Int32Array
+  private activeX!: Float64Array // use Float64 for intersection precision
+  private activeCap = 0
+
+  // temp arrays preallocated (no per-row alloc)
+  private tmpIdx!: Int32Array
+  private tmpX!: Float64Array
+
+  // bitset
+  private bitWords!: Uint32Array
+  private bitCount = 0
+  private bitMask = 0
+
+  // state
+  private state: PolygonState
+
+  // config
+  private insertionSortThreshold: number
+  private dedupeEpsilon: number
+  private debug: boolean
+  private readonly golden = 0.618033988749895
+
+  // safety
+  private readonly BITSET_BYTES_LIMIT: number // max bytes for bitset to allow (avoid OOM)
+
+  constructor(polygon: Polygon, radiusMeters: number, opts?: GridOptions) {
+    let ll: any = polygon.getLatLngs()
     
-    const bounds = polygon.getBounds()
-    this.bounds = {
-      south: bounds.getSouth(),
-      north: bounds.getNorth(),
-      west: bounds.getWest(),
-      east: bounds.getEast()
+    // Handle nested arrays - flatten to get the actual coordinate array
+    // getLatLngs() can return LatLng[], LatLng[][], or LatLng[][][]
+    while (Array.isArray(ll) && ll.length > 0 && Array.isArray(ll[0])) {
+      ll = ll[0]
     }
+    
+    // Verify we have valid coordinates
+    if (!Array.isArray(ll) || ll.length < 3) {
+      console.error('Invalid polygon structure:', polygon.getLatLngs())
+      throw new Error('Invalid polygon coords')
+    }
+    
+    // Map to [lng, lat] coordinate pairs
+    let coords : [number,number][] = ll.map((p:any) => {
+      if (p && typeof p.lat === 'number' && typeof p.lng === 'number') {
+        return [p.lng, p.lat]
+      }
+      throw new Error('Invalid coordinate point in polygon')
+    })
+    
+    if (!coords || coords.length < 3) throw new Error('Invalid polygon coords')
 
-    // Calculate grid spacing
+    // get or create in-memory polygon state
+    let st = POLY_STATES.get(polygon)
+    if (!st) {
+      st = { iteration: 0, currentRow: 0, sortedPtr: 0, oddIntersectionsSeen: 0 }
+      POLY_STATES.set(polygon, st)
+    }
+    this.state = st
+
+    this.insertionSortThreshold = opts?.insertionSortThreshold ?? 64
+    this.dedupeEpsilon = opts?.dedupeEpsilon ?? 1e-9
+    this.debug = !!opts?.debug
+    this.BITSET_BYTES_LIMIT = opts?.bitsetBytesLimit ?? 64 * 1024 * 1024 // default 64MB safe limit
+
+    // compute bounds
+    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity
+    for (const [lng, lat] of coords) {
+      if (lat < minLat) minLat = lat
+      if (lat > maxLat) maxLat = lat
+      if (lng < minLng) minLng = lng
+      if (lng > maxLng) maxLng = lng
+    }
+    const eps = 1e-12
+    this.bounds = { south: minLat - eps, north: maxLat + eps, west: minLng - eps, east: maxLng + eps }
+
+    // compute grid step degrees
     const spacingMeters = radiusMeters * 2 * 0.866
     const midLat = (this.bounds.south + this.bounds.north) / 2
-    const metersPerDegreeLat = 111320
-    const metersPerDegreeLng = 111320 * Math.cos(midLat * Math.PI / 180)
+    const metersPerDegLat = 111320
+    const metersPerDegLng = 111320 * Math.cos(midLat * Math.PI / 180)
+    this.latStep = spacingMeters / metersPerDegLat
+    this.lngStep = spacingMeters / metersPerDegLng
 
-    this.latStep = spacingMeters / metersPerDegreeLat
-    this.lngStep = spacingMeters / metersPerDegreeLng
+    // compute rows & cols
+    this.rows = Math.floor((this.bounds.north - this.bounds.south) / this.latStep) + 1
+    this.cols = Math.floor((this.bounds.east - this.bounds.west) / this.lngStep) + 1
 
-    // Restore state from localStorage
-    this.restoreState()
+    // safety: check bitset size
+    const totalBits = this.rows * this.cols
+    const totalBytes = Math.ceil(totalBits / 8)
+    if (totalBytes > this.BITSET_BYTES_LIMIT) {
+      throw new Error(`Bitset size ${totalBytes} bytes exceeds limit ${this.BITSET_BYTES_LIMIT}. Choose larger grid step or use sparse mode.`)
+    }
+
+    // allocate dense bitset words
+    const wordCount = Math.ceil(totalBits / 32)
+    this.bitWords = new Uint32Array(wordCount)
+    this.bitCount = totalBits
+    this.bitMask = totalBits - 1 // not used for mapping since we use direct index calc
+
+    // build SOA edge arrays
+    this.buildEdgeSOA(coords)
+
+    // allocate active arrays and temp arrays based on edgeCount
+    this.activeCap = Math.max(8, this.edgeCount)
+    this.activeIdx = new Int32Array(this.activeCap)
+    this.activeX = new Float64Array(this.activeCap)
+    this.tmpIdx = new Int32Array(this.activeCap)
+    this.tmpX = new Float64Array(this.activeCap)
   }
 
-  /**
-   * Compress coordinate to string: "lat5,lng5" (5 decimal places)
-   * Reduces storage from ~40 chars to ~24 chars per coordinate
-   */
-  private compressCoord(lat: number, lng: number): string {
-    return `${lat.toFixed(5)},${lng.toFixed(5)}`
-  }
+  // -------------------- helpers --------------------
+  private normalizeCoords(input: any): [number, number][] {
+    if (!input) throw new Error('Empty polygon input')
 
-  /**
-   * Decompress coordinate string back to lat/lng
-   */
-  private decompressCoord(compressed: string): LatLng {
-    const [lat, lng] = compressed.split(',').map(Number)
-    return { lat, lng }
-  }
-
-  /**
-   * Save state to localStorage with chunked storage
-   */
-  private saveState(): void {
-    try {
-      // Save metadata (iteration, buffer, chunk count)
-      const chunkCount = Math.ceil(this.checkedCoords.size / this.CHUNK_SIZE)
-      const metadata = {
-        iteration: this.iteration,
-        totalCoords: this.checkedCoords.size,
-        chunkCount: chunkCount,
-        buffer: this.coordsBuffer.map(c => this.compressCoord(c.lat, c.lng))
+    if (Array.isArray(input)) {
+      const first = input[0]
+      if (!first) return []
+      if (Array.isArray(first) && first.length >= 2) {
+        // [[lng,lat], ...]
+        return input as [number, number][]
+      } else if (typeof first === 'object' && 'lat' in first && 'lng' in first) {
+        return (input as LatLng[]).map(p => [p.lng, p.lat])
       }
-      localStorage.setItem(`${this.storageKey}_meta`, JSON.stringify(metadata))
-
-      // Save chunks of coordinates
-      const coordsArray = Array.from(this.checkedCoords)
-      for (let i = 0; i < chunkCount; i++) {
-        const start = i * this.CHUNK_SIZE
-        const end = start + this.CHUNK_SIZE
-        const chunk = coordsArray.slice(start, end)
-        localStorage.setItem(`${this.storageKey}_chunk_${i}`, JSON.stringify(chunk))
+    }
+    // GeoJSON feature
+    if (input.geometry && input.geometry.type) {
+      const type = input.geometry.type
+      const coords = input.geometry.coordinates
+      if (type === 'Polygon') {
+        return coords[0] as [number, number][]
       }
-    } catch (e) {
-      console.warn('Failed to save GridCoordinateGenerator state:', e)
+      if (type === 'MultiPolygon') {
+        return coords[0][0] as [number, number][]
+      }
+    }
+    throw new Error('Unsupported polygon input format')
+  }
+
+  private buildEdgeSOA(coords: [number, number][]) {
+    // collect edges excluding horizontal edges
+    const tmp: { yMin: number; yMax: number; xAtYMin: number; invSlope: number }[] = []
+    const n = coords.length
+    for (let i = 0; i < n; i++) {
+      const [x1, y1] = coords[i]
+      const [x2, y2] = coords[(i + 1) % n]
+      if (Math.abs(y2 - y1) < 1e-12) continue
+      if (y1 < y2) {
+        tmp.push({ yMin: y1, yMax: y2, xAtYMin: x1, invSlope: (x2 - x1) / (y2 - y1) })
+      } else {
+        tmp.push({ yMin: y2, yMax: y1, xAtYMin: x2, invSlope: (x1 - x2) / (y1 - y2) })
+      }
+    }
+
+    this.edgeCount = tmp.length
+    this.yMinArr = new Float32Array(this.edgeCount)
+    this.yMaxArr = new Float32Array(this.edgeCount)
+    this.xAtYMinArr = new Float32Array(this.edgeCount)
+    this.invSlopeArr = new Float32Array(this.edgeCount)
+
+    for (let i = 0; i < this.edgeCount; i++) {
+      const e = tmp[i]
+      this.yMinArr[i] = e.yMin
+      this.yMaxArr[i] = e.yMax
+      this.xAtYMinArr[i] = e.xAtYMin
+      this.invSlopeArr[i] = e.invSlope
+    }
+
+    // sorted indices by yMin (Int32Array)
+    const idxs: number[] = Array.from({ length: this.edgeCount }, (_, i) => i)
+    idxs.sort((a, b) => this.yMinArr[a] - this.yMinArr[b])
+    this.sortedByY = new Int32Array(idxs)
+  }
+
+  // ---------------- bitset operations ----------------
+  private setBitByIndex(bitIndex: number) {
+    const w = (bitIndex >>> 5)
+    const b = bitIndex & 31
+    this.bitWords[w] |= (1 << b)
+  }
+
+  private testBitByIndex(bitIndex: number): boolean {
+    const w = (bitIndex >>> 5)
+    const b = bitIndex & 31
+    return (this.bitWords[w] & (1 << b)) !== 0
+  }
+
+  // ---------------- in-place quicksort + insertionSort ----------------
+  private insertionSort(activeCount: number) {
+    // typed arrays activeX & activeIdx
+    const activeX = this.activeX
+    const activeIdx = this.activeIdx
+    for (let i = 1; i < activeCount; i++) {
+      const ax = activeX[i]
+      const ai = activeIdx[i]
+      let j = i - 1
+      while (j >= 0 && activeX[j] > ax) {
+        activeX[j + 1] = activeX[j]
+        activeIdx[j + 1] = activeIdx[j]
+        j--
+      }
+      activeX[j + 1] = ax
+      activeIdx[j + 1] = ai
     }
   }
 
-  /**
-   * Restore state from localStorage
-   */
-  private restoreState(): void {
-    try {
-      const metaStr = localStorage.getItem(`${this.storageKey}_meta`)
-      if (!metaStr) return
-
-      const meta = JSON.parse(metaStr)
-      this.iteration = meta.iteration || 0
-      
-      // Load buffer
-      if (meta.buffer && Array.isArray(meta.buffer)) {
-        this.coordsBuffer = meta.buffer.map((c: string) => this.decompressCoord(c))
-      }
-
-      // Load chunks lazily - only load the first chunk initially
-      const chunkCount = meta.chunkCount || 0
-      if (chunkCount > 0) {
-        const firstChunk = localStorage.getItem(`${this.storageKey}_chunk_0`)
-        if (firstChunk) {
-          const coords = JSON.parse(firstChunk)
-          coords.forEach((c: string) => this.checkedCoords.add(c))
-          this.loadedChunks.add(0)
+  private quicksortInPlace(lo: number, hi: number) {
+    const activeX = this.activeX
+    const activeIdx = this.activeIdx
+    // non-recursive stack
+    const stack: number[] = []
+    stack.push(lo, hi)
+    while (stack.length) {
+      const r = stack.pop()!; const l = stack.pop()!
+      if (l >= r) continue
+      let i = l, j = r
+      const pivot = activeX[(l + r) >> 1]
+      while (i <= j) {
+        while (activeX[i] < pivot) i++
+        while (activeX[j] > pivot) j--
+        if (i <= j) {
+          // swap
+          const tx = activeX[i]; activeX[i] = activeX[j]; activeX[j] = tx
+          const ti = activeIdx[i]; activeIdx[i] = activeIdx[j]; activeIdx[j] = ti
+          i++; j--
         }
       }
-    } catch (e) {
-      console.warn('Failed to restore GridCoordinateGenerator state:', e)
+      if (l < j) { stack.push(l, j) }
+      if (i < r) { stack.push(i, r) }
     }
   }
 
-  /**
-   * Load additional chunks on demand
-   */
-  private loadChunkIfNeeded(chunkIndex: number): void {
-    if (this.loadedChunks.has(chunkIndex)) return
-
-    try {
-      const chunk = localStorage.getItem(`${this.storageKey}_chunk_${chunkIndex}`)
-      if (chunk) {
-        const coords = JSON.parse(chunk)
-        coords.forEach((c: string) => this.checkedCoords.add(c))
-        this.loadedChunks.add(chunkIndex)
-      }
-    } catch (e) {
-      console.warn(`Failed to load chunk ${chunkIndex}:`, e)
-    }
-  }
-
-  /**
-   * Load all chunks (when needed)
-   */
-  private loadAllChunks(): void {
-    try {
-      const metaStr = localStorage.getItem(`${this.storageKey}_meta`)
-      if (!metaStr) return
-
-      const meta = JSON.parse(metaStr)
-      const chunkCount = meta.chunkCount || 0
-
-      for (let i = 0; i < chunkCount; i++) {
-        this.loadChunkIfNeeded(i)
-      }
-    } catch (e) {
-      console.warn('Failed to load all chunks:', e)
-    }
-  }
-
-  /**
-   * Clear saved state from localStorage
-   */
-  clearSavedState(): void {
-    try {
-      // Clear metadata
-      const metaStr = localStorage.getItem(`${this.storageKey}_meta`)
-      if (metaStr) {
-        const meta = JSON.parse(metaStr)
-        const chunkCount = meta.chunkCount || 0
-
-        // Clear all chunks
-        for (let i = 0; i < chunkCount; i++) {
-          localStorage.removeItem(`${this.storageKey}_chunk_${i}`)
-        }
-      }
-
-      // Clear metadata
-      localStorage.removeItem(`${this.storageKey}_meta`)
-    } catch (e) {
-      console.warn('Failed to clear GridCoordinateGenerator state:', e)
-    }
-  }
-
-  /**
-   * Generate a batch of coordinates with offset based on iteration count.
-   * Each iteration produces a different grid pattern by applying random offset.
-   * Supports pause/resume by maintaining state in localStorage.
-   * @param batchSize Number of coordinates to generate per batch
-   */
+  // ---------------- main generator ----------------
   *generateBatch(batchSize: number): Generator<LatLng[], void, unknown> {
-    // First, check if we have buffered coordinates from before pause
-    if (this.coordsBuffer.length > 0) {
-      let batch: LatLng[] = []
-      while (this.coordsBuffer.length > 0 && batch.length < batchSize) {
-        batch.push(this.coordsBuffer.shift()!)
-      }
-      if (batch.length > 0) {
-        yield batch
-        this.saveState()
-      }
-    }
+    const batch: LatLng[] = []
+    const st = this.state
 
-    // Apply offset based on iteration to create different grid patterns
-    // Use golden ratio for better distribution across iterations
-    const goldenRatio = 0.618033988749895
-    const latOffset = (this.iteration * goldenRatio * this.latStep) % this.latStep
-    const lngOffset = (this.iteration * goldenRatio * this.lngStep) % this.lngStep
-    
-    let batch: LatLng[] = []
-    let rowIndex = 0
+    let row = st.currentRow || 0
+    let sortedPtr = st.sortedPtr || 0
+    let activeCount = 0
 
-    for (let lat = this.bounds.south + latOffset; lat <= this.bounds.north; lat += this.latStep) {
-      // Hexagonal offset for alternating rows
-      const hexOffset = (rowIndex % 2) * (this.lngStep / 2)
-      
-      for (let lng = this.bounds.west + lngOffset + hexOffset; lng <= this.bounds.east; lng += this.lngStep) {
-        // Create coordinate key for deduplication (5 decimal places = ~1.1m precision)
-        const coordKey = this.compressCoord(lat, lng)
-        
-        if (!this.checkedCoords.has(coordKey)) {
-          this.checkedCoords.add(coordKey)
-          batch.push(this.decompressCoord(coordKey))
-          
+    // precompute constants
+    const latStep = this.latStep
+    const lngStep = this.lngStep
+    const west = this.bounds.west
+    const east = this.bounds.east
+    const rows = this.rows
+    const dedupeEps = this.dedupeEpsilon
+    const insertThresh = this.insertionSortThreshold
+
+    // iteration fractional offsets
+    const fracLat = (st.iteration * this.golden) % 1
+    const fracLng = ((st.iteration * 0.7548776662466927) % 1)
+    const latOffset = fracLat * latStep
+    const lngOffsetBase = fracLng * lngStep
+
+    // main rows loop
+    for (; row < rows; row++) {
+      const lat = this.bounds.south + latOffset + row * latStep
+      // add new edges whose yMin <= lat
+      while (sortedPtr < this.edgeCount && this.yMinArr[this.sortedByY[sortedPtr]] <= lat) {
+        const ei = this.sortedByY[sortedPtr]
+        if (lat < this.yMaxArr[ei]) {
+          if (activeCount >= this.activeCap) {
+            // should not happen because we sized activeCap >= edgeCount, but guard
+            this.resizeActiveCapacity(activeCount + 4)
+          }
+          this.activeIdx[activeCount] = ei
+          this.activeX[activeCount] = this.xAtYMinArr[ei] + (lat - this.yMinArr[ei]) * this.invSlopeArr[ei]
+          activeCount++
+        }
+        sortedPtr++
+      }
+
+      // remove expired edges (yMax <= lat)
+      if (activeCount > 0) {
+        let w = 0
+        for (let i = 0; i < activeCount; i++) {
+          const ei = this.activeIdx[i]
+          if (lat < this.yMaxArr[ei]) {
+            this.activeIdx[w] = this.activeIdx[i]
+            this.activeX[w] = this.activeX[i]
+            w++
+          }
+        }
+        activeCount = w
+      }
+
+      if (activeCount === 0) continue
+
+      // sort active edges by X (in-place)
+      if (activeCount <= insertThresh) {
+        this.insertionSort(activeCount)
+      } else {
+        this.quicksortInPlace(0, activeCount - 1)
+      }
+
+      // dedupe nearly-equal intersections (tangents etc.)
+      // compact into tmp arrays, then copy back to active arrays
+      let m = 0
+      let prevX = Number.NaN
+      for (let i = 0; i < activeCount; i++) {
+        const ax = this.activeX[i]
+        if (i === 0 || Math.abs(ax - prevX) > dedupeEps) {
+          this.tmpX[m] = ax
+          this.tmpIdx[m] = this.activeIdx[i]
+          prevX = ax
+          m++
+        } else {
+          // near-duplicate intersection: skip this one (tangent)
+          // do not advance m
+        }
+      }
+      // if dedup removed items, copy back
+      if (m < activeCount) {
+        for (let i = 0; i < m; i++) {
+          this.activeX[i] = this.tmpX[i]
+          this.activeIdx[i] = this.tmpIdx[i]
+        }
+        activeCount = m
+      }
+
+      // if odd intersections -> geometry problem; drop last intersection and count
+      if ((activeCount & 1) === 1) {
+        st.oddIntersectionsSeen = (st.oddIntersectionsSeen || 0) + 1
+        // drop last
+        activeCount = activeCount - 1
+      }
+
+      if (activeCount === 0) continue
+
+      // precompute latIdx (quantized) for this row -> used for index calc
+      const latIdx = Math.round((lat - this.bounds.south) / latStep) | 0
+
+      // iterate pairs
+      for (let a = 0; a < activeCount; a += 2) {
+        const xL = this.activeX[a]
+        const xR = this.activeX[a + 1]
+        if (xR <= west || xL >= east) continue
+        const minLng = Math.max(west, xL)
+        const maxLng = Math.min(east, xR)
+
+        // compute col index range (integer) with offset
+        // apply row parity hex offset (alternate rows)
+        const rowHexOffset = (row & 1) ? (lngStep * 0.5) : 0
+        const totalLngOffset = lngOffsetBase + rowHexOffset
+
+        const firstCol = Math.ceil((minLng - west - totalLngOffset) / lngStep) | 0
+        const lastCol = Math.floor((maxLng - west - totalLngOffset) / lngStep) | 0
+
+        if (lastCol < firstCol) continue
+
+        // loop columns - simple integer increment
+        for (let col = firstCol; col <= lastCol; col++) {
+          const lng = west + col * lngStep + totalLngOffset
+          // compute unique bit index = latIdx * cols + col
+          const bitIndex = latIdx * this.cols + col
+          if (bitIndex < 0 || bitIndex >= this.bitCount) continue // safety
+          if (this.testBitByIndex(bitIndex)) continue
+          this.setBitByIndex(bitIndex)
+          batch.push({ lat, lng })
           if (batch.length >= batchSize) {
-            yield batch
-            this.saveState() // Save state after yielding batch
-            batch = []
+            // save resume pointers in-memory
+            st.currentRow = row
+            st.sortedPtr = sortedPtr
+            // yield
+            yield batch.splice(0, batch.length)
           }
         }
       }
-      rowIndex++
-    }
 
-    // Store remaining coordinates in buffer for next resume
-    if (batch.length > 0) {
-      this.coordsBuffer.push(...batch)
-      yield batch
-      this.saveState()
-    }
-
-    this.iteration++
-    this.saveState()
-  }
-
-  /**
-   * Reset the checked coordinates for a new search cycle.
-   * Call this when starting fresh or after exhausting all grid patterns.
-   */
-  reset(): void {
-    this.checkedCoords.clear()
-    this.iteration = 0
-    this.coordsBuffer = []
-    this.currentBatchIndex = 0
-    this.loadedChunks.clear()
-    this.saveState()
-  }
-
-  /**
-   * Get current iteration count
-   */
-  getIteration(): number {
-    return this.iteration
-  }
-
-  /**
-   * Get number of checked coordinates
-   * Note: only counts loaded chunks, call loadAllChunks() for total
-   */
-  getCheckedCount(): number {
-    return this.checkedCoords.size
-  }
-
-  /**
-   * Get total checked coordinates from storage metadata
-   */
-  getTotalCheckedCount(): number {
-    try {
-      const metaStr = localStorage.getItem(`${this.storageKey}_meta`)
-      if (metaStr) {
-        const meta = JSON.parse(metaStr)
-        return meta.totalCoords || 0
+      // incrementally update activeX for next row
+      for (let i = 0; i < activeCount; i++) {
+        const ei = this.activeIdx[i]
+        // add delta = invSlope * latStep
+        this.activeX[i] += this.invSlopeArr[ei] * latStep
       }
-    } catch (e) {
-      console.warn('Failed to get total checked count:', e)
+    } // end rows
+
+    // flush remaining
+    if (batch.length > 0) {
+      st.currentRow = this.rows
+      st.sortedPtr = this.edgeCount
+      yield batch.splice(0, batch.length)
     }
-    return this.checkedCoords.size
+
+    // finished pass: bump iteration and reset pointers
+    st.iteration = (st.iteration || 0) + 1
+    st.currentRow = 0
+    st.sortedPtr = 0
+    // keep bitset to avoid re-visiting points in future iterations in same page
+  }
+
+  private resizeActiveCapacity(newCap: number) {
+    const cap = Math.max(newCap, this.activeCap * 2)
+    const nActive = this.activeCap
+    const newActiveIdx = new Int32Array(cap)
+    const newActiveX = new Float64Array(cap)
+    newActiveIdx.set(this.activeIdx.subarray(0, nActive))
+    newActiveX.set(this.activeX.subarray(0, nActive))
+    this.activeIdx = newActiveIdx
+    this.activeX = newActiveX
+    this.tmpIdx = new Int32Array(cap)
+    this.tmpX = new Float64Array(cap)
+    this.activeCap = cap
+  }
+
+  // clear bitset and state
+  public reset(polygon?: Polygon) {
+    if (polygon) {
+      const st = POLY_STATES.get(polygon)
+      if (st) {
+        st.iteration = 0
+        st.currentRow = 0
+        st.sortedPtr = 0
+        st.oddIntersectionsSeen = 0
+      }
+    }
+    // clear bitset
+    this.bitWords.fill(0)
+  }
+
+  public getState(): PolygonState {
+    return this.state
+  }
+
+  public approxVisitedCountSample(): number {
+    // sample-based estimate of set bits
+    let sum = 0
+    const words = this.bitWords
+    const step = Math.max(1, Math.floor(words.length / 1024))
+    let samples = 0
+    for (let i = 0; i < words.length; i += step) {
+      samples++
+      sum += popcount32(words[i])
+    }
+    if (samples === 0) return 0
+    const avg = sum / samples
+    return Math.round(avg * words.length)
   }
 
   /**
-   * Check if we've likely exhausted unique positions
-   * (after many iterations with diminishing returns)
+   * Clear saved state for this generator.
+   * Called when polygon is deleted or generation is complete.
+   * Since this implementation uses in-memory state (WeakMap), this resets the state.
    */
-  shouldReset(): boolean {
-    // After ~10 iterations, most unique positions are likely found
-    return this.iteration >= 10
+  public clearSavedState(): void {
+    this.reset()
   }
 }
+
+// popcount for 32-bit words
+function popcount32(x: number) {
+  x = x - ((x >>> 1) & 0x55555555)
+  x = (x & 0x33333333) + ((x >>> 2) & 0x33333333)
+  return (((x + (x >>> 4)) & 0x0F0F0F0F) * 0x01010101) >>> 24
+}
+
 
 export function radians_to_degrees(radians: number) {
   var pi = Math.PI;
