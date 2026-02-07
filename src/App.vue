@@ -395,7 +395,20 @@
         <div class="flex-1 min-h-0 overflow-y-auto">
           <Collapsible :is-open="panels.coverageSettings" class="p-1">
             <Checkbox v-if="!settings.rejectOfficial" v-model="settings.rejectUnofficial">Reject unofficial</Checkbox>
-
+            <Checkbox v-if="!settings.rejectUnofficial" v-model="settings.findByAuthor.enabled">Find by author</Checkbox>
+            <div v-if="settings.findByAuthor.enabled && !settings.rejectUnofficial" class="space-y-0.5 ml-6 pb-1">
+              <div class="flex justify-between items-center gap-2">
+                Include/Exclude :
+                <select v-model="settings.findByAuthor.filterType">
+                  <option value="include">include</option>
+                  <option value="exclude">exclude</option>
+                </select>
+              </div>
+              <div class="flex justify-between items-center gap-2">
+                author name :
+                  <input type="text" v-model.trim="settings.findByAuthor.author" class="w-48 border-1 border-gray-500 " placeholder="Enter author name" />
+              </div>
+            </div>
             <Checkbox v-model="settings.rejectOfficial">Find unofficial coverage</Checkbox>
             <Checkbox v-if="settings.rejectOfficial" v-model="settings.findPhotospheres">Find photospheres only
             </Checkbox>
@@ -1526,6 +1539,17 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
             return false;
           }
         }
+      }
+    }
+
+    if (!settings.rejectUnofficial && settings.findByAuthor.enabled) {
+      const author = res.copyright?.split('©')[1]?.trim() || ''
+      const authorMatch = author.toLowerCase().includes(settings.findByAuthor.author.toLowerCase())
+      if (!settings.rejectOfficial && author.includes( 'Google')) {
+        // If not rejecting official and author is Google, always include
+      } else {
+        if (settings.findByAuthor.filterType === 'exclude' && authorMatch) return false
+        if (settings.findByAuthor.filterType === 'include' && !authorMatch) return false
       }
     }
 

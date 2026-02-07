@@ -105,6 +105,11 @@ const defaultSettings = {
   onlyOneInTimeframe: false,
   findPhotospheres: false,
   findDrones: false,
+  findByAuthor:{
+    enabled: false,
+    author: '',
+    filterType: 'include',
+  },
   findNightCoverage: false,
   checkLinks: false,
   linksDepth: 2,
@@ -385,7 +390,7 @@ const defaultSettings = {
 }
 
 const CURRENT_KEYS = Object.keys(localStorage)
-const CURRENT_KEY = 'map_generator__settings_v8'
+const CURRENT_KEY = 'map_generator__settings_v1'
 
 CURRENT_KEYS.forEach((key: string) => {
   if (key !== CURRENT_KEY && localStorage.getItem(key) !== null && key.startsWith('map_generator__settings_')) {
