@@ -39,6 +39,25 @@ export async function getOSMID(placeName: string): Promise<SearchResult[] | null
   }
 }
 
+/**
+ * reverse lookup OSM ID to get address details
+ */
+export async function getAddressFromOSMID(osmId: number): Promise<SearchResult | null> {
+  try {
+    const nominatimURL = `https://nominatim.openstreetmap.org/lookup?osm_ids=R${osmId}&format=json&addressdetails=1`
+    const response = await fetch(nominatimURL, {
+      headers: {
+        'Accept-Language': 'en-US,en;q=0.9'
+      }
+    })
+    const data = await response.json()
+    return data.length > 0 ? data[0] : null
+  } catch (error) {
+    console.error('Error fetching address from OSM ID:', error)
+    return null
+  }
+}
+
 /** Visvalingam–Whyatt simplification */
 function simplifyVW(points: number[][], targetCount: number): number[][] {
   if (points.length <= targetCount) return points
@@ -154,7 +173,7 @@ export async function downloadSubdivisions(countryCode2: string): Promise<GeoJSO
     return null
   }
 
-  const url = `https://cors-proxy.ac4.stocc.dev/https://geodata.ucdavis.edu/gadm/gadm4.1/json/gadm41_${code3}_1.json`
+  const url = `https://cors-proxy.ac4.stocc.dev/https://super-duper.fr/geojson/prov/gadm41_${code3}_1.json`
   
   try {
     const res = await fetch(url)

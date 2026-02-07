@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { getOSMID, downloadGeoJSON, downloadSubdivisions, type SearchResult } from '@/composables/geojsonSearch'
+import { getOSMID, downloadGeoJSON, downloadSubdivisions, getAddressFromOSMID, type SearchResult } from '@/composables/geojsonSearch'
 import Button from '@/components/Elements/Button.vue'
 import Tooltip from '@/components/Elements/Tooltip.vue'
 
@@ -51,6 +51,35 @@ async function handleSearch() {
 
   isSearching.value = true
   error.value = ''
+
+  const trimmedInput = searchInput.value.trim()
+  const isNumeric = /^\d+$/.test(trimmedInput)
+  
+  if (isNumeric) {
+    isLoading.value = true
+    try {
+      const osmId = Number(trimmedInput)
+      const addressInfo = await getAddressFromOSMID(osmId)
+      const geojson = await downloadGeoJSON(osmId)
+      if (geojson && geojson.geometry && geojson.geometry.type) {
+        let placeName = `OSM ${osmId}`
+        if (addressInfo && addressInfo.display_name) {
+          placeName = addressInfo.display_name.split(',')[0].trim()
+        }
+        emit('import', geojson, placeName)
+        resetSearch()
+      } else {
+        error.value = 'No geojson found for this OSM ID. The database may not contain this polygon.'
+      }
+    } catch (err) {
+      let msg = 'Unknown error.'
+      if (err instanceof Error) msg = err.message
+      error.value = `Failed to download GeoJSON: ${msg}`
+    }
+    isLoading.value = false
+    isSearching.value = false
+    return
+  }
 
   const results = await getOSMID(searchInput.value)
   if (results) {
