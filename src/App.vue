@@ -38,6 +38,9 @@
             <Checkbox v-model="settings.notification.anyLocation">
               First location found in polygon
             </Checkbox>
+            <Checkbox v-model="settings.notification.anyNoBlueLine">
+              First <span class="h-3 w-3 bg-[#E412D2] rounded-full"></span> location found in polygon
+            </Checkbox>
             <Checkbox v-model="settings.notification.onePolygonComplete">
               One polygon completed
             </Checkbox>
@@ -46,7 +49,10 @@
             </Checkbox>
             <Checkbox
               v-if="settings.provider.includes('google') &&
-                (settings.notification.anyLocation || settings.notification.onePolygonComplete || settings.notification.allPolygonsComplete)"
+                (settings.notification.anyLocation || 
+                settings.notification.onePolygonComplete || 
+                settings.notification.allPolygonsComplete ||
+                settings.notification.anyNoBlueLine)"
               v-model="settings.notification.sendToDiscord">
               Send notifications to Discord
             </Checkbox>
@@ -199,7 +205,7 @@
               </Button>
             </div>
           </div>
-          <input type="file" class="mr-auto mt-1" @change="importLayer" accept=".txt,.json,.geojson" />
+          <input type="file" class="mr-auto mt-1" @change="importLayer" accept=".txt,.json,.geojson" multiple />
         </Collapsible>
       </div>
 
@@ -1955,7 +1961,7 @@ function addLoc(pano: google.maps.StreetViewPanoramaData, polygon: Polygon) {
     }
     if (settings.disableCheckBlueLine) return addLocation(location, polygon, icons.newLoc)
     checkHasBlueLine(pano.location.latLng.toJSON()).then((hasBlueLine) => {
-      location.update_type = 'newroad'
+      location.update_type = hasBlueLine ? 'newroad' : 'noblueline'
       location.extra.tags.push(location.update_type)
       return addLocation(location, polygon, hasBlueLine ? icons.newLoc : icons.noBlueLine)
     })
@@ -2062,7 +2068,15 @@ function addLocation(
           location
         )
       }
-
+      if (settings.notification.anyNoBlueLine && location.update_type === 'noblueline' && polygon.found.length === 1) {
+        sendNotifications(
+          'No blue line Location Found',
+          `No blue line location in ${getPolygonName(polygon.feature.properties)} (${elapsedTime}s)`,
+          settings.notification.sendToDiscord && settings.provider.includes('google'),
+          settings.notification.discordWebhook,
+          location
+        )
+      }
       if (settings.notification.onePolygonComplete && polygon.found.length >= polygon.nbNeeded) {
         sendNotifications(
           'Polygon Completed',
