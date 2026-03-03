@@ -614,34 +614,6 @@ export class GridGenerator {
     this.tmpX = new Float64Array(this.activeCap)
   }
 
-  // -------------------- helpers --------------------
-  private normalizeCoords(input: any): [number, number][] {
-    if (!input) throw new Error('Empty polygon input')
-
-    if (Array.isArray(input)) {
-      const first = input[0]
-      if (!first) return []
-      if (Array.isArray(first) && first.length >= 2) {
-        // [[lng,lat], ...]
-        return input as [number, number][]
-      } else if (typeof first === 'object' && 'lat' in first && 'lng' in first) {
-        return (input as LatLng[]).map(p => [p.lng, p.lat])
-      }
-    }
-    // GeoJSON feature
-    if (input.geometry && input.geometry.type) {
-      const type = input.geometry.type
-      const coords = input.geometry.coordinates
-      if (type === 'Polygon') {
-        return coords[0] as [number, number][]
-      }
-      if (type === 'MultiPolygon') {
-        return coords[0][0] as [number, number][]
-      }
-    }
-    throw new Error('Unsupported polygon input format')
-  }
-
   private buildEdgeSOA(coords: [number, number][]) {
     // collect edges excluding horizontal edges
     const tmp: { yMin: number; yMax: number; xAtYMin: number; invSlope: number }[] = []

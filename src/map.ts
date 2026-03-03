@@ -617,7 +617,7 @@ function refreshGlifyLayer() {
     map: map,
     data: data,
     size: 12,
-    opacity: 0.9,
+    opacity: 1,
     color: (index, feature) => {
       if (typeof feature === 'object' && 'properties' in feature) {
         const type = feature.properties?.type as MarkerLayersTypes
@@ -945,30 +945,47 @@ function deselectLayer(layerKey: string) {
 
 async function importLayer(e: Event) {
   const input = e.target as HTMLInputElement
-  if (!input.files) return
+  if (!input.files || input.files.length === 0) return
 
+  const results = {
+    successful: 0,
+    failed: 0,
+    failedFiles: [] as string[],
+  }
+
+  // Process files sequentially to avoid race conditions
   for (const file of input.files) {
-    const result = await readFileAsText(file)
     try {
+      const result = await readFileAsText(file)
       const json = JSON.parse(result)
+      
       if (!isValidGeoJSON(json)) {
         throw new Error('Invalid GeoJSON structure.')
       }
 
+      // Generate unique key using timestamp and random id to avoid duplicates
+      const uniqueId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       const meta: LayerMeta = {
         label: file.name,
-        key: file.name,
+        key: `imported_${uniqueId}`,
         source: json,
         visible: true,
       }
+      
       availableLayers.value.push(meta)
       const layer = await loadLayer(meta)
       map.addLayer(layer)
-    } catch (e) {
-      alert(`Invalid GeoJSON in "${file.name}"`)
-      console.error(e)
+      
+      results.successful++
+    } catch (err) {
+      results.failed++
+      results.failedFiles.push(file.name)
+      console.error(`Error importing "${file.name}":`, err)
     }
   }
+
+  // Reset file input to allow re-importing the same files
+  input.value = ''
 }
 
 function exportLayer(l: LayerMeta) {
