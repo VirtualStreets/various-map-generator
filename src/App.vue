@@ -1551,7 +1551,7 @@ async function getLoc(loc: LatLng, polygon: Polygon) {
     if (!settings.rejectUnofficial && settings.findByAuthor.enabled) {
       const author = res.copyright?.split('©')[1]?.trim() || ''
       const authorMatch = author.toLowerCase().includes(settings.findByAuthor.author.toLowerCase())
-      if (!settings.rejectOfficial && author.includes( 'Google')) {
+      if (!settings.rejectOfficial && author.includes('Google')) {
         // If not rejecting official and author is Google, always include
       } else {
         if (settings.findByAuthor.filterType === 'exclude' && authorMatch) return false
