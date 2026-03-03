@@ -411,7 +411,7 @@
                 </select>
               </div>
               <div class="flex justify-between items-center gap-2">
-                author name :
+                Author Name :
                   <input type="text" v-model.trim="settings.findByAuthor.author" class="w-48 border-1 border-gray-500 " placeholder="Enter author name" />
               </div>
             </div>
