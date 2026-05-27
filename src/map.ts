@@ -73,7 +73,7 @@ const gsvLayer2 = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.St
 const gsvLayer3 = L.tileLayer(settings.coverage.blobby ? GOOGLE_MAPS_TEMPLATE.StreetView_Blobby : GOOGLE_MAPS_TEMPLATE.StreetView_Unofficial, { maxZoom: 19, opacity: settings.coverage.opacity })
 const gsvLayer4 = new PanoramasLayer({ minZoom: 16, pane: "panoramasPane" });
 
-const appleCoverageLayer = L.tileLayer('https://lookmap.eu.pythonanywhere.com/bluelines_raster_2x/{z}/{x}/{y}.png', { minZoom: 1, maxZoom: 7 })
+const appleCoverageLayer = L.tileLayer('https://lookmap.skzk.dev/bluelines_raster_2x/{z}/{x}/{y}.png', { minZoom: 1, maxZoom: 7 })
 
 const baiduCoverageLayer = new BaiduLayer({ filter: "hue-rotate(140deg) saturate(200%)" })
 
@@ -420,7 +420,7 @@ const openNearestPano = (e: L.ContextMenuItemClickEvent) => {
       )
       break
     case 'apple':
-      open(`https://lookmap.eu.pythonanywhere.com/#c=18/${e.latlng.lat}/${e.latlng.lng}&p=${e.latlng.lat}/${e.latlng.lng}`)
+      open(`https://lookmap.skzk.dev/#c=18/${e.latlng.lat}/${e.latlng.lng}&p=${e.latlng.lat}/${e.latlng.lng}`)
       break
     case 'bing':
       open(
