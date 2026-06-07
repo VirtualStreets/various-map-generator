@@ -23,7 +23,7 @@ function determineLineWidth(zoom: number): number {
 
 
 function createVectorLayer(minZoom: number): L.Layer {
-    return VectorTileLayer('https://lookmap.eu.pythonanywhere.com/bluelines2/{z}/{x}/{y}/', {
+    return VectorTileLayer('https://lookmap.skzk.dev/bluelines2/{z}/{x}/{y}/', {
         style: (feature: any, level: number) => {
             if (feature.type !== 2) {
                 return { opacity: 0, radius: 0, weight: 0 };
