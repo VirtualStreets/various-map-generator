@@ -71,6 +71,12 @@ export const PETAL_MAPS_TEMPLATE = {
     Dark: "https://maprastertile-drcn.dbankcdn.cn/display-service/v1/online-render/getTile/25.07.19.40.300/{z}/{x}/{y}/?language=en&p=46&scale=2&mapType=ROADMAP&presetStyleId=night&pattern=JPG&key=DAEDANitav6P7Q0lWzCzKkLErbrJG4kS1u%2FCpEe5ZyxW5u0nSkb40bJ%2BYAugRN03fhf0BszLS1rCrzAogRHDZkxaMrloaHPQGO6LNg=="
 }
 
+export const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://lz4.overpass-api.de/api/interpreter",
+]
+
 export const countryCodeMap: Record<string, string> = {
   'ad': 'AND', 'ae': 'ARE', 'af': 'AFG', 'ag': 'ATG', 'ai': 'AIA', 'al': 'ALB', 'am': 'ARM',
   'ao': 'AGO', 'aq': 'ATA', 'ar': 'ARG', 'as': 'ASM', 'at': 'AUT', 'au': 'AUS', 'aw': 'ABW',

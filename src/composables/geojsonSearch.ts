@@ -1,4 +1,6 @@
 import { countryCodeMap } from '../constants'
+import osmtogeojson from "osmtogeojson";
+import { OVERPASS_ENDPOINTS } from '../constants'
 
 export interface SearchResult {
   display_name: string
@@ -133,31 +135,75 @@ function simplifyGeometry(geom: GeoJSON.Geometry): GeoJSON.Geometry {
   return geom
 }
 
+async function fetchOverpass(query: string) {
+  const controllers: AbortController[] = [];
+
+  try {
+    const result = await Promise.any(
+      OVERPASS_ENDPOINTS.map(async (endpoint) => {
+        const controller = new AbortController();
+        controllers.push(controller);
+
+        const res = await fetch(endpoint, {
+          method: "POST",
+          body: query,
+          signal: AbortSignal.any([
+            controller.signal,
+            AbortSignal.timeout(10000)
+          ])
+        });
+
+        if (!res.ok) {
+          throw new Error(`${endpoint}: HTTP ${res.status}`);
+        }
+
+        return res.json();
+      })
+    );
+
+    controllers.forEach((c) => c.abort());
+
+    return result;
+  } catch {
+    controllers.forEach((c) => c.abort());
+    throw new Error("All Overpass endpoints failed");
+  }
+}
+
+
 /** Download + simplify */
 export async function downloadGeoJSON(osmID: number) {
-  const url = `https://polygons.openstreetmap.fr/get_geojson.py?id=${osmID}`
+  const query = `
+    [out:json];
+    rel(${osmID});
+    out geom;
+    `;
+
   try {
-    const res = await fetch(url)
-    const data = await res.json()
+    const osmData = await fetchOverpass(query);
+
+    const geojson = osmtogeojson(osmData) as GeoJSON.FeatureCollection;
+
+    const sourceFeature = geojson.features.find(
+      (f) =>
+        f.geometry?.type === "Polygon" ||
+        f.geometry?.type === "MultiPolygon"
+    );
+
+    if (!sourceFeature) {
+      throw new Error("No polygon geometry found");
+    }
 
     const feature: GeoJSON.Feature = {
       type: "Feature",
-      geometry: simplifyGeometry(
-        data.type === "Feature" ? data.geometry : data
-      ),
+      geometry: simplifyGeometry(sourceFeature.geometry),
       properties: {}
-    }
+    };
 
-    // ensure <10 KB (usually 1–5 KB)
-    let size = JSON.stringify(feature).length
-    if (size > 10000) {
-      feature.geometry = simplifyGeometry(feature.geometry)
-      size = JSON.stringify(feature).length
-    }
-    return feature
+    return feature;
   } catch (e) {
-    console.error("GeoJSON download failed:", e)
-    return null
+    console.error("GeoJSON download failed:", e);
+    return null;
   }
 }
 
@@ -173,10 +219,12 @@ export async function downloadSubdivisions(countryCode2: string): Promise<GeoJSO
     return null
   }
 
-  const url = `https://cors-proxy.ac4.stocc.dev/https://super-duper.fr/geojson/prov/gadm41_${code3}_1.json`
-  
+  const url = `https://cors-proxy.ac4.stocc.dev/super-duper.fr/geojson/prov/gadm41_${code3}_1.json`
+
   try {
-    const res = await fetch(url)
+    const res = await fetch(url, {
+      headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
     if (!res.ok) {
       console.error(`Failed to fetch subdivisions for ${code3}: ${res.status}`)
       return null
