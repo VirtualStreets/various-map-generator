@@ -428,7 +428,7 @@
                 Reject locations without description
               </Checkbox>
               <Checkbox v-if="!settings.rejectOfficial" v-model="settings.rejectRoadName">
-                Reject locations with road name
+                Reject locations with Road name
               </Checkbox>
               <Checkbox v-if="settings.provider.includes('google')" v-model="settings.rejectDescription">Find trekker
                 coverage (only Gen 3)
@@ -584,6 +584,10 @@
 
         <div class="flex-1 min-h-0 overflow-y-auto">
           <Collapsible :is-open="panels.mapMakingSettings" class="p-1">
+            <Checkbox v-model="settings.rejectRoadName">
+              Reject locations with Road name
+            </Checkbox>
+
             <div class="flex items-center gap-1 relative">
               <Checkbox v-model="settings.searchInDescription.enabled">Search in panorama description
               </Checkbox>
